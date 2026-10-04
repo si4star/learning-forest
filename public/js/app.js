@@ -4,6 +4,21 @@ const ROUND=20, SLOW=6000, QUICK=3000;
 const ASSESS_MIN=5, PASS=0.8;                    // starting check: at least 5 facts per table, 80% to pass
 const INTERVAL_DAYS={2:1,3:3,4:7,5:21};
 const STAGES=['Not planted','Seed','Sprout','Sapling','Tree','Great tree'];
+// Practice check: the same shape as the Year 4 Multiplication Tables Check
+const MOCK_N=25, MOCK_MS=6000, MOCK_PAUSE=3000, MOCK_TREES=34;
+const HEAVY=[6,7,8,9,12];   // weighted more heavily in the real check
+// A forest friend moves in when every fact in a table is a Tree or Great tree
+const FRIENDS={10:['🦉','an owl'],2:['🐿️','a squirrel'],5:['🦔','a hedgehog'],11:['🐇','a rabbit'],3:['🦊','a fox'],
+  4:['🐦','a robin'],9:['🦌','a deer'],6:['🦡','a badger'],8:['🦋','a butterfly'],12:['🐸','a frog'],7:['🐞','a ladybird']};
+const friendName=t=>FRIENDS[t][1].split(' ')[1];
+// Shown before a newly planted table, with three worked examples
+const TABLE_INTROS={10:'To times by 10, count in tens.',2:'To times by 2, double the number.',
+  5:'To times by 5, times by 10, then halve it.',11:'To times by 11, write the digit twice.',
+  3:'To times by 3, double the number, then add one more lot.',4:'To times by 4, double it, then double again.',
+  9:'To times by 9, times by 10, then take one lot away.',6:'To times by 6, times by 5, then add one more lot.',
+  8:'To times by 8, double it three times.',12:'To times by 12, times by 10 and by 2, then add them.',
+  7:'To times by 7, times by 5 and by 2, then add them.'};
+const VAPID_PUBLIC_KEY='BFXwFsqbBKnp3g-1oVvI3UoYA31muXHWVXfwVK-6fo6YkYhG7SiOZmTtv04UMQMbGR1JekoavPmquSnJv82b31Q';
 const ALL=[];for(let a=2;a<=12;a++)for(let b=a;b<=12;b++)ALL.push(a+'x'+b);
 const parse=k=>k.split('x').map(Number);
 const key=(a,b)=>Math.min(a,b)+'x'+Math.max(a,b);
@@ -24,16 +39,19 @@ async function api(path,body,method){
 
 /* progress sync: changes queue on the device and are sent in the background,
    so a dropped connection mid-round loses nothing */
-let pending=null, flushing=null, syncTimer=null, unsaved=false;
+let pending=null, flushing=null, syncTimer=null, unsaved=false, offline=false, needLogin=false;
 const emptyPending=()=>({facts:{},answers:[],meta:null});
 const pkey=()=>'ttf-pending-'+kid.id;
 function loadPending(){try{pending=JSON.parse(localStorage.getItem(pkey()))||emptyPending()}catch(e){pending=emptyPending()}}
 function storePending(){try{localStorage.setItem(pkey(),JSON.stringify(pending))}catch(e){}}
 const hasPending=()=>pending&&(pending.meta||pending.answers.length||Object.keys(pending.facts).length);
-function queue(){storePending();clearTimeout(syncTimer);syncTimer=setTimeout(flush,400)}
+function queue(){storePending();storeSnap();clearTimeout(syncTimer);syncTimer=setTimeout(flush,400)}
+// The last known forest is kept on the device so a round can be played with no connection.
+function storeSnap(){if(kid)LS.set('ttf-snap',JSON.stringify({kid}))}
+function readSnap(){try{return JSON.parse(LS.get('ttf-snap'))}catch(e){return null}}
 function saveFact(k){pending.facts[k]=kid.facts[k];queue()}
 function logAnswer(a){pending.answers.push(a);queue()}
-function saveMeta(){pending.meta={tables:kid.tables,streak:kid.streak,lastDay:kid.lastDay,assessedAt:kid.assessedAt,theme:kid.theme||'auto'};queue()}
+function saveMeta(){pending.meta={tables:kid.tables,streak:kid.streak,lastDay:kid.lastDay,assessedAt:kid.assessedAt,theme:kid.theme||'auto',extra:kid.extra};queue()}
 async function flush(){
   if(flushing)await flushing;
   if(!kid||!hasPending())return true;
@@ -41,13 +59,13 @@ async function flush(){
   const body={facts:sending.facts,answers:sending.answers.slice(0,200)};
   if(sending.meta)body.meta=sending.meta;
   pending.answers=sending.answers.slice(200);
-  flushing=api('/child/sync',body).then(()=>{unsaved=false;storePending();if(pending.answers.length)queue();return true},e=>{
+  flushing=api('/child/sync',body).then(()=>{unsaved=false;offline=false;needLogin=false;storePending();if(pending.answers.length)queue();return true},e=>{
     pending={facts:{...sending.facts,...pending.facts},answers:sending.answers.concat(pending.answers),meta:pending.meta||sending.meta};
-    storePending();unsaved=true;return false;
+    storePending();unsaved=true;if(e.status===401)needLogin=true;return false;
   }).finally(()=>{flushing=null});
   return flushing;
 }
-window.addEventListener('online',()=>flush());
+window.addEventListener('online',()=>flush().then(ok=>{if(ok){offline=false;if(view==='home')render()}}));
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
 
 /* learning model */
@@ -81,8 +99,8 @@ function hint(a,b){
 
 // The same strategies as hint(), as steps the child works through, typing each small answer.
 // The last step's answer is always the product.
-function walkSteps(a,b){
-  const s=HINT_ORDER.indexOf(a)<=HINT_ORDER.indexOf(b)?a:b, n=s===a?b:a, p=a*b;
+function walkSteps(a,b,force){
+  const s=force??(HINT_ORDER.indexOf(a)<=HINT_ORDER.indexOf(b)?a:b), n=s===a?b:a, p=a*b;
   const st=(say,q,ans)=>({say,q,ans});
   switch(s){
     case 10:return [st(`${n} lots of 10 is ${n} tens.`,`${n} tens`,p)];
@@ -159,6 +177,7 @@ function applyAssessment(p,picked,results){
     else if(passed.includes(a)||passed.includes(b))p.facts[k]={box:2,due:addDays(t0,1+(spread++%3))};  // untested facts from passed tables, spread over 3 days
   }
   p.assessedAt=Date.now();
+  p.extra={...p.extra,intros:passed.slice(),friends:[],restDay:null};   // tables they know need no introduction
   const unlocked=passed.length?checkUnlock(p):null;
   pending.facts={...p.facts};saveMeta();
   return {graded,passed,unlocked,tables:p.tables.slice()};
@@ -176,7 +195,7 @@ function applySeason(){
 
 /* install as an app */
 let installEvt=null;
-const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const isMobile=()=>isIOS()||/android|mobile/i.test(navigator.userAgent);
@@ -198,7 +217,7 @@ function installSheet(){
     <button class="cta" data-act="install-go">Install</button>`);
   sheet(`<h2>Install Times Table Forest</h2>
     <p>It works best as an app. In Safari:</p>
-    <ol class="steps"><li>Tap the Share button ${shareIcon} (bottom of the screen on iPhone, top on iPad).</li>
+    <ol class="install-steps"><li>Tap the Share button ${shareIcon} (bottom of the screen on iPhone, top on iPad).</li>
       <li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>.</li></ol>
     <p class="hint">Then open it from your home screen. You'll log in once more inside the app, so keep your Forest Pass handy.</p>`);
 }
@@ -213,7 +232,7 @@ async function doInstall(){
    only on screens where nothing is lost, never mid-round or while a Forest Pass is showing. */
 const VERSION=(document.currentScript&&new URL(document.currentScript.src).searchParams.get('v'))||'dev';
 let swReg=null, updateReady=false, applyingUpdate=false;
-const SAFE_TO_UPDATE=new Set(['loading','welcome','home','parent','assessPick']);
+const SAFE_TO_UPDATE=new Set(['loading','welcome','home','parent','assessPick','mockIntro']);
 if('serviceWorker' in navigator&&VERSION!=='__V__'){
   navigator.serviceWorker.register('/sw.js').then(reg=>{
     swReg=reg;
@@ -252,17 +271,34 @@ async function syncWakeLock(){
 }
 document.addEventListener('visibilitychange',syncWakeLock);
 
+/* read aloud: the device's own voice reads each question and strategy step. When it's on, the
+   answer timer (and the practice check clock) starts when the reading finishes. */
+const canSpeak='speechSynthesis' in window;
+let voice=null;
+function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>v.lang==='en-GB')||vs.find(v=>/^en/.test(v.lang))||null}
+if(canSpeak){pickVoice();speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}
+const readAloud=()=>canSpeak&&!!kid?.extra?.readAloud;
+const spoken=s=>s.replace(/×/g,' times ').replace(/÷/g,' divided by ').replace(/−/g,' take away ').replace(/\+/g,' add ').replace(/\?/g,' what ').replace(/=/g,' equals ');
+function speak(text,then){
+  if(!readAloud()){then&&then();return}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=.95;if(voice)u.voice=voice;
+  let fired=false;const fin=()=>{if(!fired){fired=true;then&&then()}};
+  u.onend=fin;u.onerror=fin;setTimeout(fin,6000);   // never leave a question waiting on a silent voice
+  speechSynthesis.speak(u);
+}
+
 /* views */
 const app=document.getElementById('app');
 let view='loading', me={role:null}, kid=null, kids=[], card=null, cardFor='parent';
-let round=null, summary=null, assessResult=null, picked=[], plan=[], armed=null, flash='', busy=false;
+let round=null, summary=null, assessResult=null, mockResult=null, picked=[], plan=[], armed=null, flash='', busy=false;
 
 function render(){
   applySeason();
   ({loading:renderLoading,welcome:renderWelcome,childLogin:renderChildLogin,recover:renderRecover,
     grownup:renderGrownup,parent:renderParent,card:renderCard,
     assessPick:renderAssessPick,assessResult:renderAssessResult,
-    home:renderHome,play:renderPlay,summary:renderSummary})[view]();
+    home:renderHome,play:renderPlay,summary:renderSummary,mockIntro:renderMockIntro,mockResult:renderMockResult})[view]();
   syncWakeLock();
 }
 function go(v){view=v;flash='';armed=null;render();maybeUpdate();autoInstallSheet()}
@@ -328,7 +364,7 @@ function renderGrownup(){
       <label>Password<input name="password" type="password" autocomplete="${up?'new-password':'current-password'}" minlength="10" required>
         ${up?'<span class="field-hint">At least 10 characters.</span>':''}</label>
       ${up?`<label class="check"><input type="checkbox" name="consent"> I'm the parent or carer of the children I'll add.</label>
-      <p class="hint small">We store your email, each child's first name or nickname, and their times table answers. Failed logins are kept for a day to stop guessing. No ads, no tracking.</p>`:''}
+      <p class="hint small">We store your email, each child's first name or nickname, and their times table answers. If a daily reminder is turned on, we also store that device's notification address and chosen time. Failed logins are kept for a day to stop guessing. No ads, no tracking.</p>`:''}
       ${err()}
       <button class="cta" ${busy?'disabled':''}>${up?'Create account':'Log in'}</button>
     </form>
@@ -342,6 +378,7 @@ function renderParent(){
       <div class="kid-hd"><span class="pname">${esc(c.name)}</span><span class="pmeta">${esc(c.username)}</span></div>
       <p class="pmeta">${c.assessedAt?`${c.planted} of 66 planted`:'Starting check not done yet'}${c.lastPlayed?` · last played ${ago(c.lastPlayed)}`:''}</p>
       <div class="kid-acts">
+        <button class="link" data-act="tricky" data-id="${c.id}">Tricky facts</button>
         <button class="link" data-act="kid-reset" data-id="${c.id}">${a==='kid-reset'?'Tap again: new password and card':'New Forest Pass'}</button>
         <button class="link" data-act="kid-reassess" data-id="${c.id}">${a==='kid-reassess'?'Tap again: wipe progress and redo the check':'Redo starting check'}</button>
         <button class="link danger ${a==='kid-remove'?'armed':''}" data-act="kid-remove" data-id="${c.id}">${a==='kid-remove'?`Tap again to remove ${esc(c.name)} and their forest`:'Remove'}</button>
@@ -468,27 +505,46 @@ function renderHome(){
            :`<button class="cell" data-act="cell" data-a="${a}" data-b="${b}" aria-label="${a} times ${b}: ${STAGES[s]}">${tree(s)}</button>`;
     }
   }
-  const next=nextTable(p);
+  const next=nextTable(p),trees=ALL.filter(k=>fact(p,k).box>=4).length,friends=p.extra.friends||[];
+  const restRecent=p.extra.restDay&&today()-p.extra.restDay<7*864e5;
+  const mock=mockReady(p)?'<button class="cta quiet" data-act="mock-intro">📝 Practice check</button>'
+    :!next?`<p class="hint small center">The practice check opens when ${MOCK_TREES} trees have grown. You have ${trees}.</p>`:'';
   app.innerHTML=`<main class="screen scroll">
     <header class="bar start"><h1>${esc(p.name)}'s forest</h1><button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
     ${installBanner()}
-    ${unsaved?'<p class="warn">Some answers haven\'t saved yet. They\'ll save when the internet is back.</p>':''}
+    ${needLogin?'<p class="warn">Your login has run out. <button class="link inline" data-act="logout">Log in again</button> to save your answers.</p>'
+      :offline?'<p class="warn">You\'re offline. You can still play, and your answers will save when you\'re back online.</p>'
+      :unsaved?'<p class="warn">Some answers haven\'t saved yet. They\'ll save when the internet is back.</p>':''}
     <section class="today"><p class="status">${status}</p>
-      <p class="streak">${p.streak>1?`${p.streak} days in a row`:'Play a little every day to keep the forest growing.'}</p>
-      <button class="cta" data-act="play">${label}</button></section>
+      <p class="streak">${p.streak>1?`${p.streak} days in a row${restRecent?' · rest day used this week':''}`:'Play a little every day to keep the forest growing.'}</p>
+      <div class="stack tight"><button class="cta" data-act="play">${label}</button>${mock}</div></section>
     <section class="forest" aria-label="Times table forest">${g}</section>
     <div class="legend">${[1,2,3,4,5].map(s=>`<span>${tree(s)}${STAGES[s]}</span>`).join('')}</div>
+    <section class="friends" aria-labelledby="ff"><h2 id="ff">Forest friends</h2>
+      ${friends.length?`<ul>${friends.map(t=>`<li><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span>${friendName(t)}<small>${t}s</small></li>`).join('')}</ul>`
+        :'<p class="hint small">Grow every tree in a times table into a Tree and a forest friend moves in.</p>'}</section>
     <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:' Every table is planted.'}</p>
+    <button class="link" data-act="bests">⏱ Personal bests</button>
   </main>`;
 }
 
 // The total shown is fixed when the round starts. Every new fact comes back once later in the round
 // (asked again if right, corrected if wrong), so those slots are counted up front. Corrections for
 // facts the child already had are "extra goes": they don't change the total.
+const pendingIntro=p=>ORDER.find(t=>p.tables.includes(t)&&!(p.extra.intros||[]).includes(t));
 function startRound(){
+  const t=pendingIntro(kid);if(t!==undefined)return startTableIntro(t);
   const items=buildRound(kid);
   round={items,planned:items.length+items.filter(x=>x.isNew).length,i:0,input:'',mode:'ask',lock:false,res:{asked:0,right:0,quick:0,grown:0}};
   view='play';nextItem();
+}
+// A newly planted table starts with its strategy and three worked examples.
+function startTableIntro(t){
+  round={items:[2,3,4].map(n=>({k:key(t,n),example:true,a:t,b:n})),planned:3,i:0,input:'',mode:'ask',lock:false,tableIntro:t};
+  view='play';nextItem();
+}
+function finishTableIntro(){
+  kid.extra.intros=[...(kid.extra.intros||[]),round.tableIntro];saveMeta();round=null;startRound();
 }
 function startAssessment(){
   round={items:plan.map(x=>({...x})),planned:plan.length,i:0,input:'',mode:'ask',lock:false,assess:true,results:{}};
@@ -496,13 +552,28 @@ function startAssessment(){
 }
 function nextItem(){
   const r=round;
-  if(r.i>=r.items.length)return r.assess?finishAssessment():finishRound();
+  if(r.i>=r.items.length)return r.mock?finishMock():r.tableIntro?finishTableIntro():r.assess?finishAssessment():finishRound();
   const it=r.items[r.i];
-  const [x,y]=parse(it.k);[it.a,it.b]=Math.random()<.5?[x,y]:[y,x];
+  if(!it.example){const [x,y]=parse(it.k);[it.a,it.b]=Math.random()<.5?[x,y]:[y,x]}
+  // grown trees are sometimes asked the other ways round: 6 × ? = 42 or 42 ÷ 6
+  it.shape='mul';
+  if(!r.assess&&!r.mock&&!it.isNew&&!it.example&&fact(kid,it.k).box>=4){const x=Math.random();it.shape=x<1/3?'missing':x<2/3?'div':'mul'}
   r.input='';r.lock=false;r.mode='ask';
-  if(it.isNew&&!it.seen)startWalk('intro');
+  if(it.example)startWalk('example');
+  else if(it.isNew&&!it.seen)startWalk('intro');
   renderPlay();
-  if(r.mode==='ask')r.start=performance.now();
+  if(r.mode==='ask')askNow(it);else sayWalk();
+}
+const answerOf=it=>it.shape==='mul'?it.a*it.b:it.b;
+const qText=it=>it.shape==='missing'?`${it.a} × ? = ${it.a*it.b}`:it.shape==='div'?`${it.a*it.b} ÷ ${it.a}`:`${it.a} × ${it.b}`;
+const spokenQ=it=>it.shape==='missing'?`${it.a} times what equals ${it.a*it.b}?`:it.shape==='div'?`${it.a*it.b} divided by ${it.a}?`:`${it.a} times ${it.b}?`;
+function askNow(it){
+  const r=round;r.start=performance.now();
+  speak(spokenQ(it),()=>{if(round!==r||r.items[r.i]!==it||r.mode!=='ask')return;r.start=performance.now();if(r.mock)startMockClock()});
+}
+function sayAgain(){
+  const r=round;if(!r)return;
+  if(r.mode==='walk')sayWalk();else if(r.mode==='ask'&&!r.mock)speak(spokenQ(r.items[r.i]));
 }
 function renderPlay(){
   syncWakeLock();
@@ -510,42 +581,60 @@ function renderPlay(){
   const pct=Math.round(Math.min(1,done/r.planned)*100),count=it.extra?done:Math.min(done+1,r.planned);
   let stage;
   const walkDone=r.mode==='walk'&&r.walk.i>=r.walk.steps.length;
+  const paused=r.mode==='pause';
   if(r.mode==='walk')stage=walkHtml(it);
-  else stage=`${r.assess?'<p class="tag">Starting check</p>':it.extra?'<p class="tag">Extra go</p>':''}<p class="q">${it.a} × ${it.b}</p><div class="ans" id="ans" aria-live="polite">${r.input}</div>
+  else if(paused)stage=`<p class="tag">Practice check</p><p class="pause-msg">Next question…</p>`;
+  else stage=`${r.mock?'<p class="tag">Practice check</p><div class="clock" aria-hidden="true"><div class="clock-fill" id="clock"></div></div>'
+      :r.assess?'<p class="tag">Starting check</p>':it.extra?'<p class="tag">Extra go</p>':''}<p class="q ${it.shape==='missing'?'long':''}">${qText(it)}</p><div class="ans" id="ans" aria-live="polite">${r.input}</div>
       <div id="msg"><p class="msg"></p></div>`;
   const keys=[1,2,3,4,5,6,7,8,9].map(n=>`<button class="key" data-key="${n}">${n}</button>`).join('')+
     `<button class="key" data-key="del" aria-label="Delete">⌫</button><button class="key" data-key="0">0</button><button class="key go" data-key="go">Go</button>`;
   app.innerHTML=`<main class="screen play">
     <header class="pbar"><button class="icon" data-act="quit" aria-label="Stop">×</button>
-      <div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="count">${count}/${r.planned}</span></header>
+      <div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="count">${count}/${r.planned}</span>
+      ${readAloud()&&!r.mock?'<button class="icon" data-act="say-again" aria-label="Read it again">🔊</button>':''}</header>
     <section class="stage">${stage}</section>
-    <section class="pad ${walkDone?'off':''}">${keys}</section></main>`;
+    <section class="pad ${walkDone||paused?'off':''}">${keys}</section></main>`;
 }
 
 /* Strategy walk-through: shown for a new seed ('intro') and after a wrong answer ('fix').
    One step at a time; a wrong step shows its answer and the child types it. */
-function startWalk(kind){const it=round.items[round.i];round.mode='walk';round.input='';round.lock=false;round.walk={kind,steps:walkSteps(it.a,it.b),i:0,reveal:false}}
+function startWalk(kind){
+  const it=round.items[round.i];round.mode='walk';round.input='';round.lock=false;
+  round.walk={kind,steps:walkSteps(it.a,it.b,kind==='example'?round.tableIntro:undefined),i:0,reveal:false};
+}
+function sayWalk(){
+  const r=round,w=r.walk,it=r.items[r.i],cur=w.steps[w.i];
+  if(!cur)return speak(`${it.a} times ${it.b} is ${it.a*it.b}.`);
+  const lead=w.kind==='example'&&w.i===0&&r.i===0?TABLE_INTROS[r.tableIntro]+' ':'';
+  speak(`${lead}${cur.say} ${spoken(cur.q)}?`);
+}
 function walkHtml(it){
   const w=round.walk,cur=w.steps[w.i],done=!cur;
   const past=w.steps.slice(0,w.i).map(s=>`<li class="past"><span>${s.q} = <b>${s.ans}</b></span></li>`).join('');
   const now=cur?`<li class="now"><span class="say">${cur.say}</span>
       <span class="step-eq">${cur.q} = <span class="ans sm" id="ans" aria-live="polite">${round.input}</span></span>
       ${w.reveal?`<span class="reveal">It's ${cur.ans}. Type ${cur.ans}.</span>`:''}</li>`:'';
+  const ex=w.kind==='example',last=round.i>=round.items.length-1;
+  const tag=ex?`The ${round.tableIntro} times table`:w.kind==='intro'?`${tree(1)} New seed`:"Let's work it out";
+  const btn=ex?(last?'Start my round':'Next example'):w.kind==='intro'?'Got it':'Carry on';
   return `<div class="walk">
-    <p class="tag">${w.kind==='intro'?`${tree(1)} New seed`:"Let's work it out"}</p>
+    <p class="tag">${tag}</p>
+    ${ex?`<p class="intro-line">${TABLE_INTROS[round.tableIntro]}</p>`:''}
     <p class="walk-q">${it.a} × ${it.b}${done?` = ${it.a*it.b}`:''}</p>
     <ol class="steps">${past}${now}</ol>
-    ${done?`<button class="cta" data-act="walk-next">${w.kind==='intro'?'Got it':'Carry on'}</button>`:''}</div>`;
+    ${done?`<button class="cta" data-act="walk-next">${btn}</button>`:''}</div>`;
 }
 function walkSubmit(){
   const r=round,w=r.walk,s=w.steps[w.i];
-  if(Number(r.input)===s.ans){w.i++;w.reveal=false;r.input='';return renderPlay()}
+  if(Number(r.input)===s.ans){w.i++;w.reveal=false;r.input='';renderPlay();return sayWalk()}
   w.reveal=true;r.input='';renderPlay();
   const a=document.getElementById('ans');if(a)a.classList.add('wrong','shake');
+  speak(`It's ${s.ans}. Type ${s.ans}.`);
 }
 function walkNext(){
   const r=round,it=r.items[r.i];
-  if(r.walk.kind==='intro'){it.seen=true;r.mode='ask';r.walk=null;renderPlay();r.start=performance.now()}
+  if(r.walk.kind==='intro'){it.seen=true;r.mode='ask';r.walk=null;renderPlay();askNow(it)}
   else{r.i++;nextItem()}
 }
 
@@ -561,13 +650,14 @@ function requeue(item,gap){
   if(later.some(x=>x.k===item.k)){if(!item.extra)r.planned--;return}   // a counted slot that isn't needed
   r.items.splice(Math.min(r.items.length,r.i+1+gap),0,item);
 }
-const kindOf=it=>it.assess?'assess':it.practice?'practice':it.reask?'reask':it.retry?'retry':it.isNew?'new':'review';
+const kindOf=it=>it.mock?'mock':it.assess?'assess':it.practice?'practice':it.reask?'reask':it.retry?'retry':it.isNew?'new':'review';
 function submit(){
   const r=round,it=r.items[r.i];if(!r.input)return;
   const ansEl=document.getElementById('ans'),msg=document.getElementById('msg');
-  const correct=Number(r.input)===it.a*it.b;
+  const correct=Number(r.input)===answerOf(it);
   const ms=performance.now()-r.start;
-  logAnswer({fact:it.k,a:it.a,b:it.b,given:Number(r.input),correct,ms:Math.min(Math.round(ms),36e5),kind:kindOf(it),at:Date.now()});
+  logAnswer({fact:it.k,a:it.a,b:it.b,given:Number(r.input),correct,ms:Math.min(Math.round(ms),36e5),kind:kindOf(it),shape:it.shape,at:Date.now()});
+  if(r.mock)return mockAnswered(correct,Number(r.input));
   if(r.assess){
     // no right/wrong shown during the check, so it measures what they know rather than teaching
     r.results[it.k]={correct,ms};r.lock=true;ansEl.classList.add('given');
@@ -594,15 +684,84 @@ function submit(){
     requeue({k:it.k,retry:true,extra:!it.isNew},3);   // a new fact's comeback slot is already counted
     r.lock=true;ansEl.classList.add('wrong','shake');
     msg.innerHTML='<p class="msg">Not quite.</p>';
-    setTimeout(()=>{startWalk('fix');renderPlay()},700);
+    setTimeout(()=>{if(round!==r)return;startWalk('fix');renderPlay();sayWalk()},700);
   }
 }
 function finishRound(){
   const p=kid,t=today();
-  if(p.lastDay!==t){p.streak=Math.round((t-p.lastDay)/864e5)===1?p.streak+1:1;p.lastDay=t}
-  summary={...round.res,unlocked:checkUnlock(p)};saveMeta();round=null;view='summary';render();
+  if(p.lastDay!==t){
+    // one missed day a week doesn't break the run
+    const gap=Math.round((t-p.lastDay)/864e5),rest=p.extra.restDay;
+    if(gap===1)p.streak++;
+    else if(gap===2&&p.streak>0&&(!rest||t-rest>=7*864e5)){p.streak++;p.extra.restDay=addDays(t,-1)}
+    else p.streak=1;
+    p.lastDay=t;
+  }
+  summary={...round.res,unlocked:checkUnlock(p),friends:newFriends(p)};saveMeta();round=null;view='summary';render();
   flush().then(ok=>{if(!ok&&view==='summary')render()});
 }
+const tableGrown=(p,t)=>ALL.filter(k=>parse(k).includes(t)).every(k=>fact(p,k).box>=4);
+function newFriends(p){
+  const got=ORDER.filter(t=>!(p.extra.friends||[]).includes(t)&&tableGrown(p,t));
+  p.extra.friends=[...(p.extra.friends||[]),...got];return got;
+}
+
+/* practice check: 25 questions, 6 seconds each, 3-second pause, no feedback until the end,
+   like the real check. It doesn't change any trees. */
+function mockReady(p){return p.tables.length===ORDER.length&&ALL.filter(k=>fact(p,k).box>=4).length>=MOCK_TREES}
+function buildMock(){
+  const pool=ALL.map(k=>({k,w:parse(k).some(n=>HEAVY.includes(n))?2:1})),items=[];
+  while(items.length<MOCK_N){
+    let x=Math.random()*pool.reduce((s,f)=>s+f.w,0),i=0;
+    while((x-=pool[i].w)>0)i++;
+    items.push({k:pool.splice(i,1)[0].k,mock:true});
+  }
+  return items;
+}
+function startMock(){
+  round={items:buildMock(),planned:MOCK_N,i:0,input:'',mode:'ask',lock:false,mock:true,results:[]};
+  view='play';nextItem();
+}
+function startMockClock(){
+  const r=round;clearTimeout(r.timer);
+  const el=document.getElementById('clock');
+  if(el){el.style.animation='none';void el.offsetWidth;el.style.animation=`clock ${MOCK_MS}ms linear forwards`}
+  r.timer=setTimeout(()=>{
+    if(round!==r||r.mode!=='ask')return;
+    const it=r.items[r.i];
+    logAnswer({fact:it.k,a:it.a,b:it.b,given:null,correct:false,ms:MOCK_MS,kind:'mock',shape:'mul',at:Date.now()});
+    mockAnswered(false,null);
+  },MOCK_MS);
+}
+function mockAnswered(correct,given){
+  const r=round,it=r.items[r.i];clearTimeout(r.timer);
+  r.results.push({a:it.a,b:it.b,correct,given});
+  if(r.i>=r.items.length-1)return finishMock();
+  r.mode='pause';r.lock=true;renderPlay();
+  r.timer=setTimeout(()=>{if(round===r){r.i++;nextItem()}},MOCK_PAUSE);
+}
+function finishMock(){
+  const r=round,score=r.results.filter(x=>x.correct).length;
+  kid.extra.mocks=[...(kid.extra.mocks||[]),{at:Date.now(),score}].slice(-10);saveMeta();
+  mockResult={score,missed:r.results.filter(x=>!x.correct)};round=null;go('mockResult');flush();
+}
+function renderMockIntro(){
+  app.innerHTML=`<main class="screen scroll"><div class="done">${tree(5,'big')}<h1>Practice check</h1>
+    <p class="lead center">This is like the Year 4 Multiplication Tables Check.</p>
+    <ul class="rules"><li><b>${MOCK_N}</b> questions</li><li><b>6 seconds</b> to answer each one</li><li>A short pause between questions</li><li>Your score comes at the end</li></ul>
+    <p class="hint center">It's just practice. Your trees won't change.</p>
+    <button class="cta" data-act="mock-start">Start</button>
+    <button class="cta quiet" data-act="home">Not now</button></div></main>`;
+}
+function renderMockResult(){
+  const s=mockResult;
+  const msg=s.score===MOCK_N?'Every one right!':s.score>=20?'Brilliant work.':s.score>=13?'Good going. Keep growing your forest.':'Keep playing your daily rounds and try again soon.';
+  app.innerHTML=`<main class="screen scroll"><div class="done">${tree(s.score>=20?5:4,'big')}<h1>${s.score} out of ${MOCK_N}</h1>
+    <p class="lead center">${msg} The real check has no pass mark.</p>
+    ${s.missed.length?`<h2 class="mini">To practise</h2><ul class="missed">${s.missed.map(m=>`<li><span>${m.a} × ${m.b} = <b>${m.a*m.b}</b></span><small>${m.given===null?'no answer':'you said '+m.given}</small></li>`).join('')}</ul>`:''}
+    <button class="cta" data-act="home">Back to the forest</button></div></main>`;
+}
+
 function finishAssessment(){
   assessResult=applyAssessment(kid,picked,round.results);round=null;picked=[];go('assessResult');flush();
 }
@@ -612,6 +771,7 @@ function renderSummary(){
     <div class="stats"><span><b>${s.right}</b> of ${s.asked} right</span><span><b>${s.quick}</b> quick answers</span>
       <span><b>${s.grown}</b> ${s.grown===1?'tree':'trees'} grew</span></div>
     ${s.unlocked?`<p class="unlock">The ${s.unlocked} times table is now planted.</p>`:''}
+    ${(s.friends||[]).map(t=>`<p class="friend-new"><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span> ${FRIENDS[t][1][0].toUpperCase()+FRIENDS[t][1].slice(1)} has moved into your forest! Every ${t}s tree has grown.</p>`).join('')}
     ${unsaved?'<p class="warn center">Not saved yet. It will save when the internet is back.</p>':''}
     <button class="cta" data-act="home">Back to the forest</button>
     <button class="cta quiet" data-act="play">Play again</button></div></main>`;
@@ -627,9 +787,13 @@ function sheet(html){
     if(act==='season')return pickSeason(e.target.closest('[data-act]').dataset.s,bg);
     if(act==='how'){bg.remove();return howSheet()}
     if(act==='logout'){bg.remove();return logout()}
+    if(act==='read-aloud'){kid.extra.readAloud=!kid.extra.readAloud;saveMeta();bg.remove();settingsSheet();if(kid.extra.readAloud)speak('Questions will be read out loud.');return}
+    if(act==='reminder-on')return setReminder(bg);
+    if(act==='reminder-off')return clearReminder(bg);
     if(e.target===bg||act==='close'){bg.remove();maybeUpdate()}
   });
   document.body.appendChild(bg);bg.querySelector('[data-act=close]').focus();
+  return bg;
 }
 /* settings: the forest screen's cog. Add new settings here as sections or menu rows. */
 const cogIcon='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
@@ -640,9 +804,74 @@ function settingsSheet(){
       <div class="seasons" role="group" aria-label="Forest season">${SEASONS.map(([k,l])=>
         `<button data-act="season" data-s="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>
       <p class="hint small">Auto follows the time of year.</p></section>
+    <section class="set"><h3>Read aloud</h3>
+      <button class="toggle" data-act="read-aloud" aria-pressed="${!!kid.extra.readAloud}" ${canSpeak?'':'disabled'}>${kid.extra.readAloud?'On':'Off'}</button>
+      <p class="hint small">${canSpeak?'Reads each question out loud.':'This device can\'t read out loud.'}</p></section>
+    <section class="set"><h3>Daily reminder</h3>${reminderHtml()}</section>
     <nav class="menu"><button class="menu-row" data-act="how"><span>How the method works</span><span class="chev" aria-hidden="true">›</span></button>
       <button class="menu-row" data-act="logout"><span>Log out</span><span class="pmeta">${esc(kid.username)}</span></button></nav>`);
 }
+/* daily reminder: a push subscription for this device, sent by the reminders Worker */
+const pushable=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+function reminderSaved(){try{const r=JSON.parse(LS.get('ttf-reminder'));return r&&r.kid===kid.id?r:null}catch(e){return null}}
+function reminderHtml(){
+  if(!pushable())return `<p class="hint small">${isIOS()&&!standalone()?'Install the app first, then reminders can be turned on here.':'This device can\'t show reminders.'}</p>`;
+  if(Notification.permission==='denied')return '<p class="hint small">Notifications are switched off for this app in the device settings.</p>';
+  const saved=reminderSaved();
+  if(saved)return `<p class="rem-on">On, at ${esc(saved.time)} each day</p><button class="toggle" data-act="reminder-off">Turn off</button>`;
+  return `<div class="rem"><label for="remTime" class="vh">Reminder time</label><input type="time" id="remTime" value="17:00">
+    <button class="toggle" data-act="reminder-on">Turn on</button></div>
+    <p class="hint small">Ask a grown-up to set this up. One reminder a day, only if you haven't played yet.</p><p class="err small" id="remErr"></p>`;
+}
+const b64uBytes=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+async function setReminder(bg){
+  const time=bg.querySelector('#remTime')?.value||'17:00',errEl=bg.querySelector('#remErr');
+  try{
+    if(await Notification.requestPermission()!=='granted')throw new Error("Notifications weren't allowed.");
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uBytes(VAPID_PUBLIC_KEY)});
+    const j=sub.toJSON();
+    await api('/child/reminder',{endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,time,tz:Intl.DateTimeFormat().resolvedOptions().timeZone});
+    LS.set('ttf-reminder',JSON.stringify({kid:kid.id,time}));
+    bg.remove();settingsSheet();
+  }catch(e){if(errEl)errEl.textContent=e.message||"Couldn't turn reminders on."}
+}
+async function clearReminder(bg){
+  try{
+    const sub=await (await navigator.serviceWorker.ready).pushManager.getSubscription();
+    if(sub){await api('/child/reminder/off',{endpoint:sub.endpoint}).catch(()=>{});await sub.unsubscribe().catch(()=>{})}
+  }catch(e){}
+  LS.del('ttf-reminder');bg.remove();settingsSheet();
+}
+
+/* personal bests (child) and tricky facts (grown-up) */
+const factText=k=>{const [a,b]=parse(k);return `${a} × ${b}`};
+const secs=ms=>(ms/1000).toFixed(1)+' s';
+async function bestsSheet(){
+  const bg=sheet('<h2>Personal bests</h2><div id="bests"><p class="hint">Loading…</p></div>'),el=bg.querySelector('#bests');
+  try{
+    const s=await api('/child/stats');
+    el.innerHTML=!s.quickest.length?'<p class="hint">Play a round this week to set your first bests.</p>':`
+      <h3>Quickest this week</h3><ul class="bests">${s.quickest.map(q=>`<li><span>${factText(q.fact)}</span><b>${secs(q.ms)}</b></li>`).join('')}</ul>
+      ${s.faster.length?`<h3>Getting faster</h3><ul class="bests">${s.faster.map(q=>`<li><span>${factText(q.fact)}</span><b>${secs(q.before)} → ${secs(q.after)}</b></li>`).join('')}</ul>`:''}
+      <p class="hint small">${s.rightThisWeek} right answers in the last 7 days.</p>`;
+  }catch(e){el.innerHTML=`<p class="hint">${e.status===0?'Personal bests need the internet.':esc(e.message)}</p>`}
+}
+async function trickySheet(id){
+  const c=kids.find(k=>k.id===id);
+  const bg=sheet(`<h2>${esc(c?c.name:'')}: tricky facts</h2><div id="tricky"><p class="hint">Loading…</p></div>`),el=bg.querySelector('#tricky');
+  try{
+    const t=await api(`/parent/children/${id}/tricky`);
+    const pct=t.week.asked?Math.round(t.week.right/t.week.asked*100):0;
+    el.innerHTML=`<p>${t.week.asked?`This week: ${t.week.asked} questions, ${pct}% right.`:'No questions answered this week.'}</p>
+      ${t.facts.length?`<p class="hint small">Most often wrong, then slowest, over the last 30 days. Good ones to practise together.</p>
+        <ul class="tricky">${t.facts.map(f=>`<li><span class="tf">${factText(f.fact)} = ${parse(f.fact)[0]*parse(f.fact)[1]}</span>
+          <span class="pmeta">wrong ${f.wrong} of ${f.asked}${f.avgMs?` · usually ${secs(f.avgMs)}`:''} · ${STAGES[f.box]}</span></li>`).join('')}</ul>`
+        :'<p class="hint">Nothing tricky in the last 30 days.</p>'}
+      ${t.mocks.length?`<h3>Practice checks</h3><ul class="bests">${t.mocks.slice().reverse().map(m=>`<li><span>${new Date(m.at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span><b>${m.score} / ${MOCK_N}</b></li>`).join('')}</ul>`:''}`;
+  }catch(e){el.innerHTML=`<p class="hint">${esc(e.message)}</p>`}
+}
+
 function pickSeason(s,bg){
   kid.theme=s;saveMeta();render();
   bg.querySelectorAll('[data-act=season]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===s)));
@@ -661,30 +890,43 @@ function howSheet(){
   <li>6 × 7 and 7 × 6 are one tree. That turns 121 facts into 66.</li>
   <li>Mistakes are fixed straight away. The child works the fact out step by step with its strategy, and it comes back three questions later.</li>
   <li>Accuracy first, then speed. There's no countdown. An answer slower than 6 seconds (the limit in the Year 4 Multiplication Tables Check) still counts, but the tree can't grow past a sprout until it comes quickly.</li>
-  <li>Little and often. About 20 questions, a few minutes a day. A table unlocks when most planted trees have sprouted.</li></ol>`);
+  <li>Little and often. About 20 questions, a few minutes a day. A table unlocks when most planted trees have sprouted. Missing one day a week doesn't break a run of days.</li>
+  <li>Grown trees are sometimes asked the other ways round, like 6 × ? = 42 or 42 ÷ 6, so the whole fact family sticks.</li>
+  <li>When every tree in a table is grown, a forest friend moves in. Once most of the forest is grown, a practice check like the Year 4 check opens up.</li></ol>`);
 }
 
 /* flows */
 async function boot(){
   try{localStorage.removeItem('times-table-forest-v1')}catch(e){}   // progress from the old device-only version
-  try{me=await api('/me')}catch(e){me={role:null};flash=e.message}
+  try{me=await api('/me')}catch(e){
+    if(e.status===0&&readSnap()){me={role:'child'};return enterChild()}   // offline: open the last forest on this device
+    me={role:null};flash=e.message;
+  }
   if(me.role==='child')await enterChild();
   else if(me.role==='parent')await enterParent();
   else{const f=flash;go('welcome');if(f){flash=f;render()}}
 }
 async function enterChild(){
-  try{kid=await api('/child/state')}catch(e){return signedOut(e)}
+  try{kid=await api('/child/state');offline=false}catch(e){
+    const snap=readSnap();
+    if(e.status===0&&snap?.kid){kid=snap.kid;offline=true}else return signedOut(e);
+  }
+  kid.extra=kid.extra||{};
   loadPending();
   // answers saved on this device but not yet on the server win over the server copy
   Object.assign(kid.facts,pending.facts);if(pending.meta)Object.assign(kid,pending.meta);
-  if(hasPending())flush();
+  kid.extra=kid.extra||{};
+  if(!kid.extra.intros)kid.extra.intros=kid.assessedAt?kid.tables.slice():[];   // children from before table intros
+  if(!kid.extra.friends)kid.extra.friends=[];
+  storeSnap();
+  if(hasPending()&&!offline)flush();
   picked=[];plan=[];go(kid.assessedAt?'home':'assessPick');
 }
 async function enterParent(){
   try{kids=(await api('/parent/children')).children}catch(e){return signedOut(e)}
   go('parent');
 }
-function signedOut(e){me={role:null};kid=null;go('welcome');if(e){flash=e.status===401?'':e.message;render()}}
+function signedOut(e){me={role:null};kid=null;offline=false;needLogin=false;go('welcome');if(e){flash=e.status===401?'':e.message;render()}}
 
 async function submitForm(name,f){
   const v=n=>(f.elements[n]?f.elements[n].value:'').trim();
@@ -729,7 +971,10 @@ async function parentAction(act,id){
   }catch(e){flash=e.message;render()}
 }
 
-function logout(){flush().finally(()=>api('/logout',{}).catch(()=>{}).finally(()=>{kid=null;kids=[];signedOut()}))}
+function logout(){
+  if(canSpeak)speechSynthesis.cancel();
+  flush().finally(()=>api('/logout',{}).catch(()=>{}).finally(()=>{LS.del('ttf-snap');kid=null;kids=[];signedOut()}));
+}
 
 /* events */
 app.addEventListener('submit',e=>{
@@ -749,7 +994,12 @@ app.addEventListener('click',e=>{
     case 'logout':logout();break;
     case 'play':startRound();break;
     case 'home':go('home');break;
-    case 'quit':round=null;go(kid.assessedAt?'home':'assessPick');break;
+    case 'quit':if(round)clearTimeout(round.timer);round=null;if(canSpeak)speechSynthesis.cancel();go(kid.assessedAt?'home':'assessPick');break;
+    case 'say-again':sayAgain();break;
+    case 'mock-intro':go('mockIntro');break;
+    case 'mock-start':startMock();break;
+    case 'bests':bestsSheet();break;
+    case 'tricky':trickySheet(+b.dataset.id);break;
     case 'walk-next':walkNext();break;
     case 'cell':cellSheet(+b.dataset.a,+b.dataset.b);break;
     case 'pick-t':{const t=+b.dataset.t;picked=picked.includes(t)?picked.filter(x=>x!==t):[...picked,t];plan=buildAssessment(picked);render();break}

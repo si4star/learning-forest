@@ -17,7 +17,7 @@ Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. I
 - Passwords and recovery codes are stored as PBKDF2-SHA256 hashes (10,000 iterations for now; see **Upgrade later**). Sessions are random tokens in HttpOnly, Secure, SameSite=Lax cookies (30 days for grown-ups, 180 days for children).
 - 10 failed logins per account, or 50 per IP address, in 15 minutes locks out further attempts for 15 minutes.
 
-Data held: grown-up email; child first name or nickname; facts progress; chosen season; every answer (fact, answer given, right/wrong, time taken, kind). Failed login records are deleted after a day. The font is self-hosted, so the page makes no third-party requests.
+Data held: grown-up email; child first name or nickname; facts progress; settings (season, read aloud); forest friends; practice check scores; for reminders, the device's push address, time and time zone; every answer (fact, answer given, right/wrong, time taken, kind). Failed login records are deleted after a day. The font is self-hosted, so the page makes no third-party requests.
 
 ## Starting check
 
@@ -58,8 +58,8 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 
 | Season | Look |
 | --- | --- |
-| Spring | Pale fresh green, light green trees, pink blossom, drifting petals |
-| Summer | The original greens, orange fruit, nothing falling |
+| Spring | Cherry Blossom: pink trees with white and deep-pink flowers, drifting petals, pink buttons |
+| Summer | Strawberry Meadow: lush greens, strawberries and wild strawberries, floating dandelion seeds |
 | Autumn | Warm cream, orange and gold trees, red apples, falling leaves |
 | Winter | Darkest: night blue with dark pine trees, snow on the treetops and ground, red berries, dim falling snow |
 
@@ -67,6 +67,30 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 - A child can pick a season in Settings (the cog on the forest screen). The choice is saved to their account.
 - Screens before login follow the date.
 - Drifting stops if the device is set to reduce motion.
+
+## Features
+
+- **Table introductions.** When a table is newly planted, the next round opens with its strategy in one sentence and three worked examples (×2, ×3, ×4) using that table's strategy. Tables passed in the starting check skip this.
+- **Question shapes.** Trees (and Great trees) are sometimes asked as `6 × ? = 42` or `42 ÷ 6` (a third each), so the whole fact family is practised. A wrong answer walks through the multiplication.
+- **Read aloud** (Settings). The device's own voice reads each question and strategy step. The answer timer starts when the reading ends. A 🔊 button repeats it.
+- **Forest friends.** When every fact in a table is a Tree or Great tree, an animal moves in (10s owl, 2s squirrel, 5s hedgehog, 11s rabbit, 3s fox, 4s robin, 9s deer, 6s badger, 8s butterfly, 12s frog, 7s ladybird). Friends stay once earned.
+- **Gentler streak.** One missed day in any 7 doesn't break a run of days.
+- **Personal bests.** Quickest facts in the last 7 days, and facts whose best time beat the week before by 0.3 s or more.
+- **Practice check.** Opens when every table is planted and at least 34 of 66 facts are Trees. 25 questions, 6 seconds each, a 3-second pause between them, no feedback until the end. The 6, 7, 8, 9 and 12 tables are weighted twice as heavily. It doesn't change any trees. The last 10 scores are kept.
+- **Tricky facts** (grown-up screen). For each child: this week's questions and % right; up to 8 facts, ordered by how often they're wrong, then by how slow they are, over the last 30 days; and practice check scores.
+- **Daily reminder** (Settings, on the child's device). One notification a day at the chosen time, only if the child hasn't played yet that day. Needs the reminders Worker (below). On iPhone and iPad it needs iOS 16.4 or later, and the app installed to the home screen.
+- **Offline play.** The last forest is kept on the device. With no connection the app opens it and rounds can be played; answers save when the connection returns. Logging in, personal bests and the practice check need the internet.
+
+## Daily reminders (one-off setup)
+
+Pages Functions can't run on a schedule, so a small separate Worker sends the reminders (`workers/reminders/`, every 15 minutes). It's on the Workers Free plan.
+
+1. **D1 database ID.** Storage & Databases → D1 → `tree-tables` → copy the **Database ID**. Paste it into `workers/reminders/wrangler.toml` in place of `REPLACE_WITH_D1_DATABASE_ID` (or send it over and it'll be committed).
+2. **Create the Worker.** Workers & Pages → Create → **Import a repository** → `si4star/tree-tables`. Set **Root directory** to `workers/reminders`. Leave the build command empty. Deploy.
+3. **Secret.** In the new Worker → Settings → Variables and Secrets → add a **Secret** named `VAPID_PRIVATE_JWK` with the private key (supplied separately, never committed). Redeploy.
+4. If the site isn't at `https://tree-tables.pages.dev`, change `SITE_URL` in `wrangler.toml`.
+
+The matching public key is in `src/server/push.js` and `public/js/app.js` (`VAPID_PUBLIC_KEY`). If the key pair is ever replaced, change both and existing devices must turn reminders off and on again.
 
 ## Method
 
@@ -119,8 +143,8 @@ No data migration is needed. Each stored hash records its own iteration count, s
 npm install
 npx playwright install chromium   # once, for the tests
 npm run dev          # builds, then serves http://localhost:8788 with a local D1 database in .wrangler/
-npm test             # end-to-end test against the running dev server (BASE=... to override;
-                     # REBUILD="npm run build" also tests the update flow)
+npm test             # reminders unit test, then end-to-end tests against the running dev server
+                     # (BASE=... to override; REBUILD="npm run build" also tests the update flow)
 ```
 
 ## Layout
@@ -140,12 +164,14 @@ npm test             # end-to-end test against the running dev server (BASE=... 
 | `src/server/auth.js` | Password hashing and session tokens |
 | `src/server/words.js` | Username, password and recovery code generation |
 | `src/server/schema.js` | D1 schema and migrations |
-| `tests/e2e.mjs` | End-to-end test |
+| `src/server/push.js` | Web Push (VAPID) signing and sending |
+| `workers/reminders/` | Scheduled Worker that sends daily reminders |
+| `tests/e2e.mjs` | End-to-end test: accounts, starting check, rounds, sync, PWA |
+| `tests/features.mjs` | End-to-end test: shapes, read aloud, friends, streak, bests, practice check, tricky facts, reminders, offline |
+| `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
 
 ## Not built yet
 
-- Timed 25-question mock of the Multiplication Tables Check.
-- Parent view of the weakest facts (the answer log needed for it is already stored).
 - **Grown-up password reset by email** (planned). Until then a grown-up who forgets their password can't get back in. The current design leaves room for it:
   - Emails are stored lowercase and unique, so one email maps to one account.
   - Schema changes go in a new migration in `src/server/schema.js`: a `password_resets(token_hash, parent_id, expires_at, used_at)` table. Store only a hash of the token, as sessions do.

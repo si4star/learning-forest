@@ -51,6 +51,22 @@ const MIGRATIONS = [
   [
     `ALTER TABLE children ADD COLUMN theme TEXT NOT NULL DEFAULT 'auto'`,
   ],
+  [
+    // extra: per-child settings and progress extras as JSON (read aloud, forest friends,
+    // table intros seen, streak rest day, practice check scores). New keys need no migration.
+    `ALTER TABLE children ADD COLUMN extra TEXT NOT NULL DEFAULT '{}'`,
+    `ALTER TABLE answers ADD COLUMN shape TEXT NOT NULL DEFAULT 'mul'`,
+    `CREATE TABLE IF NOT EXISTS push_subs(
+      endpoint TEXT PRIMARY KEY,
+      child_id INTEGER NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      time TEXT NOT NULL,
+      tz TEXT NOT NULL,
+      last_sent TEXT,
+      created_at INTEGER NOT NULL)`,
+    `CREATE INDEX IF NOT EXISTS push_subs_child ON push_subs(child_id)`,
+  ],
 ];
 
 let ready = null;

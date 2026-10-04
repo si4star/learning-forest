@@ -39,3 +39,17 @@ self.addEventListener('fetch', e => {
   }
   e.respondWith(caches.open(CACHE).then(c => c.match(e.request)).then(r => r || fetch(e.request)));
 });
+
+// Daily reminder (sent with no body by the reminders Worker)
+self.addEventListener('push', e => {
+  e.waitUntil(self.registration.showNotification('Your forest is waiting 🌳', {
+    body: 'A few minutes of times tables will help your trees grow.',
+    icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag: 'daily-reminder',
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then(ws => (ws.length ? ws[0].focus() : self.clients.openWindow('/'))));
+});

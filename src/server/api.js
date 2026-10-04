@@ -8,7 +8,8 @@ const FAIL_WINDOW = 15 * 60e3, FAIL_LIMIT = 10, IP_FAIL_LIMIT = 50;
 const MAX_CHILDREN = 10;
 const COOKIE = 'tf_session';
 const ORDER = [10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7];
-const KINDS = new Set(['assess', 'new', 'reask', 'review', 'retry', 'practice']);
+const KINDS = new Set(['assess', 'new', 'reask', 'review', 'retry', 'practice', 'mock']);
+const SHAPES = new Set(['mul', 'missing', 'div']);
 const THEMES = ['auto', 'spring', 'summer', 'autumn', 'winter'];
 
 class HttpError extends Error {
@@ -123,6 +124,24 @@ const isFact = k => {
   return !!m && +m[1] >= 2 && +m[2] <= 12 && +m[1] <= +m[2];
 };
 const isInt = (n, lo, hi) => Number.isInteger(n) && n >= lo && n <= hi;
+const tableList = x => Array.isArray(x) && x.length <= 11 && x.every(t => ORDER.includes(t)) && new Set(x).size === x.length;
+
+// Only known keys are kept, each checked; anything else is dropped.
+function cleanExtra(x) {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) throw new HttpError(400, 'Bad progress.');
+  const out = {};
+  if ('readAloud' in x) { if (typeof x.readAloud !== 'boolean') throw new HttpError(400, 'Bad progress.'); out.readAloud = x.readAloud; }
+  for (const k of ['friends', 'intros']) if (k in x) { if (!tableList(x[k])) throw new HttpError(400, 'Bad progress.'); out[k] = x[k]; }
+  if ('restDay' in x) { if (x.restDay !== null && !Number.isFinite(x.restDay)) throw new HttpError(400, 'Bad progress.'); out.restDay = x.restDay; }
+  if ('mocks' in x) {
+    if (!Array.isArray(x.mocks) || x.mocks.length > 10 || !x.mocks.every(m => m && Number.isFinite(m.at) && isInt(m.score, 0, 25)))
+      throw new HttpError(400, 'Bad progress.');
+    out.mocks = x.mocks.map(m => ({ at: m.at, score: m.score }));
+  }
+  return out;
+}
+const parseExtra = s => { try { return JSON.parse(s) || {}; } catch { return {}; } };
+const DAY_MS = 864e5;
 
 /* routes */
 
@@ -211,7 +230,7 @@ async function reassessChild(ctx, id) {
   const child = await ownedChild(ctx, pid, id);
   await ctx.db.batch([
     ctx.db.prepare('DELETE FROM facts WHERE child_id = ?').bind(child.id),
-    ctx.db.prepare("UPDATE children SET tables = '[]', assessed_at = NULL, streak = 0, last_day = 0 WHERE id = ?").bind(child.id),
+    ctx.db.prepare("UPDATE children SET tables = '[]', assessed_at = NULL, streak = 0, last_day = 0, extra = json_remove(extra, '$.friends', '$.intros', '$.restDay') WHERE id = ?").bind(child.id),
   ]);
   return json({ ok: true });
 }
@@ -254,7 +273,7 @@ async function childRecover(ctx) {
 async function childState(ctx) {
   const cid = await need(ctx, 'child');
   const [c, f] = await ctx.db.batch([
-    ctx.db.prepare('SELECT id, name, display_username, tables, assessed_at, streak, last_day, theme FROM children WHERE id = ?').bind(cid),
+    ctx.db.prepare('SELECT id, name, display_username, tables, assessed_at, streak, last_day, theme, extra FROM children WHERE id = ?').bind(cid),
     ctx.db.prepare('SELECT fact, box, due FROM facts WHERE child_id = ?').bind(cid),
   ]);
   const row = c.results[0];
@@ -263,7 +282,7 @@ async function childState(ctx) {
   for (const r of f.results) facts[r.fact] = { box: r.box, due: r.due };
   return json({
     id: row.id, name: row.name, username: row.display_username, tables: JSON.parse(row.tables),
-    assessedAt: row.assessed_at, streak: row.streak, lastDay: row.last_day, theme: row.theme, facts,
+    assessedAt: row.assessed_at, streak: row.streak, lastDay: row.last_day, theme: row.theme, extra: parseExtra(row.extra), facts,
   });
 }
 
@@ -283,10 +302,10 @@ async function childSync(ctx) {
     const ok = a && isFact(a.fact) && isInt(a.a, 2, 12) && isInt(a.b, 2, 12)
       && `${Math.min(a.a, a.b)}x${Math.max(a.a, a.b)}` === a.fact
       && (a.given === null || isInt(a.given, 0, 999)) && typeof a.correct === 'boolean'
-      && isInt(a.ms, 0, 36e5) && KINDS.has(a.kind) && Number.isFinite(a.at);
+      && isInt(a.ms, 0, 36e5) && KINDS.has(a.kind) && Number.isFinite(a.at) && (a.shape === undefined || SHAPES.has(a.shape));
     if (!ok) throw new HttpError(400, 'Bad answer.');
-    stmts.push(db.prepare('INSERT INTO answers(child_id, fact, a, b, given, correct, ms, kind, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(cid, a.fact, a.a, a.b, a.given, a.correct ? 1 : 0, a.ms, a.kind, a.at));
+    stmts.push(db.prepare('INSERT INTO answers(child_id, fact, a, b, given, correct, ms, kind, at, shape) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(cid, a.fact, a.a, a.b, a.given, a.correct ? 1 : 0, a.ms, a.kind, a.at, a.shape || 'mul'));
   }
   if (b.meta) {
     const m = b.meta;
@@ -296,9 +315,80 @@ async function childSync(ctx) {
     if (!ok) throw new HttpError(400, 'Bad progress.');
     stmts.push(db.prepare('UPDATE children SET tables = ?, streak = ?, last_day = ?, assessed_at = ?, theme = ? WHERE id = ?')
       .bind(JSON.stringify(m.tables), m.streak, m.lastDay, m.assessedAt, m.theme, cid));
+    if (m.extra !== undefined)
+      stmts.push(db.prepare('UPDATE children SET extra = ? WHERE id = ?').bind(JSON.stringify(cleanExtra(m.extra)), cid));
   }
   if (answers.length) stmts.push(db.prepare('UPDATE children SET last_played = ? WHERE id = ?').bind(Date.now(), cid));
   if (stmts.length) await db.batch(stmts);
+  return json({ ok: true });
+}
+
+// Personal bests: quickest facts in the last 7 days, and facts whose best time beat the week before.
+async function childStats(ctx) {
+  const cid = await need(ctx, 'child');
+  const now = Date.now();
+  const { results } = await ctx.db.prepare(`SELECT fact, ms, at FROM answers
+    WHERE child_id = ? AND correct = 1 AND kind != 'assess' AND at > ?`).bind(cid, now - 14 * DAY_MS).all();
+  const thisWeek = {}, lastWeek = {};
+  let rightThisWeek = 0;
+  for (const r of results) {
+    const into = r.at > now - 7 * DAY_MS ? thisWeek : lastWeek;
+    if (into === thisWeek) rightThisWeek++;
+    into[r.fact] = Math.min(into[r.fact] ?? Infinity, r.ms);
+  }
+  const quickest = Object.entries(thisWeek).sort((a, b) => a[1] - b[1]).slice(0, 5).map(([fact, ms]) => ({ fact, ms }));
+  const faster = Object.entries(thisWeek).filter(([f, ms]) => lastWeek[f] && lastWeek[f] - ms >= 300)
+    .map(([fact, ms]) => ({ fact, before: lastWeek[fact], after: ms }))
+    .sort((a, b) => (b.before - b.after) - (a.before - a.after)).slice(0, 5);
+  return json({ quickest, faster, rightThisWeek });
+}
+
+// Tricky facts for a grown-up: most often wrong, then slowest, over the last 30 days.
+async function childTricky(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const child = await ownedChild(ctx, pid, id);
+  const now = Date.now();
+  const [a, f, c] = await ctx.db.batch([
+    ctx.db.prepare(`SELECT fact, correct, ms, at FROM answers WHERE child_id = ? AND kind != 'assess' AND at > ?`).bind(child.id, now - 30 * DAY_MS),
+    ctx.db.prepare('SELECT fact, box FROM facts WHERE child_id = ?').bind(child.id),
+    ctx.db.prepare('SELECT extra FROM children WHERE id = ?').bind(child.id),
+  ]);
+  const per = {}, week = { asked: 0, right: 0 };
+  for (const r of a.results) {
+    const p = (per[r.fact] ??= { fact: r.fact, asked: 0, wrong: 0, msTotal: 0, right: 0 });
+    p.asked++;
+    if (r.correct) { p.right++; p.msTotal += r.ms; } else p.wrong++;
+    if (r.at > now - 7 * DAY_MS) { week.asked++; if (r.correct) week.right++; }
+  }
+  const box = Object.fromEntries(f.results.map(r => [r.fact, r.box]));
+  const facts = Object.values(per)
+    .map(p => ({ fact: p.fact, asked: p.asked, wrong: p.wrong, avgMs: p.right ? Math.round(p.msTotal / p.right) : null, box: box[p.fact] ?? 0 }))
+    .filter(p => p.wrong > 0 || (p.avgMs ?? 0) > 4000)
+    .sort((x, y) => y.wrong / y.asked - x.wrong / x.asked || y.wrong - x.wrong || (y.avgMs ?? 0) - (x.avgMs ?? 0))
+    .slice(0, 8);
+  return json({ facts, week, mocks: parseExtra(c.results[0]?.extra).mocks || [] });
+}
+
+// Daily reminders: this device's push subscription, the time and its time zone.
+// A scheduled Worker (workers/reminders) sends them.
+async function reminderOn(ctx) {
+  const cid = await need(ctx, 'child');
+  const b = await body(ctx);
+  const ok = typeof b.endpoint === 'string' && /^https:\/\//.test(b.endpoint) && b.endpoint.length <= 600
+    && typeof b.p256dh === 'string' && b.p256dh.length <= 200 && typeof b.auth === 'string' && b.auth.length <= 100
+    && /^([01]\d|2[0-3]):[0-5]\d$/.test(b.time || '') && typeof b.tz === 'string' && b.tz.length <= 64;
+  if (!ok) throw new HttpError(400, 'Bad reminder.');
+  try { new Intl.DateTimeFormat('en-GB', { timeZone: b.tz }); } catch { throw new HttpError(400, 'Bad time zone.'); }
+  await ctx.db.prepare(`INSERT INTO push_subs(endpoint, child_id, p256dh, auth, time, tz, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET child_id = excluded.child_id, p256dh = excluded.p256dh, auth = excluded.auth,
+      time = excluded.time, tz = excluded.tz`).bind(b.endpoint, cid, b.p256dh, b.auth, b.time, b.tz, Date.now()).run();
+  return json({ ok: true });
+}
+
+async function reminderOff(ctx) {
+  const cid = await need(ctx, 'child');
+  const b = await body(ctx);
+  await ctx.db.prepare('DELETE FROM push_subs WHERE endpoint = ? AND child_id = ?').bind(String(b.endpoint || ''), cid).run();
   return json({ ok: true });
 }
 
@@ -316,4 +406,8 @@ const ROUTES = [
   ['POST', /^\/child\/recover$/, childRecover],
   ['GET', /^\/child\/state$/, childState],
   ['POST', /^\/child\/sync$/, childSync],
+  ['GET', /^\/child\/stats$/, childStats],
+  ['GET', /^\/parent\/children\/(\d+)\/tricky$/, childTricky],
+  ['POST', /^\/child\/reminder$/, reminderOn],
+  ['POST', /^\/child\/reminder\/off$/, reminderOff],
 ];

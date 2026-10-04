@@ -143,6 +143,13 @@ async function walk(missFirst) {
 // gets questions 3 and 6 wrong (then works the strategy through) to check the total never changes
 const totals = new Set(), counts = [];
 let roundAsked = 0, walks = 0;
+// the 10s were just planted, so the round opens with the 10s introduction: 3 worked examples
+let introExamples = 0;
+while (await kp.$('.intro-line')) {
+  assert.match(await kp.textContent('.walk .tag'), /The 10 times table/);
+  await walk(false); introExamples++;
+}
+assert.equal(introExamples, 3, 'new table introduced with three examples');
 for (let n = 0; n < 80 && !(await kp.$('.done')); n++) {
   const c = (await kp.textContent('.count')).split('/'); totals.add(c[1]); counts.push(+c[0]);
   if (await kp.$('.walk')) { await walk(walks++ === 0); continue; }   // a new seed
