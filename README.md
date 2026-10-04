@@ -85,7 +85,7 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 
 Pages Functions can't run on a schedule, so a small separate Worker sends the reminders (`workers/reminders/`, every 15 minutes). It's on the Workers Free plan.
 
-1. **D1 database ID.** Storage & Databases → D1 → `tree-tables` → copy the **Database ID**. Paste it into `workers/reminders/wrangler.toml` in place of `REPLACE_WITH_D1_DATABASE_ID` (or send it over and it'll be committed).
+1. **D1 database ID.** Already set in `workers/reminders/wrangler.toml`. If the database is ever recreated, copy the new ID from Storage & Databases → D1 → `tree-tables`.
 2. **Create the Worker.** Workers & Pages → Create → **Import a repository** → `si4star/tree-tables`. Set **Root directory** to `workers/reminders`. Leave the build command empty. Deploy.
 3. **Secret.** In the new Worker → Settings → Variables and Secrets → add a **Secret** named `VAPID_PRIVATE_JWK` with the private key (supplied separately, never committed). Redeploy.
 4. If the site isn't at `https://tree-tables.pages.dev`, change `SITE_URL` in `wrangler.toml`.

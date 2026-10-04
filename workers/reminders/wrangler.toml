@@ -10,7 +10,7 @@ crons = ["*/15 * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "tree-tables"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "b2da684b-b66a-4ba4-a163-93e69ef20c12"
 
 [vars]
 SITE_URL = "https://tree-tables.pages.dev"
