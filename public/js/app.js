@@ -464,12 +464,16 @@ function renderHome(){
   </main>`;
 }
 
+// The total shown is fixed when the round starts. Every new fact comes back once later in the round
+// (asked again if right, corrected if wrong), so those slots are counted up front. Corrections for
+// facts the child already had are "extra goes": they don't change the total.
 function startRound(){
-  round={items:buildRound(kid),i:0,input:'',mode:'ask',lock:false,res:{asked:0,right:0,quick:0,grown:0}};
+  const items=buildRound(kid);
+  round={items,planned:items.length+items.filter(x=>x.isNew).length,i:0,input:'',mode:'ask',lock:false,res:{asked:0,right:0,quick:0,grown:0}};
   view='play';nextItem();
 }
 function startAssessment(){
-  round={items:plan.map(x=>({...x})),i:0,input:'',mode:'ask',lock:false,assess:true,results:{}};
+  round={items:plan.map(x=>({...x})),planned:plan.length,i:0,input:'',mode:'ask',lock:false,assess:true,results:{}};
   view='play';nextItem();
 }
 function nextItem(){
@@ -483,20 +487,21 @@ function nextItem(){
 }
 function renderPlay(){
   syncWakeLock();
-  const r=round,it=r.items[r.i],pct=Math.round(r.i/r.items.length*100);
+  const r=round,it=r.items[r.i],done=r.items.slice(0,r.i).filter(x=>!x.extra).length;
+  const pct=Math.round(Math.min(1,done/r.planned)*100),count=it.extra?done:Math.min(done+1,r.planned);
   let stage;
   if(r.mode==='intro'){
     stage=`<div class="intro">${tree(1)}<p class="tag">New seed</p><p class="eq">${it.a} × ${it.b} = ${it.a*it.b}</p>
       <p class="hint">${hint(it.a,it.b)}</p><button class="cta" data-act="gotit">Got it</button></div>`;
   }else{
-    stage=`${r.assess?'<p class="tag">Starting check</p>':''}<p class="q">${it.a} × ${it.b}</p><div class="ans" id="ans" aria-live="polite">${r.input}</div>
+    stage=`${r.assess?'<p class="tag">Starting check</p>':it.extra?'<p class="tag">Extra go</p>':''}<p class="q">${it.a} × ${it.b}</p><div class="ans" id="ans" aria-live="polite">${r.input}</div>
       <div id="msg">${r.mode==='fix'?fixHtml(it):'<p class="msg"></p>'}</div>`;
   }
   const keys=[1,2,3,4,5,6,7,8,9].map(n=>`<button class="key" data-key="${n}">${n}</button>`).join('')+
     `<button class="key" data-key="del" aria-label="Delete">⌫</button><button class="key" data-key="0">0</button><button class="key go" data-key="go">Go</button>`;
   app.innerHTML=`<main class="screen play">
     <header class="pbar"><button class="icon" data-act="quit" aria-label="Stop">×</button>
-      <div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="count">${r.i+1}/${r.items.length}</span></header>
+      <div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="count">${count}/${r.planned}</span></header>
     <section class="stage">${stage}</section>
     <section class="pad ${r.mode==='intro'?'off':''}">${keys}</section></main>`;
 }
@@ -511,7 +516,7 @@ function press(k){
 }
 function requeue(item,gap){
   const r=round,later=r.items.slice(r.i+1);
-  if(later.some(x=>x.k===item.k))return;
+  if(later.some(x=>x.k===item.k)){if(!item.extra)r.planned--;return}   // a counted slot that isn't needed
   r.items.splice(Math.min(r.items.length,r.i+1+gap),0,item);
 }
 const kindOf=it=>it.assess?'assess':it.practice?'practice':it.reask?'reask':it.retry?'retry':it.isNew?'new':'review';
@@ -549,7 +554,7 @@ function submit(){
     setTimeout(()=>{r.i++;nextItem()},ms<=QUICK?550:750);
   }else{
     f.box=1;f.due=Date.now();p.facts[it.k]=f;saveFact(it.k);
-    requeue({k:it.k,retry:true},3);
+    requeue({k:it.k,retry:true,extra:!it.isNew},3);   // a new fact's comeback slot is already counted
     r.mode='fix';r.input='';ansEl.textContent='';ansEl.classList.add('wrong','shake');
     msg.innerHTML=fixHtml(it);
   }

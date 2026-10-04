@@ -108,14 +108,27 @@ assert.match(await kp.textContent('.tables'), /2, 5, 10/);
 step('play a round (screen kept awake, released after)');
 await kp.click('[data-act=play]');
 await kp.waitForFunction(() => window.__wake.held === 1);
+// gets questions 3 and 6 wrong (then types the correction) to check the total never changes
+const totals = new Set(), counts = [];
+let roundAsked = 0;
 for (let n = 0; n < 80 && !(await kp.$('.done')); n++) {
+  const c = (await kp.textContent('.count')).split('/'); totals.add(c[1]); counts.push(+c[0]);
   if (await kp.$('[data-act=gotit]')) { await kp.keyboard.press('Enter'); continue; }
   const [a, b] = (await kp.textContent('.q')).split('×').map(s => +s.trim());
-  for (const d of String(a * b)) await kp.keyboard.press(d);
+  const wrong = ++roundAsked === 3 || roundAsked === 6;
+  for (const d of String(wrong ? a * b + 1 : a * b)) await kp.keyboard.press(d);
   await kp.keyboard.press('Enter');
+  if (wrong) {
+    await kp.waitForSelector('.fix');
+    for (const d of String(a * b)) await kp.keyboard.press(d);
+    await kp.keyboard.press('Enter');
+  }
   await kp.waitForTimeout(700);
 }
-console.log('  ', (await kp.textContent('.stats')).replace(/\s+/g, ' '));
+console.log('  ', (await kp.textContent('.stats')).replace(/\s+/g, ' '), '| counter:', counts.join(','), '/', [...totals].join(','));
+assert.equal(totals.size, 1, 'round total never changes');
+assert.equal(Math.max(...counts), +[...totals][0], 'counter reaches the total');
+assert.ok(counts.every((c, i) => i === 0 || c >= counts[i - 1]), 'counter never goes backwards');
 await kp.waitForFunction(() => window.__wake.held === 0);
 console.log('   wake lock requests this session:', await kp.evaluate(() => window.__wake.requests));
 await kp.waitForTimeout(800);
