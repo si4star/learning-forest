@@ -449,8 +449,7 @@ function renderHome(){
   }
   const next=nextTable(p);
   app.innerHTML=`<main class="screen scroll">
-    <header class="bar"><button class="pill" data-act="logout">Log out</button>
-      <h1>${esc(p.name)}'s forest</h1><button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
+    <header class="bar start"><h1>${esc(p.name)}'s forest</h1><button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
     ${installBanner()}
     ${unsaved?'<p class="warn">Some answers haven\'t saved yet. They\'ll save when the internet is back.</p>':''}
     <section class="today"><p class="status">${status}</p>
@@ -586,6 +585,7 @@ function sheet(html){
     if(act==='install-go')return doInstall();
     if(act==='season')return pickSeason(e.target.closest('[data-act]').dataset.s,bg);
     if(act==='how'){bg.remove();return howSheet()}
+    if(act==='logout'){bg.remove();return logout()}
     if(e.target===bg||act==='close'){bg.remove();maybeUpdate()}
   });
   document.body.appendChild(bg);bg.querySelector('[data-act=close]').focus();
@@ -599,7 +599,8 @@ function settingsSheet(){
       <div class="seasons" role="group" aria-label="Forest season">${SEASONS.map(([k,l])=>
         `<button data-act="season" data-s="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>
       <p class="hint small">Auto follows the time of year.</p></section>
-    <nav class="menu"><button class="menu-row" data-act="how"><span>How the method works</span><span aria-hidden="true">›</span></button></nav>`);
+    <nav class="menu"><button class="menu-row" data-act="how"><span>How the method works</span><span class="chev" aria-hidden="true">›</span></button>
+      <button class="menu-row" data-act="logout"><span>Log out</span><span class="pmeta">${esc(kid.username)}</span></button></nav>`);
 }
 function pickSeason(s,bg){
   kid.theme=s;saveMeta();render();
@@ -687,6 +688,8 @@ async function parentAction(act,id){
   }catch(e){flash=e.message;render()}
 }
 
+function logout(){flush().finally(()=>api('/logout',{}).catch(()=>{}).finally(()=>{kid=null;kids=[];signedOut()}))}
+
 /* events */
 app.addEventListener('submit',e=>{
   e.preventDefault();if(busy)return;
@@ -702,8 +705,7 @@ app.addEventListener('click',e=>{
     case 'mode':grownupMode=b.dataset.mode;flash='';render();break;
     case 'how':howSheet();break;
     case 'settings':settingsSheet();break;
-    case 'logout':
-      flush().finally(()=>api('/logout',{}).catch(()=>{}).finally(()=>{kid=null;kids=[];signedOut()}));break;
+    case 'logout':logout();break;
     case 'play':startRound();break;
     case 'home':go('home');break;
     case 'quit':round=null;go(kid.assessedAt?'home':'assessPick');break;

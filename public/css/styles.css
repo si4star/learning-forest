@@ -173,7 +173,8 @@ p{line-height:1.45}
 .set .hint{margin:10px 0 0}
 .menu{border-top:1px solid var(--line);margin-bottom:8px}
 .menu-row{display:flex;justify-content:space-between;align-items:center;width:100%;padding:16px 2px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left}
-.menu-row span:last-child{color:var(--muted);font-size:22px;line-height:1}
+.menu-row .chev{color:var(--muted);font-size:22px;line-height:1}
+.menu-row .pmeta{font-weight:400}
 .seasons [aria-pressed=true]{border-color:var(--leaf);color:var(--leaf);font-weight:600}
 
 /* install */
@@ -203,6 +204,7 @@ label.check{flex-direction:row;align-items:flex-start;gap:10px;font-size:17px;fo
 .center{text-align:center}
 .cta:disabled{opacity:.5;cursor:default;transform:none}
 .icon-gap{width:44px;flex:none}
+.bar.start h1{text-align:left;padding-left:2px}
 .pill{height:40px;padding:0 14px;border:0;border-radius:20px;background:var(--surface);font-size:15px;font-weight:500;box-shadow:0 2px 0 var(--key-shadow);flex:none}
 .pill-gap{width:82px;flex:none}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:18px;padding:4px;border-radius:16px;background:var(--surface)}

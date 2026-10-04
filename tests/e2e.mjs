@@ -184,7 +184,14 @@ await kp.waitForSelector('.forest');
 assert.equal(await kp.evaluate(() => document.documentElement.dataset.season), 'winter');
 await kp.click('[data-act=settings]');
 assert.equal(await kp.getAttribute('.sheet [data-s=winter]', 'aria-pressed'), 'true');
-await kp.click('.sheet [data-act=close]');
+step('log out from settings, then back in');
+await kp.click('.sheet [data-act=logout]');
+await kp.waitForSelector("text=I'm playing");
+await kp.click("text=I'm playing");
+await kp.fill('input[name=username]', username);
+await kp.fill('input[name=password]', newPw);
+await kp.click('form .cta');
+await kp.waitForSelector('.forest');
 
 step('install banner shows when the browser offers install, and hides for 14 days');
 await kp.evaluate(() => { const e = new Event('beforeinstallprompt'); e.prompt = () => {}; e.userChoice = Promise.resolve({}); window.dispatchEvent(e); });
