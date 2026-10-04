@@ -237,6 +237,10 @@ p{line-height:1.45}
 .form input:not([type=checkbox]){padding:14px 16px;border-radius:14px;border:2px solid var(--line);background:var(--surface);font-size:20px;width:100%}
 .form input:focus{border-color:var(--leaf);outline:none}
 .form .cta{margin-top:6px}
+.pw{position:relative;display:block}
+.form .pw input{padding-right:84px}
+.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);min-width:68px;height:40px;border:0;border-radius:10px;
+  background:var(--bg);color:var(--leaf);font-size:16px;font-weight:600}
 .field-hint{color:var(--muted);font-size:14px;font-weight:400}
 label.check{flex-direction:row;align-items:flex-start;gap:10px;font-size:17px;font-weight:400;display:flex;line-height:1.35}
 .check input{width:22px;height:22px;margin:0;flex:none;accent-color:var(--leaf)}

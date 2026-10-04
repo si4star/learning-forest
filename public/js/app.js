@@ -321,13 +321,22 @@ function renderWelcome(){
   </main>`;
 }
 
+// Show/hide for password boxes; type="button" so it never submits the form
+const pwToggle='<button type="button" class="pw-toggle" data-act="pw" aria-pressed="false" aria-label="Show password">Show</button>';
+function togglePw(b){
+  const input=b.parentElement.querySelector('input'),show=input.type==='password';
+  input.type=show?'text':'password';
+  b.textContent=show?'Hide':'Show';b.setAttribute('aria-pressed',String(show));b.setAttribute('aria-label',show?'Hide password':'Show password');
+  input.focus();
+}
+
 function renderChildLogin(){
   app.innerHTML=`<main class="screen scroll">
     <header class="bar">${back('welcome')}<h1>Log in</h1><span class="icon-gap"></span></header>
     <p class="lead">Your username and password are on your Forest Pass card.</p>
     <form class="form" data-form="childLogin" novalidate>
       <label>Username<input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
-      <label>Password<input name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+      <label>Password<span class="pw"><input name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required>${pwToggle}</span>
         <span class="field-hint">Three words. Spaces or dashes both work.</span></label>
       ${err()}
       <button class="cta" ${busy?'disabled':''}>Log in</button>
@@ -361,7 +370,7 @@ function renderGrownup(){
     </div>
     <form class="form" data-form="${up?'signup':'parentLogin'}" novalidate>
       <label>Email<input name="email" type="email" autocomplete="email" required></label>
-      <label>Password<input name="password" type="password" autocomplete="${up?'new-password':'current-password'}" minlength="10" required>
+      <label>Password<span class="pw"><input name="password" type="password" autocomplete="${up?'new-password':'current-password'}" minlength="10" required>${pwToggle}</span>
         ${up?'<span class="field-hint">At least 10 characters.</span>':''}</label>
       ${up?`<label class="check"><input type="checkbox" name="consent"> I'm the parent or carer of the children I'll add.</label>
       <p class="hint small">We store your email, each child's first name or nickname, and their times table answers. If a daily reminder is turned on, we also store that device's notification address and chosen time. Failed logins are kept for a day to stop guessing. No ads, no tracking.</p>`:''}
@@ -996,6 +1005,7 @@ app.addEventListener('click',e=>{
     case 'home':go('home');break;
     case 'quit':if(round)clearTimeout(round.timer);round=null;if(canSpeak)speechSynthesis.cancel();go(kid.assessedAt?'home':'assessPick');break;
     case 'say-again':sayAgain();break;
+    case 'pw':e.preventDefault();togglePw(b);break;
     case 'mock-intro':go('mockIntro');break;
     case 'mock-start':startMock();break;
     case 'bests':bestsSheet();break;

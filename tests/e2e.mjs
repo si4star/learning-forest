@@ -69,6 +69,13 @@ await kp.waitForSelector('.err');
 step('child login: forgiving input (lower case, spaces)');
 await kp.fill('input[name=username]', username.toLowerCase());
 await kp.fill('input[name=password]', password.toUpperCase().replace(/-/g, ' '));
+step('show/hide password');
+await kp.click('.pw-toggle');
+assert.equal(await kp.getAttribute('input[name=password]', 'type'), 'text');
+assert.equal(await kp.textContent('.pw-toggle'), 'Hide');
+assert.ok(await kp.$("text=Which times tables do you already know?") === null, 'toggle does not submit the form');
+await kp.click('.pw-toggle');
+assert.equal(await kp.getAttribute('input[name=password]', 'type'), 'password');
 await kp.click('form .cta');
 await kp.waitForSelector('text=Which times tables do you already know?');
 
