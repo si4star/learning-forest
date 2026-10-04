@@ -48,6 +48,16 @@ assert.match(await pp.textContent('.kid'), /Starting check not done yet/);
 
 // --- child logs in on another device ---
 const kidCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+// stand-in for the Screen Wake Lock API so the test can see when the screen is held on
+await kidCtx.addInitScript(() => {
+  window.__wake = { held: 0, requests: 0 };
+  Object.defineProperty(navigator, 'wakeLock', { value: { request: async () => {
+    window.__wake.requests++; window.__wake.held++;
+    const l = new EventTarget(); let done = false;
+    l.release = async () => { if (!done) { done = true; window.__wake.held--; l.dispatchEvent(new Event('release')); } };
+    return l;
+  } } });
+});
 const kp = await kidCtx.newPage(); watch(kp);
 await kp.goto(BASE);
 step('child login: wrong password rejected');
@@ -95,8 +105,9 @@ await kp.reload();
 await kp.waitForSelector('.forest');
 assert.match(await kp.textContent('.tables'), /2, 5, 10/);
 
-step('play a round');
+step('play a round (screen kept awake, released after)');
 await kp.click('[data-act=play]');
+await kp.waitForFunction(() => window.__wake.held === 1);
 for (let n = 0; n < 80 && !(await kp.$('.done')); n++) {
   if (await kp.$('[data-act=gotit]')) { await kp.keyboard.press('Enter'); continue; }
   const [a, b] = (await kp.textContent('.q')).split('×').map(s => +s.trim());
@@ -105,6 +116,8 @@ for (let n = 0; n < 80 && !(await kp.$('.done')); n++) {
   await kp.waitForTimeout(700);
 }
 console.log('  ', (await kp.textContent('.stats')).replace(/\s+/g, ' '));
+await kp.waitForFunction(() => window.__wake.held === 0);
+console.log('   wake lock requests this session:', await kp.evaluate(() => window.__wake.requests));
 await kp.waitForTimeout(800);
 
 step('parent sees progress');

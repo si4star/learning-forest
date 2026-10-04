@@ -213,6 +213,24 @@ function maybeUpdate(){
   (kid?flush():Promise.resolve()).finally(()=>swReg.waiting?swReg.waiting.postMessage('skip-waiting'):location.reload());
 }
 
+/* keep the screen on during a round or the starting check, so it doesn't dim mid-question.
+   The browser drops the lock when the app is hidden; it's taken again on return. */
+let wakeLock=null, wakeBusy=false;
+async function syncWakeLock(){
+  const want=view==='play'&&document.visibilityState==='visible';
+  if(want&&!wakeLock&&!wakeBusy&&'wakeLock' in navigator){
+    wakeBusy=true;
+    try{
+      const l=await navigator.wakeLock.request('screen');
+      l.addEventListener('release',()=>{if(wakeLock===l)wakeLock=null});
+      wakeLock=l;
+    }catch(e){}   // refused (low battery, unsupported): carry on without it
+    wakeBusy=false;
+    if(view!=='play')syncWakeLock();   // the round ended while the request was pending
+  }else if(!want&&wakeLock){const l=wakeLock;wakeLock=null;l.release().catch(()=>{})}
+}
+document.addEventListener('visibilitychange',syncWakeLock);
+
 /* views */
 const app=document.getElementById('app');
 let view='loading', me={role:null}, kid=null, kids=[], card=null, cardFor='parent';
@@ -224,6 +242,7 @@ function render(){
     grownup:renderGrownup,parent:renderParent,card:renderCard,
     assessPick:renderAssessPick,assessResult:renderAssessResult,
     home:renderHome,play:renderPlay,summary:renderSummary})[view]();
+  syncWakeLock();
 }
 function go(v){view=v;flash='';armed=null;render();maybeUpdate();autoInstallSheet()}
 const err=()=>flash?`<p class="err" role="alert">${esc(flash)}</p>`:'';
@@ -463,6 +482,7 @@ function nextItem(){
   if(r.mode==='ask')r.start=performance.now();
 }
 function renderPlay(){
+  syncWakeLock();
   const r=round,it=r.items[r.i],pct=Math.round(r.i/r.items.length*100);
   let stage;
   if(r.mode==='intro'){

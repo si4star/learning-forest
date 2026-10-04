@@ -78,6 +78,8 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 
 Rounds are 20 questions (about 4 minutes); the first is shorter. ×1 facts are excluded.
 
+The screen stays on during a round and the starting check, using the browser's Screen Wake Lock API. It's released as soon as the round ends or the app is closed. Devices without support (iPhone/iPad home-screen apps before iOS 18.4, some older browsers) dim as normal.
+
 Progress is saved after every answer. If the connection drops, answers queue on the device and send when it's back.
 
 ## Deploying to Cloudflare Pages
