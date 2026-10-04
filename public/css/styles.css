@@ -1,3 +1,6 @@
+/* Fredoka, self-hosted (SIL Open Font License) so no requests go to third parties */
+@font-face{font-family:'Fredoka';font-style:normal;font-display:swap;font-weight:300 700;
+  src:url(../fonts/fredoka-latin-wght-normal.woff2) format('woff2-variations')}
 :root{
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -34,17 +37,11 @@ h2{font-size:20px;font-weight:600;margin:28px 0 12px}
 p{line-height:1.45}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
-/* players */
+/* welcome */
 .brand{display:flex;align-items:center;gap:12px;margin-top:12px}
 .brand svg{width:56px;height:56px}
 .brand h1{font-size:32px;font-weight:700;letter-spacing:-.01em}
 .lead{color:var(--muted);font-size:18px;margin:12px 0 0}
-.plist{display:flex;flex-direction:column;gap:10px}
-.pbtn{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;
-  width:100%;padding:16px;border:0;border-radius:18px;background:var(--surface);
-  box-shadow:0 3px 0 var(--key-shadow);text-align:left}
-.pbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--key-shadow)}
-.pdot{width:18px;height:18px;border-radius:50%;background:var(--pc)}
 .pname{font-size:22px;font-weight:600}
 .pmeta{color:var(--muted);font-size:15px}
 .add{display:flex;gap:8px;margin-top:12px}
@@ -132,4 +129,64 @@ p{line-height:1.45}
 .sheet ol{padding-left:22px;margin:0 0 12px}
 .sheet li{margin-bottom:10px;line-height:1.45;font-size:16px}
 .sheet .cta{margin-top:8px}
+/* forms */
+.stack{display:flex;flex-direction:column;gap:12px;margin-top:22px}
+.form{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:17px;font-weight:500}
+.form input:not([type=checkbox]){padding:14px 16px;border-radius:14px;border:2px solid var(--line);background:var(--surface);font-size:20px;width:100%}
+.form input:focus{border-color:var(--leaf);outline:none}
+.form .cta{margin-top:6px}
+.field-hint{color:var(--muted);font-size:14px;font-weight:400}
+label.check{flex-direction:row;align-items:flex-start;gap:10px;font-size:17px;font-weight:400;display:flex;line-height:1.35}
+.check input{width:22px;height:22px;margin:0;flex:none;accent-color:var(--leaf)}
+.err{color:var(--berry);font-size:16px;margin:0;font-weight:500}
+.small{font-size:14px}
+.center{text-align:center}
+.cta:disabled{opacity:.5;cursor:default;transform:none}
+.icon-gap{width:44px;flex:none}
+.pill{height:40px;padding:0 14px;border:0;border-radius:20px;background:var(--surface);font-size:15px;font-weight:500;box-shadow:0 2px 0 var(--key-shadow);flex:none}
+.pill-gap{width:82px;flex:none}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:18px;padding:4px;border-radius:16px;background:var(--surface)}
+.tabs button{border:0;background:none;padding:10px;border-radius:12px;font-size:17px;font-weight:500;color:var(--muted)}
+.tabs [aria-selected=true]{background:var(--leaf);color:#fff}
+
+/* parent */
+.kids{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.kid{background:var(--surface);border-radius:18px;padding:14px 16px 6px}
+.kid-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.kid p{margin:4px 0 0}
+.kid-acts{display:flex;flex-wrap:wrap;gap:0 18px}
+.kid-acts .link{font-size:15px;padding:10px 0}
+
+/* forest pass */
+.card-title{margin-top:8px}
+.pass{margin-top:16px;padding:18px 20px;border-radius:20px;background:var(--surface);border:3px dashed var(--leaf)}
+.pass-hd{display:flex;align-items:center;gap:12px}
+.pass-hd svg{width:52px;height:52px}
+.pass-label{margin:0;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--leaf)}
+.pass-name{margin:0;font-size:24px;font-weight:600}
+.pass dl{margin:14px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:baseline}
+.pass dt{color:var(--muted);font-size:15px}
+.pass dd{margin:0;font-size:18px;overflow-wrap:anywhere}
+.pass dd.cred{font-size:22px;font-weight:600;letter-spacing:.01em}
+.pass-rules{margin:14px 0 0;padding-left:20px;font-size:15px;color:var(--muted)}
+.pass-rules li{margin-bottom:2px}
+
+/* starting check */
+.tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.tbtn{height:64px;border:3px solid transparent;border-radius:16px;background:var(--surface);font-size:28px;font-weight:600;box-shadow:0 3px 0 var(--key-shadow)}
+.tbtn[aria-pressed=true]{background:color-mix(in srgb,var(--leaf) 20%,var(--surface));border-color:var(--leaf);color:var(--leaf)}
+.play .tag{margin:0;color:var(--muted);font-size:17px}
+.ans.given{border-color:var(--muted)}
+.results{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.results li{display:grid;grid-template-columns:52px 70px 1fr;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;background:var(--surface);font-size:17px}
+.results .tname{font-weight:600;font-size:20px}
+.results .pass-yes .tname{color:var(--leaf)}
+.results .pass-no{color:var(--muted)}
+
+@media print{
+  body{background:#fff}
+  #app>main>*:not(.pass){display:none!important}
+  .pass{border-color:#3F8F3A;color:#000;background:#fff;max-width:420px}
+}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
