@@ -548,6 +548,7 @@ function howSheet(){
 
 /* flows */
 async function boot(){
+  try{localStorage.removeItem('times-table-forest-v1')}catch(e){}   // progress from the old device-only version
   try{me=await api('/me')}catch(e){me={role:null};flash=e.message}
   if(me.role==='child')await enterChild();
   else if(me.role==='parent')await enterParent();

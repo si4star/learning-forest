@@ -1,5 +1,5 @@
 import { migrate } from './schema.js';
-import { hashSecret, verifySecret, newToken, sha256 } from './auth.js';
+import { configure, hashSecret, verifySecret, needsRehash, newToken, sha256 } from './auth.js';
 import { newUsername, newPassword, newRecoveryCode, normUsername, normPassword, normRecovery } from './words.js';
 
 const DAY = 864e5;
@@ -22,6 +22,7 @@ const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(d
 export async function handle(request, env) {
   try {
     if (!env.DB) throw new HttpError(500, 'The database is not connected.');
+    configure(env);
     await migrate(env.DB);
     const url = new URL(request.url);
     if (request.method !== 'GET') {
@@ -144,6 +145,8 @@ async function parentLogin(ctx) {
   await guard(ctx, 'p:' + email);
   const row = await ctx.db.prepare('SELECT id, pw_hash FROM parents WHERE email = ?').bind(email).first();
   if (!(await verifySecret(String(b.password || ''), row?.pw_hash))) await fail(ctx, 'p:' + email, 'Email or password not right.');
+  if (needsRehash(row.pw_hash))
+    await ctx.db.prepare('UPDATE parents SET pw_hash = ? WHERE id = ?').bind(await hashSecret(String(b.password)), row.id).run();
   return json({ role: 'parent' }, 200, await startSession(ctx, 'parent', row.id));
 }
 
@@ -229,6 +232,8 @@ async function childLogin(ctx) {
   await guard(ctx, 'c:' + u);
   const row = await ctx.db.prepare('SELECT id, pw_hash FROM children WHERE username = ?').bind(u).first();
   if (!(await verifySecret(normPassword(b.password), row?.pw_hash))) await fail(ctx, 'c:' + u, 'Username or password not right. Check your Forest Pass.');
+  if (needsRehash(row.pw_hash))
+    await ctx.db.prepare('UPDATE children SET pw_hash = ? WHERE id = ?').bind(await hashSecret(normPassword(b.password)), row.id).run();
   return json({ role: 'child' }, 200, await startSession(ctx, 'child', row.id));
 }
 

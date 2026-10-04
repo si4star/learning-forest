@@ -14,7 +14,7 @@ Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. I
 - The grown-up has to tick "We've written it down or printed it" before continuing.
 - Login is forgiving: case, spaces and dashes don't matter.
 - A forgotten password is replaced with the recovery code (the child gets a new card) or by the grown-up ("New Forest Pass"). Both sign out the old sessions.
-- Passwords and recovery codes are stored as PBKDF2-SHA256 hashes (100,000 iterations). Sessions are random tokens in HttpOnly, Secure, SameSite=Lax cookies (30 days for grown-ups, 180 days for children).
+- Passwords and recovery codes are stored as PBKDF2-SHA256 hashes (10,000 iterations for now; see **Upgrade later**). Sessions are random tokens in HttpOnly, Secure, SameSite=Lax cookies (30 days for grown-ups, 180 days for children).
 - 10 failed logins per account, or 50 per IP address, in 15 minutes locks out further attempts for 15 minutes.
 
 Data held: grown-up email; child first name or nickname; facts progress; chosen season; every answer (fact, answer given, right/wrong, time taken, kind). Failed login records are deleted after a day. The font is self-hosted, so the page makes no third-party requests.
@@ -45,6 +45,12 @@ On first login the child taps the tables they think they know.
 - Open apps check for updates when brought to the front, and every hour. The new version takes over and the page reloads only on screens where nothing is lost (welcome, forest, grown-up and table-picking screens). It never happens mid-round or while a Forest Pass is on screen.
 - The version number is shown at the bottom of the grown-up screen.
 - Scripts and styles are cached for a year because each version has its own URLs. `sw.js` and the manifest are never cached (see `public/_headers`).
+
+## Splash screens
+
+- iPhone and iPad show a launch screen (tree and title on the summer green) when the installed app opens. There are 38 images in `public/splash/`, one per screen shape in portrait and landscape, matched by the `apple-touch-startup-image` tags in `index.html`.
+- Android builds its splash from the manifest's `background_color` and 512 px icon.
+- To regenerate the icons and splash screens after changing `public/icons/icon.svg`: `node scripts/make-images.mjs`.
 
 ## Seasons
 
@@ -87,7 +93,22 @@ The database tables create themselves on the first request (see `src/server/sche
 
 Other branches get preview URLs automatically.
 
-**CPU limit:** each password hash takes about 18 ms of CPU, and adding a child does two. The Workers Free plan allows 10 ms of CPU per request, so logins may fail with error 1102 on the free plan. Workers Paid ($5/month) removes this.
+Pages runs on the Workers Free plan. See **Upgrade later** below.
+
+## Upgrade later
+
+> **Flagged:** move to Workers Paid ($5/month) and strengthen password hashing.
+
+- The Workers Free plan allows 10 ms of CPU per request.
+- Password hashing therefore uses 10,000 PBKDF2 iterations, about 1.8 ms per hash. Recovering a password does three hashes.
+- That fits the free plan, but it's weaker than the 100,000 iterations recommended (the most Workers allows).
+
+To upgrade:
+
+1. Switch the Cloudflare account to Workers Paid.
+2. In the Pages project → **Settings** → **Variables and Secrets**, add `PBKDF2_ITERATIONS` = `100000` for Production and Preview. Then redeploy.
+
+No data migration is needed. Each stored hash records its own iteration count, so existing passwords still work and are re-hashed at the new strength the next time that person logs in. Recovery codes are re-hashed whenever a new card is issued.
 
 ## Local development
 
@@ -122,4 +143,12 @@ npm test             # end-to-end test against the running dev server (BASE=... 
 
 - Timed 25-question mock of the Multiplication Tables Check.
 - Parent view of the weakest facts (the answer log needed for it is already stored).
-- Grown-up password reset by email (needs an email provider). Until then a grown-up who forgets their password can't get back in.
+- **Grown-up password reset by email** (planned). Until then a grown-up who forgets their password can't get back in. The current design leaves room for it:
+  - Emails are stored lowercase and unique, so one email maps to one account.
+  - Schema changes go in a new migration in `src/server/schema.js`: a `password_resets(token_hash, parent_id, expires_at, used_at)` table. Store only a hash of the token, as sessions do.
+  - Routes: `POST /api/parent/forgot {email}` always replies the same way, so it doesn't reveal which emails have accounts, and is rate-limited with the existing `guard()`/`fail()` helpers. `POST /api/parent/reset {token, password}` sets a new hash and deletes the parent's sessions, as child resets already do.
+  - It needs an email provider (for example Resend), with an API key stored as a Pages secret.
+  - The client needs a "Forgot password?" link on the grown-up login screen, and a reset screen opened from the emailed link (`/?reset=<token>`). The service worker already serves the app for any URL.
+  - Optionally, add email verification at sign-up using the same token table.
+
+The first Cloudflare version started fresh: progress from the earlier device-only version was not imported. That old data is deleted from each device the first time it opens the new version.
