@@ -67,6 +67,11 @@ const MIGRATIONS = [
       created_at INTEGER NOT NULL)`,
     `CREATE INDEX IF NOT EXISTS push_subs_child ON push_subs(child_id)`,
   ],
+  [
+    // read-aloud audio, generated once per phrase; and daily generation counts (caps)
+    `CREATE TABLE IF NOT EXISTS tts_cache(key TEXT PRIMARY KEY, mime TEXT NOT NULL, audio BLOB NOT NULL, created_at INTEGER NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS tts_usage(day TEXT NOT NULL, who TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY(day, who))`,
+  ],
 ];
 
 let ready = null;

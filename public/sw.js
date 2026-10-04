@@ -3,6 +3,7 @@
 // worker to take over when the child isn't mid-round, then reloads.
 const VERSION = '__VERSION__';
 const CACHE = 'ttf-' + VERSION;
+const TTS_CACHE = 'tts-v1';   // not deleted on update (doesn't start with 'ttf-')
 const SHELL = [
   '/',
   '/css/styles.css?v=' + VERSION,
@@ -31,6 +32,17 @@ self.addEventListener('message', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  // read-aloud clips: kept across app versions, so each phrase downloads once and works offline
+  if (e.request.method === 'GET' && url.origin === location.origin && url.pathname === '/api/tts') {
+    e.respondWith(caches.open(TTS_CACHE).then(async c => {
+      const hit = await c.match(e.request);
+      if (hit) return hit;
+      const res = await fetch(e.request);
+      if (res.ok) c.put(e.request, res.clone());
+      return res;
+    }));
+    return;
+  }
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
   if (e.request.mode === 'navigate') {
     // The app is one page: serve this version's copy, so page, script and styles always match.

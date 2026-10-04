@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 
 const BASE = process.env.BASE || 'http://localhost:8788';
 const ORDER = [10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7];
-const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
+const browser = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), args: ['--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
 const step = name => console.log('•', name);
 
@@ -81,7 +81,26 @@ const solveStep = q => {
   throw new Error('unknown step ' + q);
 };
 
-step('grown trees are asked in different shapes; one wrong answer gets the walk-through');
+step('read aloud uses the natural voice from the server when it is available');
+// the dev server has no Workers AI, so stand in for it with a short silent WAV
+const wavBytes = (() => { const n = 4000, b = Buffer.alloc(44 + n); b.write('RIFF', 0); b.writeUInt32LE(36 + n, 4); b.write('WAVEfmt ', 8);
+  b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(8000, 24); b.writeUInt32LE(8000, 28);
+  b.writeUInt16LE(1, 32); b.writeUInt16LE(8, 34); b.write('data', 36); b.writeUInt32LE(n, 40); b.fill(128, 44); return b; })();
+const ttsAsked = [];
+await kidCtx.route('**/api/tts?*', route => { ttsAsked.push(new URL(route.request().url()).searchParams.get('t')); route.fulfill({ status: 200, contentType: 'audio/wav', body: wavBytes }); });
+await kp.evaluate(() => { window.__said.length = 0; ttsDown = false; });   // the earlier 503 switched this session to the device voice
+await kp.click('[data-act=settings]');
+await kp.click('.sheet [data-act=read-aloud]');   // off
+await kp.click('.sheet [data-act=read-aloud]');   // on again: says a short confirmation
+await kp.waitForFunction(() => true);
+await kp.waitForTimeout(800);
+await kp.click('.sheet [data-act=close]');
+assert.ok(ttsAsked.includes('Questions will be read out loud.'), 'confirmation fetched from the server voice');
+assert.deepEqual(await kp.evaluate(() => window.__said), [], 'device voice not used');
+await kidCtx.unroute('**/api/tts?*');
+await kp.evaluate(() => { ttsDown = false; });
+
+step('grown trees are asked in different shapes; one wrong answer gets the walk-through (device voice fallback)');
 await kp.click('[data-act=play]');
 const shapes = { mul: 0, missing: 0, div: 0 };
 let missedOne = false;

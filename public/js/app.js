@@ -271,21 +271,45 @@ async function syncWakeLock(){
 }
 document.addEventListener('visibilitychange',syncWakeLock);
 
-/* read aloud: the device's own voice reads each question and strategy step. When it's on, the
-   answer timer (and the practice check clock) starts when the reading finishes. */
+/* read aloud: a natural voice from the server (Cloudflare Workers AI, each phrase generated once
+   and cached), falling back to the device's own voice if that isn't available. When it's on,
+   the answer timer (and the practice check clock) starts when the reading finishes. */
 const canSpeak='speechSynthesis' in window;
 let voice=null;
 function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>v.lang==='en-GB')||vs.find(v=>/^en/.test(v.lang))||null}
 if(canSpeak){pickVoice();speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}
-const readAloud=()=>canSpeak&&!!kid?.extra?.readAloud;
+const readAloud=()=>!!kid?.extra?.readAloud;
 const spoken=s=>s.replace(/×/g,' times ').replace(/÷/g,' divided by ').replace(/−/g,' take away ').replace(/\+/g,' add ').replace(/\?/g,' what ').replace(/=/g,' equals ');
+const player=new Audio();
+let speechId=0, ttsDown=false, playerUrl=null, playerUnlocked=false;
+// iPhone and iPad only let a page play sound after a tap; one silent play on the first tap unlocks the player
+const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+document.addEventListener('pointerdown',()=>{if(playerUnlocked||!readAloud())return;playerUnlocked=true;player.onended=player.onerror=null;player.src=SILENT;player.play().catch(()=>{})},true);
+const ttsText=t=>t.replace(/\s+/g,' ').trim();
+function stopSpeech(){speechId++;player.pause();if(canSpeak)speechSynthesis.cancel()}
+function deviceSpeak(text,fin){
+  if(!canSpeak)return fin();
+  const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=.95;if(voice)u.voice=voice;
+  u.onend=fin;u.onerror=fin;speechSynthesis.speak(u);
+}
 function speak(text,then){
   if(!readAloud()){then&&then();return}
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=.95;if(voice)u.voice=voice;
-  let fired=false;const fin=()=>{if(!fired){fired=true;then&&then()}};
-  u.onend=fin;u.onerror=fin;setTimeout(fin,6000);   // never leave a question waiting on a silent voice
-  speechSynthesis.speak(u);
+  stopSpeech();
+  const id=speechId;let fired=false;
+  const fin=()=>{if(!fired&&id===speechId){fired=true;clearTimeout(guard);then&&then()}};
+  const guard=setTimeout(fin,15000);   // never leave a question waiting on a silent voice
+  if(ttsDown)return deviceSpeak(text,fin);
+  fetch('/api/tts?t='+encodeURIComponent(ttsText(text)),{credentials:'same-origin'}).then(res=>{
+    if(!res.ok){if(res.status===503||res.status===429)ttsDown=true;throw new Error(res.status)}
+    return res.blob();
+  }).then(blob=>{
+    if(id!==speechId)return;
+    if(playerUrl)URL.revokeObjectURL(playerUrl);
+    playerUrl=URL.createObjectURL(blob);
+    player.onended=fin;player.onerror=()=>{if(id===speechId)deviceSpeak(text,fin)};
+    player.src=playerUrl;
+    return player.play();
+  }).catch(()=>{if(id===speechId)deviceSpeak(text,fin)});
 }
 
 /* views */
@@ -814,8 +838,8 @@ function settingsSheet(){
         `<button data-act="season" data-s="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>
       <p class="hint small">Auto follows the time of year.</p></section>
     <section class="set"><h3>Read aloud</h3>
-      <button class="toggle" data-act="read-aloud" aria-pressed="${!!kid.extra.readAloud}" ${canSpeak?'':'disabled'}>${kid.extra.readAloud?'On':'Off'}</button>
-      <p class="hint small">${canSpeak?'Reads each question out loud.':'This device can\'t read out loud.'}</p></section>
+      <button class="toggle" data-act="read-aloud" aria-pressed="${!!kid.extra.readAloud}">${kid.extra.readAloud?'On':'Off'}</button>
+      <p class="hint small">Reads each question and step out loud.</p></section>
     <section class="set"><h3>Daily reminder</h3>${reminderHtml()}</section>
     <nav class="menu"><button class="menu-row" data-act="how"><span>How the method works</span><span class="chev" aria-hidden="true">›</span></button>
       <button class="menu-row" data-act="logout"><span>Log out</span><span class="pmeta">${esc(kid.username)}</span></button></nav>`);
@@ -981,7 +1005,7 @@ async function parentAction(act,id){
 }
 
 function logout(){
-  if(canSpeak)speechSynthesis.cancel();
+  stopSpeech();
   flush().finally(()=>api('/logout',{}).catch(()=>{}).finally(()=>{LS.del('ttf-snap');kid=null;kids=[];signedOut()}));
 }
 
@@ -1003,7 +1027,7 @@ app.addEventListener('click',e=>{
     case 'logout':logout();break;
     case 'play':startRound();break;
     case 'home':go('home');break;
-    case 'quit':if(round)clearTimeout(round.timer);round=null;if(canSpeak)speechSynthesis.cancel();go(kid.assessedAt?'home':'assessPick');break;
+    case 'quit':if(round)clearTimeout(round.timer);round=null;stopSpeech();go(kid.assessedAt?'home':'assessPick');break;
     case 'say-again':sayAgain();break;
     case 'pw':e.preventDefault();togglePw(b);break;
     case 'mock-intro':go('mockIntro');break;
