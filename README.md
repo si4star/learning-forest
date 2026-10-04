@@ -8,6 +8,12 @@ Static site, no build step. Open `index.html` directly or serve the folder:
 python3 -m http.server 8000
 ```
 
+## Deployment
+
+GitHub Pages serves the root of `main` directly (Settings → Pages → Deploy from a branch). Every push to `main` goes live within a minute or two. `.nojekyll` stops GitHub running Jekyll over the files.
+
+Live at https://si4star.github.io/tree-tables/
+
 ## Method
 
 - **Retrieval practice.** Every question is answered from memory; the answer is never shown alongside the question.
@@ -29,7 +35,6 @@ python3 -m http.server 8000
 | `index.html` | Page shell and tree SVG symbols |
 | `css/styles.css` | Styles, light and dark themes |
 | `js/app.js` | Scheduling, round building, views and input handling |
-| `.github/workflows/pages.yml` | Deploys to GitHub Pages on every push to `main` |
 
 ## Not built yet
 
