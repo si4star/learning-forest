@@ -79,6 +79,27 @@ function hint(a,b){
   }
 }
 
+// The same strategies as hint(), as steps the child works through, typing each small answer.
+// The last step's answer is always the product.
+function walkSteps(a,b){
+  const s=HINT_ORDER.indexOf(a)<=HINT_ORDER.indexOf(b)?a:b, n=s===a?b:a, p=a*b;
+  const st=(say,q,ans)=>({say,q,ans});
+  switch(s){
+    case 10:return [st(`${n} lots of 10 is ${n} tens.`,`${n} tens`,p)];
+    case 2:return [st('Times 2 means double it.',`double ${n}`,p)];
+    case 5:return [st('Times 10 first.',`10 × ${n}`,10*n),st('5 is half of 10, so halve it.',`half of ${10*n}`,p)];
+    case 11:return n<=9?[st('Times 11 with one digit: write the digit twice.',`write ${n} twice`,p)]
+      :[st('Times 10 first.',`10 × ${n}`,10*n),st(`11 lots is one more ${n}.`,`${10*n} + ${n}`,p)];
+    case 4:return [st('Times 4 is double, then double again.',`double ${n}`,2*n),st('Now double it again.',`double ${2*n}`,p)];
+    case 3:return [st('Double it first.',`double ${n}`,2*n),st(`3 lots is one more ${n}.`,`${2*n} + ${n}`,p)];
+    case 9:return [st('Times 10 first.',`10 × ${n}`,10*n),st(`9 lots is one ${n} less, so take one ${n} away.`,`${10*n} − ${n}`,p)];
+    case 8:return [st('Times 8 is double, double, double.',`double ${n}`,2*n),st('Double again.',`double ${2*n}`,4*n),st('And double once more.',`double ${4*n}`,p)];
+    case 6:return [st('Times 5 first.',`5 × ${n}`,5*n),st(`6 lots is one more ${n}.`,`${5*n} + ${n}`,p)];
+    case 12:return [st('Times 10 first.',`10 × ${n}`,10*n),st(`Now 2 × ${n}.`,`2 × ${n}`,2*n),st('Add them together.',`${10*n} + ${2*n}`,p)];
+    case 7:return [st('Times 5 first.',`5 × ${n}`,5*n),st(`Now 2 × ${n}.`,`2 × ${n}`,2*n),st('Add them together.',`${5*n} + ${2*n}`,p)];
+  }
+}
+
 function buildRound(p){
   const now=Date.now(), un=ALL.filter(k=>isUnlocked(p,k));
   const due=shuffle(un.filter(k=>{const f=fact(p,k);return f.box>0&&f.due<=now})).sort((x,y)=>fact(p,x).box-fact(p,y).box);
@@ -478,7 +499,8 @@ function nextItem(){
   if(r.i>=r.items.length)return r.assess?finishAssessment():finishRound();
   const it=r.items[r.i];
   const [x,y]=parse(it.k);[it.a,it.b]=Math.random()<.5?[x,y]:[y,x];
-  r.input='';r.lock=false;r.mode=(it.isNew&&!it.seen)?'intro':'ask';
+  r.input='';r.lock=false;r.mode='ask';
+  if(it.isNew&&!it.seen)startWalk('intro');
   renderPlay();
   if(r.mode==='ask')r.start=performance.now();
 }
@@ -487,27 +509,50 @@ function renderPlay(){
   const r=round,it=r.items[r.i],done=r.items.slice(0,r.i).filter(x=>!x.extra).length;
   const pct=Math.round(Math.min(1,done/r.planned)*100),count=it.extra?done:Math.min(done+1,r.planned);
   let stage;
-  if(r.mode==='intro'){
-    stage=`<div class="intro">${tree(1)}<p class="tag">New seed</p><p class="eq">${it.a} × ${it.b} = ${it.a*it.b}</p>
-      <p class="hint">${hint(it.a,it.b)}</p><button class="cta" data-act="gotit">Got it</button></div>`;
-  }else{
-    stage=`${r.assess?'<p class="tag">Starting check</p>':it.extra?'<p class="tag">Extra go</p>':''}<p class="q">${it.a} × ${it.b}</p><div class="ans" id="ans" aria-live="polite">${r.input}</div>
-      <div id="msg">${r.mode==='fix'?fixHtml(it):'<p class="msg"></p>'}</div>`;
-  }
+  const walkDone=r.mode==='walk'&&r.walk.i>=r.walk.steps.length;
+  if(r.mode==='walk')stage=walkHtml(it);
+  else stage=`${r.assess?'<p class="tag">Starting check</p>':it.extra?'<p class="tag">Extra go</p>':''}<p class="q">${it.a} × ${it.b}</p><div class="ans" id="ans" aria-live="polite">${r.input}</div>
+      <div id="msg"><p class="msg"></p></div>`;
   const keys=[1,2,3,4,5,6,7,8,9].map(n=>`<button class="key" data-key="${n}">${n}</button>`).join('')+
     `<button class="key" data-key="del" aria-label="Delete">⌫</button><button class="key" data-key="0">0</button><button class="key go" data-key="go">Go</button>`;
   app.innerHTML=`<main class="screen play">
     <header class="pbar"><button class="icon" data-act="quit" aria-label="Stop">×</button>
       <div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="count">${count}/${r.planned}</span></header>
     <section class="stage">${stage}</section>
-    <section class="pad ${r.mode==='intro'?'off':''}">${keys}</section></main>`;
+    <section class="pad ${walkDone?'off':''}">${keys}</section></main>`;
 }
-const fixHtml=it=>`<div class="fix"><p class="eq-s">${it.a} × ${it.b} = ${it.a*it.b}</p><p class="hint">${hint(it.a,it.b)}</p><p>Type ${it.a*it.b} to carry on.</p></div>`;
+
+/* Strategy walk-through: shown for a new seed ('intro') and after a wrong answer ('fix').
+   One step at a time; a wrong step shows its answer and the child types it. */
+function startWalk(kind){const it=round.items[round.i];round.mode='walk';round.input='';round.lock=false;round.walk={kind,steps:walkSteps(it.a,it.b),i:0,reveal:false}}
+function walkHtml(it){
+  const w=round.walk,cur=w.steps[w.i],done=!cur;
+  const past=w.steps.slice(0,w.i).map(s=>`<li class="past"><span>${s.q} = <b>${s.ans}</b></span></li>`).join('');
+  const now=cur?`<li class="now"><span class="say">${cur.say}</span>
+      <span class="step-eq">${cur.q} = <span class="ans sm" id="ans" aria-live="polite">${round.input}</span></span>
+      ${w.reveal?`<span class="reveal">It's ${cur.ans}. Type ${cur.ans}.</span>`:''}</li>`:'';
+  return `<div class="walk">
+    <p class="tag">${w.kind==='intro'?`${tree(1)} New seed`:"Let's work it out"}</p>
+    <p class="walk-q">${it.a} × ${it.b}${done?` = ${it.a*it.b}`:''}</p>
+    <ol class="steps">${past}${now}</ol>
+    ${done?`<button class="cta" data-act="walk-next">${w.kind==='intro'?'Got it':'Carry on'}</button>`:''}</div>`;
+}
+function walkSubmit(){
+  const r=round,w=r.walk,s=w.steps[w.i];
+  if(Number(r.input)===s.ans){w.i++;w.reveal=false;r.input='';return renderPlay()}
+  w.reveal=true;r.input='';renderPlay();
+  const a=document.getElementById('ans');if(a)a.classList.add('wrong','shake');
+}
+function walkNext(){
+  const r=round,it=r.items[r.i];
+  if(r.walk.kind==='intro'){it.seen=true;r.mode='ask';r.walk=null;renderPlay();r.start=performance.now()}
+  else{r.i++;nextItem()}
+}
 
 function press(k){
-  const r=round;if(!r||r.lock||r.mode==='intro')return;
+  const r=round;if(!r||r.lock||(r.mode==='walk'&&r.walk.i>=r.walk.steps.length))return;
   if(k==='del')r.input=r.input.slice(0,-1);
-  else if(k==='go')return submit();
+  else if(k==='go')return r.mode==='walk'?(r.input&&walkSubmit()):submit();
   else if(r.input.length<3)r.input+=k;
   const a=document.getElementById('ans');if(a){a.textContent=r.input;a.classList.remove('wrong','shake')}
 }
@@ -521,11 +566,6 @@ function submit(){
   const r=round,it=r.items[r.i];if(!r.input)return;
   const ansEl=document.getElementById('ans'),msg=document.getElementById('msg');
   const correct=Number(r.input)===it.a*it.b;
-  if(r.mode==='fix'){
-    if(correct){r.i++;nextItem()}
-    else{r.input='';ansEl.textContent='';ansEl.classList.remove('shake');void ansEl.offsetWidth;ansEl.classList.add('wrong','shake')}
-    return;
-  }
   const ms=performance.now()-r.start;
   logAnswer({fact:it.k,a:it.a,b:it.b,given:Number(r.input),correct,ms:Math.min(Math.round(ms),36e5),kind:kindOf(it),at:Date.now()});
   if(r.assess){
@@ -552,8 +592,9 @@ function submit(){
   }else{
     f.box=1;f.due=Date.now();p.facts[it.k]=f;saveFact(it.k);
     requeue({k:it.k,retry:true,extra:!it.isNew},3);   // a new fact's comeback slot is already counted
-    r.mode='fix';r.input='';ansEl.textContent='';ansEl.classList.add('wrong','shake');
-    msg.innerHTML=fixHtml(it);
+    r.lock=true;ansEl.classList.add('wrong','shake');
+    msg.innerHTML='<p class="msg">Not quite.</p>';
+    setTimeout(()=>{startWalk('fix');renderPlay()},700);
   }
 }
 function finishRound(){
@@ -616,9 +657,9 @@ function howSheet(){
   <li>A starting check. Children pick the tables they think they know and answer a few questions on each. Only the tables they really know are planted.</li>
   <li>Recall, not reading. Every question is answered from memory. Pulling a fact out of memory is what makes it stick.</li>
   <li>Spaced repetition. A right answer sends the fact away for longer each time: same round, 1 day, 3 days, 7 days, then 21 days. Each check grows the tree a stage. A wrong answer sends it back to a seed.</li>
-  <li>Easy facts first, hard facts built from them. Tables unlock in this order: 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. New seeds come with a strategy, like "×9 is ×10 take away one".</li>
+  <li>Easy facts first, hard facts built from them. Tables unlock in this order: 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. Each new seed is worked out step by step with a strategy, like "×9 is ×10 take away one".</li>
   <li>6 × 7 and 7 × 6 are one tree. That turns 121 facts into 66.</li>
-  <li>Mistakes are fixed straight away. The answer and strategy appear, the child types it, and it comes back three questions later.</li>
+  <li>Mistakes are fixed straight away. The child works the fact out step by step with its strategy, and it comes back three questions later.</li>
   <li>Accuracy first, then speed. There's no countdown. An answer slower than 6 seconds (the limit in the Year 4 Multiplication Tables Check) still counts, but the tree can't grow past a sprout until it comes quickly.</li>
   <li>Little and often. About 20 questions, a few minutes a day. A table unlocks when most planted trees have sprouted.</li></ol>`);
 }
@@ -709,7 +750,7 @@ app.addEventListener('click',e=>{
     case 'play':startRound();break;
     case 'home':go('home');break;
     case 'quit':round=null;go(kid.assessedAt?'home':'assessPick');break;
-    case 'gotit':round.items[round.i].seen=true;round.mode='ask';renderPlay();round.start=performance.now();break;
+    case 'walk-next':walkNext();break;
     case 'cell':cellSheet(+b.dataset.a,+b.dataset.b);break;
     case 'pick-t':{const t=+b.dataset.t;picked=picked.includes(t)?picked.filter(x=>x!==t):[...picked,t];plan=buildAssessment(picked);render();break}
     case 'assess-start':startAssessment();break;
@@ -725,7 +766,7 @@ document.addEventListener('keydown',e=>{
   if(view!=='play'||document.querySelector('.sheet-bg'))return;
   if(/^[0-9]$/.test(e.key))press(e.key);
   else if(e.key==='Backspace')press('del');
-  else if(e.key==='Enter'){if(round&&round.mode==='intro')document.querySelector('[data-act=gotit]').click();else press('go')}
+  else if(e.key==='Enter'){const next=document.querySelector('[data-act=walk-next]');if(next)next.click();else press('go')}
   else return;
   e.preventDefault();   // stop Enter also "clicking" whichever on-screen key has focus
 });

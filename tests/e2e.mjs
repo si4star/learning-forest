@@ -108,23 +108,51 @@ assert.match(await kp.textContent('.tables'), /2, 5, 10/);
 step('play a round (screen kept awake, released after)');
 await kp.click('[data-act=play]');
 await kp.waitForFunction(() => window.__wake.held === 1);
-// gets questions 3 and 6 wrong (then types the correction) to check the total never changes
+// Works each strategy step out from its text, the way a child would.
+const solveStep = q => {
+  let m;
+  if ((m = /^(\d+) tens$/.exec(q))) return +m[1] * 10;
+  if ((m = /^double (\d+)$/.exec(q))) return +m[1] * 2;
+  if ((m = /^half of (\d+)$/.exec(q))) return +m[1] / 2;
+  if ((m = /^write (\d+) twice$/.exec(q))) return +m[1] * 11;
+  if ((m = /^(\d+) × (\d+)$/.exec(q))) return +m[1] * +m[2];
+  if ((m = /^(\d+) \+ (\d+)$/.exec(q))) return +m[1] + +m[2];
+  if ((m = /^(\d+) − (\d+)$/.exec(q))) return +m[1] - +m[2];
+  throw new Error('unknown step: ' + q);
+};
+const type = async v => { for (const d of String(v)) await kp.keyboard.press(d); await kp.keyboard.press('Enter'); };
+// Walks through a strategy; gets the first step wrong when asked to, then types the shown answer.
+async function walk(missFirst) {
+  let steps = 0;
+  while (!(await kp.$('[data-act=walk-next]'))) {
+    const q = (await kp.textContent('.steps .now .step-eq')).replace(/=.*$/s, '').trim();
+    if (missFirst && steps === 0) {
+      await type(solveStep(q) + 1);
+      await kp.waitForSelector('.reveal');
+      assert.match(await kp.textContent('.reveal'), new RegExp(`It's ${solveStep(q)}`));
+    }
+    await type(solveStep(q));
+    steps++;
+  }
+  const [lhs, rhs] = (await kp.textContent('.walk-q')).split('=');
+  const [a, b] = lhs.split('×').map(x => +x.trim());
+  assert.equal(+rhs.trim(), a * b, 'walk-through ends on the answer');
+  await kp.keyboard.press('Enter');
+  return steps;
+}
+// gets questions 3 and 6 wrong (then works the strategy through) to check the total never changes
 const totals = new Set(), counts = [];
-let roundAsked = 0;
+let roundAsked = 0, walks = 0;
 for (let n = 0; n < 80 && !(await kp.$('.done')); n++) {
   const c = (await kp.textContent('.count')).split('/'); totals.add(c[1]); counts.push(+c[0]);
-  if (await kp.$('[data-act=gotit]')) { await kp.keyboard.press('Enter'); continue; }
+  if (await kp.$('.walk')) { await walk(walks++ === 0); continue; }   // a new seed
   const [a, b] = (await kp.textContent('.q')).split('×').map(s => +s.trim());
   const wrong = ++roundAsked === 3 || roundAsked === 6;
-  for (const d of String(wrong ? a * b + 1 : a * b)) await kp.keyboard.press(d);
-  await kp.keyboard.press('Enter');
-  if (wrong) {
-    await kp.waitForSelector('.fix');
-    for (const d of String(a * b)) await kp.keyboard.press(d);
-    await kp.keyboard.press('Enter');
-  }
+  await type(wrong ? a * b + 1 : a * b);
+  if (wrong) { await kp.waitForSelector('.walk'); await walk(false); walks++; }
   await kp.waitForTimeout(700);
 }
+assert.ok(walks >= 2, 'walk-throughs shown for new seeds and corrections');
 console.log('  ', (await kp.textContent('.stats')).replace(/\s+/g, ' '), '| counter:', counts.join(','), '/', [...totals].join(','));
 assert.equal(totals.size, 1, 'round total never changes');
 assert.equal(Math.max(...counts), +[...totals][0], 'counter reaches the total');

@@ -73,7 +73,8 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 - **Retrieval practice.** Every question is answered from memory; the answer is never shown alongside the question.
 - **Spaced repetition (Leitner).** Correct answers move a fact through: same round → 1 day → 3 days → 7 days → 21 days. A wrong answer resets it to a seed.
 - **Strategy sequencing.** Tables unlock in the order 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. Harder facts are taught from easier ones (×9 = ×10 minus one lot; ×8 = double three times). The next table unlocks once every fact in the unlocked tables is planted and 80% have reached sprout.
-- **Immediate error correction.** A wrong answer shows the correct answer and strategy; the child types it, and the fact returns 3 questions later.
+- **Immediate error correction.** After a wrong answer, the child works the fact out step by step with its strategy (below), and the fact returns 3 questions later.
+- **Interactive strategies.** New seeds and corrections don't show the answer; the child builds it in 1–3 small steps, typing each one. For example, 9 × 7: `10 × 7 = 70` → `70 − 7 = 63`. 8 × 6 is three doubles: `12` → `24` → `48`. A wrong step shows its answer and the child types it. Steps are defined in `walkSteps()` in `public/js/app.js`, using the same strategy choice as the text hints.
 - **Accuracy before speed.** No countdown. Answers slower than 6 seconds (the Multiplication Tables Check limit) still count, but the tree stays at sprout until it is answered quickly.
 
 Rounds are 20 questions (about 4 minutes); the first is shorter. ×1 facts are excluded.
