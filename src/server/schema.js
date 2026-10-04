@@ -48,6 +48,9 @@ const MIGRATIONS = [
     `CREATE TABLE IF NOT EXISTS login_failures(k TEXT NOT NULL, at INTEGER NOT NULL)`,
     `CREATE INDEX IF NOT EXISTS login_failures_k ON login_failures(k, at)`,
   ],
+  [
+    `ALTER TABLE children ADD COLUMN theme TEXT NOT NULL DEFAULT 'auto'`,
+  ],
 ];
 
 let ready = null;
@@ -56,13 +59,19 @@ export function migrate(db) {
   return (ready ??= run(db).catch(e => { ready = null; throw e; }));
 }
 
+const version = async db => (await db.prepare('SELECT MAX(v) AS v FROM schema_version').first())?.v ?? 0;
+
 async function run(db) {
   await db.prepare('CREATE TABLE IF NOT EXISTS schema_version(v INTEGER NOT NULL)').run();
-  const row = await db.prepare('SELECT MAX(v) AS v FROM schema_version').first();
-  for (let v = row?.v ?? 0; v < MIGRATIONS.length; v++) {
-    await db.batch([
-      ...MIGRATIONS[v].map(s => db.prepare(s)),
-      db.prepare('INSERT INTO schema_version(v) VALUES (?)').bind(v + 1),
-    ]);
+  for (let v = await version(db); v < MIGRATIONS.length; v++) {
+    try {
+      await db.batch([
+        ...MIGRATIONS[v].map(s => db.prepare(s)),
+        db.prepare('INSERT INTO schema_version(v) VALUES (?)').bind(v + 1),
+      ]);
+    } catch (e) {
+      // Another request applied this migration at the same moment; the batch rolled back.
+      if ((await version(db)) <= v) throw e;
+    }
   }
 }

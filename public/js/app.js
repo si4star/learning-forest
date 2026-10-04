@@ -33,7 +33,7 @@ const hasPending=()=>pending&&(pending.meta||pending.answers.length||Object.keys
 function queue(){storePending();clearTimeout(syncTimer);syncTimer=setTimeout(flush,400)}
 function saveFact(k){pending.facts[k]=kid.facts[k];queue()}
 function logAnswer(a){pending.answers.push(a);queue()}
-function saveMeta(){pending.meta={tables:kid.tables,streak:kid.streak,lastDay:kid.lastDay,assessedAt:kid.assessedAt};queue()}
+function saveMeta(){pending.meta={tables:kid.tables,streak:kid.streak,lastDay:kid.lastDay,assessedAt:kid.assessedAt,theme:kid.theme||'auto'};queue()}
 async function flush(){
   if(flushing)await flushing;
   if(!kid||!hasPending())return true;
@@ -143,18 +143,89 @@ function applyAssessment(p,picked,results){
   return {graded,passed,unlocked,tables:p.tables.slice()};
 }
 
+/* seasons: by date (UK meteorological seasons) unless the child picks one */
+const SEASONS=[['auto','Auto'],['spring','🌸 Spring'],['summer','☀️ Summer'],['autumn','🍂 Autumn'],['winter','❄️ Winter']];
+function seasonByDate(d=new Date()){const m=d.getMonth();return m===11||m<2?'winter':m<5?'spring':m<8?'summer':'autumn'}
+function applySeason(){
+  const s=kid&&kid.theme&&kid.theme!=='auto'?kid.theme:seasonByDate();
+  if(document.documentElement.dataset.season===s)return;
+  document.documentElement.dataset.season=s;
+  document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+}
+
+/* install as an app */
+let installEvt=null;
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isMobile=()=>isIOS()||/android|mobile/i.test(navigator.userAgent);
+const canInstall=()=>!standalone()&&(!!installEvt||isIOS());
+const bannerHidden=()=>Date.now()<Number(LS.get('ttf-install-hide')||0);
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(view==='home'||view==='welcome')render();autoInstallSheet()});
+window.addEventListener('appinstalled',()=>{installEvt=null;document.querySelector('.sheet-bg')?.remove();if(view==='home'||view==='welcome')render()});
+const installBanner=()=>canInstall()&&!bannerHidden()?`<div class="install"><p><b>This works best as an app.</b> Install it and it opens full screen from your home screen.</p>
+  <button class="go" data-act="install">Install</button><button class="x" data-act="install-hide" aria-label="Not now">×</button></div>`:'';
+function autoInstallSheet(){
+  // pops up once per device on phones and tablets
+  if(!isMobile()||!canInstall()||LS.get('ttf-install-seen')||!['home','welcome'].includes(view)||document.querySelector('.sheet-bg'))return;
+  LS.set('ttf-install-seen','1');installSheet();
+}
+const shareIcon='<svg class="share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+function installSheet(){
+  if(installEvt)return sheet(`<h2>Install Times Table Forest</h2>
+    <p>It works best as an app: it opens full screen from your home screen, and updates itself.</p>
+    <button class="cta" data-act="install-go">Install</button>`);
+  sheet(`<h2>Install Times Table Forest</h2>
+    <p>It works best as an app. In Safari:</p>
+    <ol class="steps"><li>Tap the Share button ${shareIcon} (bottom of the screen on iPhone, top on iPad).</li>
+      <li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>.</li></ol>
+    <p class="hint">Then open it from your home screen. You'll log in once more inside the app, so keep your Forest Pass handy.</p>`);
+}
+async function doInstall(){
+  if(!installEvt)return;
+  const e=installEvt;installEvt=null;
+  document.querySelector('.sheet-bg')?.remove();
+  e.prompt();await e.userChoice.catch(()=>{});render();
+}
+
+/* updates: each deploy ships a new service worker. It takes over (and the page reloads)
+   only on screens where nothing is lost, never mid-round or while a Forest Pass is showing. */
+const VERSION=(document.currentScript&&new URL(document.currentScript.src).searchParams.get('v'))||'dev';
+let swReg=null, updateReady=false, applyingUpdate=false;
+const SAFE_TO_UPDATE=new Set(['loading','welcome','home','parent','assessPick']);
+if('serviceWorker' in navigator&&VERSION!=='__V__'){
+  navigator.serviceWorker.register('/sw.js').then(reg=>{
+    swReg=reg;
+    const ready=()=>{if(navigator.serviceWorker.controller){updateReady=true;maybeUpdate()}};
+    const track=w=>w&&w.addEventListener('statechange',()=>{if(w.state==='installed')ready()});
+    if(reg.waiting)ready();
+    track(reg.installing);
+    reg.addEventListener('updatefound',()=>track(reg.installing));
+  }).catch(()=>{});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(applyingUpdate)location.reload()});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')swReg?.update().catch(()=>{})});
+  setInterval(()=>swReg?.update().catch(()=>{}),60*60e3);
+}
+function maybeUpdate(){
+  if(!updateReady||applyingUpdate||!SAFE_TO_UPDATE.has(view)||document.querySelector('.sheet-bg')||!swReg?.waiting)return;
+  applyingUpdate=true;
+  const t=document.createElement('div');t.className='update';t.textContent='Updating the forest…';document.body.appendChild(t);
+  (kid?flush():Promise.resolve()).finally(()=>swReg.waiting?swReg.waiting.postMessage('skip-waiting'):location.reload());
+}
+
 /* views */
 const app=document.getElementById('app');
 let view='loading', me={role:null}, kid=null, kids=[], card=null, cardFor='parent';
 let round=null, summary=null, assessResult=null, picked=[], plan=[], armed=null, flash='', busy=false;
 
 function render(){
+  applySeason();
   ({loading:renderLoading,welcome:renderWelcome,childLogin:renderChildLogin,recover:renderRecover,
     grownup:renderGrownup,parent:renderParent,card:renderCard,
     assessPick:renderAssessPick,assessResult:renderAssessResult,
     home:renderHome,play:renderPlay,summary:renderSummary})[view]();
 }
-function go(v){view=v;flash='';armed=null;render()}
+function go(v){view=v;flash='';armed=null;render();maybeUpdate();autoInstallSheet()}
 const err=()=>flash?`<p class="err" role="alert">${esc(flash)}</p>`:'';
 const back=(to,label='Back')=>`<button class="icon" data-act="go" data-to="${to}" aria-label="${label}">‹</button>`;
 
@@ -164,6 +235,7 @@ function renderWelcome(){
   app.innerHTML=`<main class="screen scroll">
     <header class="brand">${tree(5)}<h1>Times Table Forest</h1></header>
     <p class="lead">Every times table fact is a tree. Get it right on the right day and it grows.</p>
+    ${installBanner()}
     ${err()}
     <div class="stack">
       <button class="cta" data-act="go" data-to="childLogin">I'm playing</button>
@@ -244,6 +316,7 @@ function renderParent(){
       <input id="nm" name="name" maxlength="20" placeholder="First name or nickname" autocomplete="off" enterkeyhint="done">
       <button ${busy?'disabled':''}>Add</button></form>
     <p class="hint small">Signed in as ${esc(me.email||'')}</p>
+    <p class="ver">Version ${esc(VERSION)}</p>
   </main>`;
 }
 function ago(t){const d=Math.round((today()-new Date(t).setHours(0,0,0,0))/864e5);return d<=0?'today':d===1?'yesterday':`${d} days ago`}
@@ -324,6 +397,7 @@ function renderHome(){
   app.innerHTML=`<main class="screen scroll">
     <header class="bar"><button class="pill" data-act="logout">Log out</button>
       <h1>${esc(p.name)}'s forest</h1><button class="icon" data-act="how" aria-label="How it works">?</button></header>
+    ${installBanner()}
     ${unsaved?'<p class="warn">Some answers haven\'t saved yet. They\'ll save when the internet is back.</p>':''}
     <section class="today"><p class="status">${status}</p>
       <p class="streak">${p.streak>1?`${p.streak} days in a row`:'Play a little every day to keep the forest growing.'}</p>
@@ -331,6 +405,8 @@ function renderHome(){
     <section class="forest" aria-label="Times table forest">${g}</section>
     <div class="legend">${[1,2,3,4,5].map(s=>`<span>${tree(s)}${STAGES[s]}</span>`).join('')}</div>
     <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:' Every table is planted.'}</p>
+    <div class="seasons" role="group" aria-label="Forest season"><p>Forest season</p>${SEASONS.map(([k,l])=>
+      `<button data-act="season" data-s="${k}" aria-pressed="${(p.theme||'auto')===k}">${l}</button>`).join('')}</div>
   </main>`;
 }
 
@@ -447,7 +523,11 @@ function renderSummary(){
 function sheet(html){
   const bg=document.createElement('div');bg.className='sheet-bg';
   bg.innerHTML=`<div class="sheet" role="dialog" aria-modal="true">${html}<button class="cta quiet" data-act="close">Close</button></div>`;
-  bg.addEventListener('click',e=>{if(e.target===bg||e.target.dataset.act==='close')bg.remove()});
+  bg.addEventListener('click',e=>{
+    const act=e.target.closest('[data-act]')?.dataset.act;
+    if(act==='install-go')return doInstall();
+    if(e.target===bg||act==='close'){bg.remove();maybeUpdate()}
+  });
   document.body.appendChild(bg);bg.querySelector('[data-act=close]').focus();
 }
 function cellSheet(a,b){
@@ -471,7 +551,7 @@ async function boot(){
   try{me=await api('/me')}catch(e){me={role:null};flash=e.message}
   if(me.role==='child')await enterChild();
   else if(me.role==='parent')await enterParent();
-  else{view='welcome';render()}
+  else{const f=flash;go('welcome');if(f){flash=f;render()}}
 }
 async function enterChild(){
   try{kid=await api('/child/state')}catch(e){return signedOut(e)}
@@ -555,6 +635,9 @@ app.addEventListener('click',e=>{
     case 'assess-start':startAssessment();break;
     case 'assess-skip':assessResult=applyAssessment(kid,[],{});flush();go('assessResult');break;
     case 'print':window.print();break;
+    case 'season':kid.theme=b.dataset.s;saveMeta();render();break;
+    case 'install':installSheet();break;
+    case 'install-hide':LS.set('ttf-install-hide',String(Date.now()+14*864e5));render();break;
     case 'card-done':card=null;if(cardFor==='child')enterChild();else enterParent();break;
     case 'kid-reset':case 'kid-reassess':case 'kid-remove':parentAction(act,+b.dataset.id);break;
   }

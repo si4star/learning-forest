@@ -5,21 +5,37 @@
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
-  --bg:#E8F0E0; --surface:#F8FBF4; --ink:#1E2B1A; --muted:#5B6B54;
-  --leaf:#3F8F3A; --leaf-2:#86C25F; --bark:#7A4E2D; --soil:#CDBBA0;
-  --sun:#EFA52A; --berry:#C44569; --line:#CFDCC4; --key-shadow:#B9CAAE;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#121A10; --surface:#1D2819; --ink:#E7EFDE; --muted:#9FB096;
-    --leaf:#62B651; --leaf-2:#A1D77F; --bark:#B07A4F; --soil:#4D4235;
-    --sun:#F5B942; --berry:#E46D8E; --line:#2E3C29; --key-shadow:#0A0F09;
-  }
+/* Four forest seasons. The season is set on <html data-season>: by date, or the child's pick.
+   --leaf is the UI accent; --canopy colours the trees; --fruit is blossom, fruit or berries;
+   --snow caps the trees (winter only); --particle is what drifts down the screen. */
+:root,[data-season=summer]{
+  color-scheme:light;
+  --bg:#E8F0E0; --surface:#F8FBF4; --ink:#1E2B1A; --muted:#5B6B54; --line:#CFDCC4; --key-shadow:#B9CAAE;
+  --leaf:#3F8F3A; --leaf-2:#86C25F; --canopy:#3F8F3A; --canopy-2:#86C25F; --sprout:#3F8F3A; --sprout-2:#86C25F;
+  --bark:#7A4E2D; --soil:#CDBBA0; --fruit:#EFA52A; --sun:#EFA52A; --berry:#C44569;
+  --snow:transparent; --particle:transparent;
 }
-:root[data-theme="dark"]{
-  --bg:#121A10; --surface:#1D2819; --ink:#E7EFDE; --muted:#9FB096;
-  --leaf:#62B651; --leaf-2:#A1D77F; --bark:#B07A4F; --soil:#4D4235;
-  --sun:#F5B942; --berry:#E46D8E; --line:#2E3C29; --key-shadow:#0A0F09;
+[data-season=spring]{
+  color-scheme:light;
+  --bg:#EEF6EA; --surface:#FCFEFA; --ink:#1F2B1C; --muted:#5A6B55; --line:#D6E6CC; --key-shadow:#BED3B2;
+  --leaf:#3F8F3A; --leaf-2:#86C25F; --canopy:#78BE57; --canopy-2:#B3DE8C; --sprout:#4E9F3D; --sprout-2:#9BD272;
+  --bark:#7A4E2D; --soil:#CDBBA0; --fruit:#F38DB6; --sun:#E5962A; --berry:#C44569;
+  --snow:transparent; --particle:#F6B3CD;
+}
+[data-season=autumn]{
+  color-scheme:light;
+  --bg:#F4EADB; --surface:#FFF9F0; --ink:#2E2116; --muted:#76604C; --line:#E7D4BB; --key-shadow:#D4BB9A;
+  --leaf:#A5521C; --leaf-2:#E2A04A; --canopy:#D2691E; --canopy-2:#EDB04A; --sprout:#6E9A3A; --sprout-2:#B4C96A;
+  --bark:#6B4226; --soil:#BFA27F; --fruit:#A82E2A; --sun:#D9861C; --berry:#B23A48;
+  --snow:transparent; --particle:#D9792B;
+}
+[data-season=winter]{
+  color-scheme:dark;
+  --bg:#0B121C; --surface:#152030; --ink:#E3ECF4; --muted:#8FA2B6; --line:#22303F; --key-shadow:#05080D;
+  --leaf:#2F8A6B; --leaf-2:#6DB596; --canopy:#2E6E58; --canopy-2:#4F937A; --sprout:#4F9B74; --sprout-2:#86C6A2;
+  --bark:#7D6150; --soil:#8E9FB1; --fruit:#D6455C; --sun:#F2C25B; --berry:#EF7A94;
+  --snow:#C3D0DD; --particle:rgba(214,226,238,.5);
 }
 *,*::before,*::after{box-sizing:border-box}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -29,7 +45,7 @@ body{height:100%;margin:0;background:var(--bg);color:var(--ink);
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:3px solid var(--sun);outline-offset:2px}
-#app{height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column}
+#app{position:relative;z-index:1;height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column}
 .screen{flex:1;min-height:0;display:flex;flex-direction:column;padding:16px 16px 20px}
 .scroll{overflow-y:auto}
 h1{font-size:26px;font-weight:600;margin:0;line-height:1.2}
@@ -129,6 +145,42 @@ p{line-height:1.45}
 .sheet ol{padding-left:22px;margin:0 0 12px}
 .sheet li{margin-bottom:10px;line-height:1.45;font-size:16px}
 .sheet .cta{margin-top:8px}
+/* drifting snow, petals or leaves behind the app; each layer moves exactly one tile so the loop is seamless */
+.sky{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(2.5px 2.5px at 30px 40px,var(--particle) 60%,transparent),
+    radial-gradient(2px 2px at 140px 120px,var(--particle) 60%,transparent),
+    radial-gradient(3px 3px at 90px 210px,var(--particle) 60%,transparent),
+    radial-gradient(1.5px 1.5px at 220px 60px,var(--particle) 60%,transparent);
+  background-size:180px 180px,260px 260px,320px 320px,240px 240px;
+  animation:drift 24s linear infinite}
+[data-season=spring] .sky,[data-season=autumn] .sky{
+  background-image:
+    radial-gradient(4px 2.5px at 40px 60px,var(--particle) 60%,transparent),
+    radial-gradient(3.5px 2px at 200px 170px,var(--particle) 60%,transparent),
+    radial-gradient(4px 3px at 120px 300px,var(--particle) 60%,transparent);
+  background-size:260px 260px,340px 340px,420px 420px;opacity:.55;animation-duration:40s}
+[data-season=summer] .sky{display:none}
+@keyframes drift{
+  from{background-position:0 0,0 0,0 0,0 0}
+  to{background-position:40px 180px,-30px 260px,50px 320px,-20px 240px}}
+.seasons{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.seasons p{width:100%;margin:0;color:var(--muted);font-size:15px}
+.seasons button{border:2px solid transparent;border-radius:14px;background:var(--surface);padding:8px 12px;font-size:15px;box-shadow:0 2px 0 var(--key-shadow)}
+.seasons [aria-pressed=true]{border-color:var(--leaf);color:var(--leaf);font-weight:600}
+
+/* install */
+.install{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;margin:14px 0 0;padding:12px 12px 12px 16px;border-radius:16px;
+  background:color-mix(in srgb,var(--leaf) 14%,var(--surface));border:2px solid color-mix(in srgb,var(--leaf) 40%,transparent)}
+.install p{margin:0;font-size:15px;line-height:1.35}
+.install .go{border:0;border-radius:12px;background:var(--leaf);color:#fff;font-weight:600;padding:10px 14px;font-size:16px}
+.install .x{border:0;background:none;width:36px;height:36px;font-size:22px;color:var(--muted)}
+.steps{padding-left:22px}
+.share{display:inline-block;width:20px;height:20px;vertical-align:-4px;color:var(--leaf)}
+.update{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:14px;font-size:15px}
+.ver{color:var(--muted);font-size:13px;margin:6px 0 0}
+
 /* forms */
 .stack{display:flex;flex-direction:column;gap:12px;margin-top:22px}
 .form{display:flex;flex-direction:column;gap:14px;margin-top:18px}

@@ -2,7 +2,7 @@
 
 A times table practice app for children aged 7–9. Each fact is a tree on an 11 × 11 grid (2–12 × 2–12; 6 × 7 and 7 × 6 are the same tree, so 66 trees). A tree only grows when the fact is recalled correctly on the day it is due, so the forest shows retention rather than time played.
 
-Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. No build step.
+Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. It's a PWA: installable, and it updates itself when a new version is published.
 
 ## Accounts
 
@@ -17,7 +17,7 @@ Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. N
 - Passwords and recovery codes are stored as PBKDF2-SHA256 hashes (100,000 iterations). Sessions are random tokens in HttpOnly, Secure, SameSite=Lax cookies (30 days for grown-ups, 180 days for children).
 - 10 failed logins per account, or 50 per IP address, in 15 minutes locks out further attempts for 15 minutes.
 
-Data held: grown-up email; child first name or nickname; facts progress; every answer (fact, answer given, right/wrong, time taken, kind). Failed login records are deleted after a day. The font is self-hosted, so the page makes no third-party requests.
+Data held: grown-up email; child first name or nickname; facts progress; chosen season; every answer (fact, answer given, right/wrong, time taken, kind). Failed login records are deleted after a day. The font is self-hosted, so the page makes no third-party requests.
 
 ## Starting check
 
@@ -31,6 +31,36 @@ On first login the child taps the tables they think they know.
 - The next table in the unlock order then unlocks as normal if 80% of planted facts have sprouted.
 - The results screen shows each picked table, its score, and "You know these" or "We'll grow these".
 - "I don't know any yet" skips the check. A grown-up can "Redo starting check", which wipes that child's progress.
+
+## Installing as an app (PWA)
+
+- On phones and tablets an install pop-up appears once per device. After that, the welcome and forest screens show a "This works best as an app" banner until the app is installed. The × hides the banner for 14 days.
+- Android and desktop Chrome or Edge use the browser's own install prompt. On iPhone and iPad the pop-up shows the Safari steps: Share → Add to Home Screen → Add.
+- On iPhone and iPad the installed app keeps its own logins, separate from Safari, so the child logs in once more inside it.
+
+## Updates
+
+- `npm run build` copies `public/` to `dist/` and stamps a version (the Git commit on Cloudflare) into the page, the script and style URLs, and the service worker.
+- Each deploy installs a new service worker with a fresh cache and deletes the old one.
+- Open apps check for updates when brought to the front, and every hour. The new version takes over and the page reloads only on screens where nothing is lost (welcome, forest, grown-up and table-picking screens). It never happens mid-round or while a Forest Pass is on screen.
+- The version number is shown at the bottom of the grown-up screen.
+- Scripts and styles are cached for a year because each version has its own URLs. `sw.js` and the manifest are never cached (see `public/_headers`).
+
+## Seasons
+
+There are four forest themes: spring, summer, autumn and winter. Each changes the colours, the trees and what drifts down the screen.
+
+| Season | Look |
+| --- | --- |
+| Spring | Pale fresh green, light green trees, pink blossom, drifting petals |
+| Summer | The original greens, orange fruit, nothing falling |
+| Autumn | Warm cream, orange and gold trees, red apples, falling leaves |
+| Winter | Darkest: night blue with dark pine trees, snow on the treetops and ground, red berries, dim falling snow |
+
+- The season follows the date by default (UK meteorological seasons: winter is December to February).
+- A child can pick a season under their forest. The choice is saved to their account.
+- Screens before login follow the date.
+- Drifting stops if the device is set to reduce motion.
 
 ## Method
 
@@ -48,7 +78,7 @@ Progress is saved after every answer. If the connection drops, answers queue on 
 
 1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git** → pick `si4star/tree-tables`.
    - Production branch: `main`
-   - Framework preset: None. Build command: *(leave empty)*. Build output directory: `public`
+   - Framework preset: None. Build command: `npm run build`. Build output directory: `dist`
 2. **Storage & Databases** → **D1** → **Create database**, name it `tree-tables`.
 3. Back in the Pages project → **Settings** → **Bindings** → **Add** → **D1 database**: variable name `DB`, database `tree-tables`. Add it for both Production and Preview.
 4. **Deployments** → retry the latest deployment so it picks up the binding.
@@ -64,8 +94,9 @@ Other branches get preview URLs automatically.
 ```
 npm install
 npx playwright install chromium   # once, for the tests
-npm run dev          # http://localhost:8788 with a local D1 database in .wrangler/
-npm test             # end-to-end test against the running dev server (BASE=... to override)
+npm run dev          # builds, then serves http://localhost:8788 with a local D1 database in .wrangler/
+npm test             # end-to-end test against the running dev server (BASE=... to override;
+                     # REBUILD="npm run build" also tests the update flow)
 ```
 
 ## Layout
@@ -73,7 +104,11 @@ npm test             # end-to-end test against the running dev server (BASE=... 
 | Path | Contents |
 | --- | --- |
 | `public/index.html` | Page shell and tree SVG symbols |
-| `public/css/styles.css` | Styles, light and dark themes, print layout for the Forest Pass |
+| `public/sw.js` | Service worker: offline app shell, versioned caches |
+| `public/manifest.webmanifest`, `public/icons/` | PWA manifest and icons |
+| `public/_headers` | Cache and security headers (Cloudflare Pages) |
+| `scripts/build.mjs` | Copies `public/` to `dist/` and stamps the version |
+| `public/css/styles.css` | Styles, the four seasons, print layout for the Forest Pass |
 | `public/js/app.js` | Client: screens, scheduling, rounds, starting check, sync queue |
 | `public/fonts/` | Fredoka (SIL Open Font License) |
 | `functions/api/[[path]].js` | Pages Functions entry for `/api/*` |

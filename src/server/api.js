@@ -9,6 +9,7 @@ const MAX_CHILDREN = 10;
 const COOKIE = 'tf_session';
 const ORDER = [10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7];
 const KINDS = new Set(['assess', 'new', 'reask', 'review', 'retry', 'practice']);
+const THEMES = ['auto', 'spring', 'summer', 'autumn', 'winter'];
 
 class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -248,7 +249,7 @@ async function childRecover(ctx) {
 async function childState(ctx) {
   const cid = await need(ctx, 'child');
   const [c, f] = await ctx.db.batch([
-    ctx.db.prepare('SELECT id, name, display_username, tables, assessed_at, streak, last_day FROM children WHERE id = ?').bind(cid),
+    ctx.db.prepare('SELECT id, name, display_username, tables, assessed_at, streak, last_day, theme FROM children WHERE id = ?').bind(cid),
     ctx.db.prepare('SELECT fact, box, due FROM facts WHERE child_id = ?').bind(cid),
   ]);
   const row = c.results[0];
@@ -257,7 +258,7 @@ async function childState(ctx) {
   for (const r of f.results) facts[r.fact] = { box: r.box, due: r.due };
   return json({
     id: row.id, name: row.name, username: row.display_username, tables: JSON.parse(row.tables),
-    assessedAt: row.assessed_at, streak: row.streak, lastDay: row.last_day, facts,
+    assessedAt: row.assessed_at, streak: row.streak, lastDay: row.last_day, theme: row.theme, facts,
   });
 }
 
@@ -285,10 +286,11 @@ async function childSync(ctx) {
   if (b.meta) {
     const m = b.meta;
     const ok = Array.isArray(m.tables) && m.tables.every(t => ORDER.includes(t)) && new Set(m.tables).size === m.tables.length
-      && isInt(m.streak, 0, 100000) && Number.isFinite(m.lastDay) && (m.assessedAt === null || Number.isFinite(m.assessedAt));
+      && isInt(m.streak, 0, 100000) && Number.isFinite(m.lastDay) && (m.assessedAt === null || Number.isFinite(m.assessedAt))
+      && THEMES.includes(m.theme);
     if (!ok) throw new HttpError(400, 'Bad progress.');
-    stmts.push(db.prepare('UPDATE children SET tables = ?, streak = ?, last_day = ?, assessed_at = ? WHERE id = ?')
-      .bind(JSON.stringify(m.tables), m.streak, m.lastDay, m.assessedAt, cid));
+    stmts.push(db.prepare('UPDATE children SET tables = ?, streak = ?, last_day = ?, assessed_at = ?, theme = ? WHERE id = ?')
+      .bind(JSON.stringify(m.tables), m.streak, m.lastDay, m.assessedAt, m.theme, cid));
   }
   if (answers.length) stmts.push(db.prepare('UPDATE children SET last_played = ? WHERE id = ?').bind(Date.now(), cid));
   if (stmts.length) await db.batch(stmts);

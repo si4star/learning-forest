@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev public --d1 DB --port 8788",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs && wrangler pages dev dist --d1 DB --port 8788",
     "test": "node tests/e2e.mjs"
   },
   "devDependencies": {

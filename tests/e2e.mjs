@@ -130,12 +130,58 @@ await kp.waitForSelector('text=I\'m playing');   // recovery logged out the old 
 step('rate limit after 10 wrong passwords');
 const r = await (await browser.newContext()).request;
 let last;
-for (let i = 0; i < 11; i++) last = await r.post(BASE + '/api/child/login', { data: { username, password: 'nope-nope-nope' } });
+for (let i = 0; i < 11; i++) last = await r.post(BASE + '/api/child/login', { data: { username: 'SomeoneElse99', password: 'nope-nope-nope' } });
 assert.equal(last.status(), 429);
 
 step('API rejects cross-origin writes and unauthenticated reads');
 assert.equal((await r.post(BASE + '/api/child/sync', { data: {}, headers: { origin: 'https://evil.example' } })).status(), 403);
 assert.equal((await r.get(BASE + '/api/child/state')).status(), 401);
+
+step('child picks a season, and it is saved');
+await kp.goto(BASE);
+await kp.click("text=I'm playing");
+await kp.fill('input[name=username]', username);
+await kp.fill('input[name=password]', newPw);
+await kp.click('form .cta');
+await kp.waitForSelector('.seasons');
+await kp.click('[data-s=winter]');
+assert.equal(await kp.evaluate(() => document.documentElement.dataset.season), 'winter');
+await kp.waitForTimeout(800);
+await kp.reload();
+await kp.waitForSelector('.seasons');
+assert.equal(await kp.evaluate(() => document.documentElement.dataset.season), 'winter');
+assert.equal(await kp.getAttribute('[data-s=winter]', 'aria-pressed'), 'true');
+
+step('install banner shows when the browser offers install, and hides for 14 days');
+await kp.evaluate(() => { const e = new Event('beforeinstallprompt'); e.prompt = () => {}; e.userChoice = Promise.resolve({}); window.dispatchEvent(e); });
+await kp.waitForSelector('.install');
+await kp.click('.install .x');
+assert.equal(await kp.$('.install'), null);
+
+step('PWA: manifest and service worker');
+const manifest = await (await r.get(BASE + '/manifest.webmanifest')).json();
+assert.equal(manifest.display, 'standalone');
+for (const i of manifest.icons) assert.equal((await r.get(BASE + i.src)).status(), 200, i.src);
+const swVersion = async page => page.evaluate(async () => {
+  const reg = await navigator.serviceWorker.ready;
+  return (await caches.keys()).find(k => k.startsWith('ttf-'));
+});
+console.log('  cache:', await swVersion(pp));
+
+if (process.env.REBUILD) {
+  step('publishing a new version updates the open app');
+  await pp.goto(BASE);
+  await pp.waitForSelector('.ver');
+  const before = await pp.textContent('.ver');
+  const { execSync } = await import('node:child_process');
+  execSync(process.env.REBUILD, { stdio: 'inherit' });
+  await pp.waitForTimeout(1500);
+  await pp.evaluate(() => navigator.serviceWorker.getRegistration().then(r => r.update())).catch(() => {}); // may already be reloading
+  await pp.waitForFunction(b => document.querySelector('.ver') && document.querySelector('.ver').textContent !== b, before, { timeout: 20000 });
+  const after = await pp.textContent('.ver');
+  console.log(`  ${before} → ${after}; caches:`, await pp.evaluate(() => caches.keys()));
+  assert.equal((await pp.evaluate(() => caches.keys())).filter(k => k.startsWith('ttf-')).length, 1, 'old cache deleted');
+}
 
 assert.deepEqual(errors, []);
 console.log('PASS');
