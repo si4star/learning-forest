@@ -321,6 +321,40 @@ function renderParent(){
 }
 function ago(t){const d=Math.round((today()-new Date(t).setHours(0,0,0,0))/864e5);return d<=0?'today':d===1?'yesterday':`${d} days ago`}
 
+/* Forest Pass as an image. window.print() does nothing in iPhone/iPad home-screen apps and is
+   unreliable in Android installed apps, so phones get the share sheet (Print, Save Image, AirDrop...).
+   The image is drawn as soon as the card shows, because iOS only allows sharing straight after a tap. */
+let cardFile=null;
+const loadImg=src=>new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=src});
+async function drawCard(c){
+  await Promise.all(['400 30px Fredoka','600 30px Fredoka'].map(f=>document.fonts.load(f).catch(()=>{})));
+  const W=1000,H=1300,cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const g=cv.getContext('2d'),F='Fredoka, ui-rounded, sans-serif',GREEN='#3F8F3A',INK='#1E2B1A',MUTED='#5B6B54';
+  const text=(t,x,y,size,weight,colour,maxW)=>{let s=size;do g.font=`${weight} ${s}px ${F}`;while(maxW&&g.measureText(t).width>maxW&&--s>20);g.fillStyle=colour;g.fillText(t,x,y)};
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  g.beginPath();const x=40,y=40,w=W-80,h=H-80,rr=48;
+  g.moveTo(x+rr,y);g.arcTo(x+w,y,x+w,y+h,rr);g.arcTo(x+w,y+h,x,y+h,rr);g.arcTo(x,y+h,x,y,rr);g.arcTo(x,y,x+w,y,rr);g.closePath();
+  g.setLineDash([24,14]);g.lineWidth=8;g.strokeStyle=GREEN;g.stroke();g.setLineDash([]);
+  try{g.drawImage(await loadImg('icons/icon-192.png'),95,95,150,150)}catch(e){}
+  text('FOREST PASS',275,150,34,600,GREEN);
+  text(c.name,275,222,64,600,INK,640);
+  const rows=[['Website',location.host,44],['Username',c.username,60],['Password',c.password,60],['Recovery code',c.recovery,60]];
+  rows.forEach(([label,value,size],i)=>{const top=350+i*170;text(label,110,top,34,400,MUTED);text(value,110,top+70,size,600,INK,780)});
+  ['Keep this card safe at home.','Never tell a friend your password.','Lost your password? Use the recovery code.']
+    .forEach((t,i)=>text('•  '+t,110,1060+i*56,32,400,MUTED,780));
+  const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
+  return new File([blob],`Forest Pass - ${c.name.replace(/[^\w -]/g,'')}.png`,{type:'image/png'});
+}
+function printCard(){
+  const f=cardFile;
+  if(f&&navigator.canShare&&navigator.canShare({files:[f]}))
+    return navigator.share({files:[f],title:'Forest Pass'}).catch(()=>{});   // cancelled is fine
+  if(!standalone())return window.print();
+  if(!f)return;
+  const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+
 function renderCard(){
   const c=card;
   app.innerHTML=`<main class="screen scroll">
@@ -341,12 +375,13 @@ function renderCard(){
       </ul>
     </section>
     <div class="stack">
-      <button class="cta quiet" data-act="print">Print card</button>
+      <button class="cta quiet" data-act="print">Print or save card</button>
       <label class="check"><input type="checkbox" id="wrote"> ${cardFor==='parent'?"We've written it down or printed it.":"I've written it down."}</label>
       <button class="cta" data-act="card-done" id="cardDone" disabled>${cardFor==='parent'?'Done':'Go to my forest'}</button>
     </div>
   </main>`;
   document.getElementById('wrote').addEventListener('change',e=>{document.getElementById('cardDone').disabled=!e.target.checked});
+  cardFile=null;const forCard=c;drawCard(c).then(f=>{if(card===forCard)cardFile=f}).catch(()=>{});
 }
 
 function renderAssessPick(){
@@ -635,11 +670,11 @@ app.addEventListener('click',e=>{
     case 'pick-t':{const t=+b.dataset.t;picked=picked.includes(t)?picked.filter(x=>x!==t):[...picked,t];plan=buildAssessment(picked);render();break}
     case 'assess-start':startAssessment();break;
     case 'assess-skip':assessResult=applyAssessment(kid,[],{});flush();go('assessResult');break;
-    case 'print':window.print();break;
+    case 'print':printCard();break;
     case 'season':kid.theme=b.dataset.s;saveMeta();render();break;
     case 'install':installSheet();break;
     case 'install-hide':LS.set('ttf-install-hide',String(Date.now()+14*864e5));render();break;
-    case 'card-done':card=null;if(cardFor==='child')enterChild();else enterParent();break;
+    case 'card-done':card=null;cardFile=null;if(cardFor==='child')enterChild();else enterParent();break;
     case 'kid-reset':case 'kid-reassess':case 'kid-remove':parentAction(act,+b.dataset.id);break;
   }
 });

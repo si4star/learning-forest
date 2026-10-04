@@ -40,6 +40,7 @@ assert.match(username, /^[A-Z][a-z]+[A-Z][a-z]+\d\d$/);
 assert.match(password, /^[a-z]+-[a-z]+-[a-z]+$/);
 assert.match(recovery, /^\d{4}-\d{4}$/);
 assert.equal(await pp.isDisabled('#cardDone'), true, 'Done needs the written-down tick');
+await pp.waitForFunction(() => cardFile && cardFile.type === 'image/png' && cardFile.size > 10000);   // card image for share/print
 await pp.check('#wrote');
 await pp.click('#cardDone');
 await pp.waitForSelector('.kid');
