@@ -164,9 +164,16 @@ p{line-height:1.45}
 @keyframes drift{
   from{background-position:0 0,0 0,0 0,0 0}
   to{background-position:40px 180px,-30px 260px,50px 320px,-20px 240px}}
-.seasons{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.seasons p{width:100%;margin:0;color:var(--muted);font-size:15px}
-.seasons button{border:2px solid transparent;border-radius:14px;background:var(--surface);padding:8px 12px;font-size:15px;box-shadow:0 2px 0 var(--key-shadow)}
+.seasons{display:flex;flex-wrap:wrap;gap:8px}
+.seasons button{border:2px solid transparent;border-radius:14px;background:var(--bg);padding:9px 13px;font-size:16px;box-shadow:0 2px 0 var(--key-shadow)}
+.icon svg{width:24px;height:24px}
+.set{padding-bottom:14px}
+.set h3,.menu-row{font-size:17px;font-weight:600}
+.set h3{margin:4px 0 10px}
+.set .hint{margin:10px 0 0}
+.menu{border-top:1px solid var(--line);margin-bottom:8px}
+.menu-row{display:flex;justify-content:space-between;align-items:center;width:100%;padding:16px 2px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left}
+.menu-row span:last-child{color:var(--muted);font-size:22px;line-height:1}
 .seasons [aria-pressed=true]{border-color:var(--leaf);color:var(--leaf);font-weight:600}
 
 /* install */

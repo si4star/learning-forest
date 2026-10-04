@@ -450,7 +450,7 @@ function renderHome(){
   const next=nextTable(p);
   app.innerHTML=`<main class="screen scroll">
     <header class="bar"><button class="pill" data-act="logout">Log out</button>
-      <h1>${esc(p.name)}'s forest</h1><button class="icon" data-act="how" aria-label="How it works">?</button></header>
+      <h1>${esc(p.name)}'s forest</h1><button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
     ${installBanner()}
     ${unsaved?'<p class="warn">Some answers haven\'t saved yet. They\'ll save when the internet is back.</p>':''}
     <section class="today"><p class="status">${status}</p>
@@ -459,8 +459,6 @@ function renderHome(){
     <section class="forest" aria-label="Times table forest">${g}</section>
     <div class="legend">${[1,2,3,4,5].map(s=>`<span>${tree(s)}${STAGES[s]}</span>`).join('')}</div>
     <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:' Every table is planted.'}</p>
-    <div class="seasons" role="group" aria-label="Forest season"><p>Forest season</p>${SEASONS.map(([k,l])=>
-      `<button data-act="season" data-s="${k}" aria-pressed="${(p.theme||'auto')===k}">${l}</button>`).join('')}</div>
   </main>`;
 }
 
@@ -586,10 +584,28 @@ function sheet(html){
   bg.addEventListener('click',e=>{
     const act=e.target.closest('[data-act]')?.dataset.act;
     if(act==='install-go')return doInstall();
+    if(act==='season')return pickSeason(e.target.closest('[data-act]').dataset.s,bg);
+    if(act==='how'){bg.remove();return howSheet()}
     if(e.target===bg||act==='close'){bg.remove();maybeUpdate()}
   });
   document.body.appendChild(bg);bg.querySelector('[data-act=close]').focus();
 }
+/* settings: the forest screen's cog. Add new settings here as sections or menu rows. */
+const cogIcon='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+function settingsSheet(){
+  const t=kid.theme||'auto';
+  sheet(`<h2>Settings</h2>
+    <section class="set"><h3>Forest season</h3>
+      <div class="seasons" role="group" aria-label="Forest season">${SEASONS.map(([k,l])=>
+        `<button data-act="season" data-s="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>
+      <p class="hint small">Auto follows the time of year.</p></section>
+    <nav class="menu"><button class="menu-row" data-act="how"><span>How the method works</span><span aria-hidden="true">›</span></button></nav>`);
+}
+function pickSeason(s,bg){
+  kid.theme=s;saveMeta();render();
+  bg.querySelectorAll('[data-act=season]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===s)));
+}
+
 function cellSheet(a,b){
   const s=fact(kid,key(a,b)).box;
   sheet(`<p class="eq">${a} × ${b} = ${a*b}</p><p>${b} × ${a} is the same tree.</p><p class="hint">${hint(a,b)}</p><p>Stage: ${STAGES[s]}.</p>`);
@@ -685,6 +701,7 @@ app.addEventListener('click',e=>{
     case 'go':go(b.dataset.to);break;
     case 'mode':grownupMode=b.dataset.mode;flash='';render();break;
     case 'how':howSheet();break;
+    case 'settings':settingsSheet();break;
     case 'logout':
       flush().finally(()=>api('/logout',{}).catch(()=>{}).finally(()=>{kid=null;kids=[];signedOut()}));break;
     case 'play':startRound();break;
@@ -696,7 +713,6 @@ app.addEventListener('click',e=>{
     case 'assess-start':startAssessment();break;
     case 'assess-skip':assessResult=applyAssessment(kid,[],{});flush();go('assessResult');break;
     case 'print':printCard();break;
-    case 'season':kid.theme=b.dataset.s;saveMeta();render();break;
     case 'install':installSheet();break;
     case 'install-hide':LS.set('ttf-install-hide',String(Date.now()+14*864e5));render();break;
     case 'card-done':card=null;cardFile=null;if(cardFor==='child')enterChild();else enterParent();break;

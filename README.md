@@ -64,7 +64,7 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 | Winter | Darkest: night blue with dark pine trees, snow on the treetops and ground, red berries, dim falling snow |
 
 - The season follows the date by default (UK meteorological seasons: winter is December to February).
-- A child can pick a season under their forest. The choice is saved to their account.
+- A child can pick a season in Settings (the cog on the forest screen). The choice is saved to their account.
 - Screens before login follow the date.
 - Drifting stops if the device is set to reduce motion.
 

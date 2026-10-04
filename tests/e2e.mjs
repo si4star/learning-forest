@@ -164,20 +164,27 @@ step('API rejects cross-origin writes and unauthenticated reads');
 assert.equal((await r.post(BASE + '/api/child/sync', { data: {}, headers: { origin: 'https://evil.example' } })).status(), 403);
 assert.equal((await r.get(BASE + '/api/child/state')).status(), 401);
 
-step('child picks a season, and it is saved');
+step('settings menu: child picks a season, and it is saved');
 await kp.goto(BASE);
 await kp.click("text=I'm playing");
 await kp.fill('input[name=username]', username);
 await kp.fill('input[name=password]', newPw);
 await kp.click('form .cta');
-await kp.waitForSelector('.seasons');
-await kp.click('[data-s=winter]');
+await kp.waitForSelector('.forest');
+await kp.click('[data-act=settings]');
+await kp.click('.sheet [data-s=winter]');
 assert.equal(await kp.evaluate(() => document.documentElement.dataset.season), 'winter');
+assert.equal(await kp.getAttribute('.sheet [data-s=winter]', 'aria-pressed'), 'true');
+await kp.click('.sheet .menu-row');                       // How the method works
+await kp.waitForSelector('.sheet h2:text("How the method works")');
+await kp.click('.sheet [data-act=close]');
 await kp.waitForTimeout(800);
 await kp.reload();
-await kp.waitForSelector('.seasons');
+await kp.waitForSelector('.forest');
 assert.equal(await kp.evaluate(() => document.documentElement.dataset.season), 'winter');
-assert.equal(await kp.getAttribute('[data-s=winter]', 'aria-pressed'), 'true');
+await kp.click('[data-act=settings]');
+assert.equal(await kp.getAttribute('.sheet [data-s=winter]', 'aria-pressed'), 'true');
+await kp.click('.sheet [data-act=close]');
 
 step('install banner shows when the browser offers install, and hides for 14 days');
 await kp.evaluate(() => { const e = new Event('beforeinstallprompt'); e.prompt = () => {}; e.userChoice = Promise.resolve({}); window.dispatchEvent(e); });
