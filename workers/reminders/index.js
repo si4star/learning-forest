@@ -1,4 +1,5 @@
-// Grow your times tables (The Learning Forest) daily reminders. Runs every 15 minutes (see wrangler.toml).
+// The Learning Forest's scheduled jobs: daily reminders, and deleting data after 12 months without use.
+// Runs every 15 minutes (see wrangler.toml).
 // Each device that turned reminders on gets one push a day, at or up to an hour after its
 // chosen local time, and only if the child hasn't played yet that day.
 import { sendPush, VAPID_PUBLIC_KEY } from '../../src/server/push.js';
@@ -12,7 +13,7 @@ const localParts = (when, tz) => {
 
 export async function run(env, now = new Date()) {
   const privateJwk = JSON.parse(env.VAPID_PRIVATE_JWK);
-  const subject = env.SITE_URL || 'https://tree-tables.pages.dev';
+  const subject = env.SITE_URL || 'https://learn.thetreefella.co.uk';
   const publicKey = env.VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY;   // must match the key the app subscribed with
   const db = env.DATA;
   const { results } = await db.prepare(`SELECT p.endpoint, p.time, p.tz, p.last_sent, c.last_played
@@ -34,7 +35,25 @@ export async function run(env, now = new Date()) {
   return sent;
 }
 
+// Retention (see the school pack): a pupil who hasn't played for 12 months is deleted with their
+// progress, answers, reminders and logins (teachers see a warning in the app from 11 months). A grown-up
+// account with no login for 12 months is deleted once it has no pupils left. Safe to run every time.
+const YEAR = 365 * 864e5;
+export async function purgeInactive(db, now = Date.now()) {
+  const cut = now - YEAR, idle = 'COALESCE(last_played, created_at) < ?';
+  const emptyIdleParent = 'COALESCE(p.last_seen, p.created_at) < ? AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id = p.id)';
+  await db.batch([
+    db.prepare(`DELETE FROM sessions WHERE role = 'child' AND user_id IN (SELECT id FROM children WHERE ${idle})`).bind(cut),
+    db.prepare(`DELETE FROM children WHERE ${idle}`).bind(cut),   // facts, answers, reminders follow (ON DELETE CASCADE)
+    db.prepare(`DELETE FROM sessions WHERE role = 'parent' AND user_id IN (SELECT p.id FROM parents p WHERE ${emptyIdleParent})`).bind(cut),
+    db.prepare(`DELETE FROM parents WHERE id IN (SELECT p.id FROM parents p WHERE ${emptyIdleParent})`).bind(cut),   // classes follow
+  ]);
+}
+
 export default {
-  scheduled(event, env, ctx) { ctx.waitUntil(run(env, new Date(event.scheduledTime))); },
+  scheduled(event, env, ctx) {
+    ctx.waitUntil(run(env, new Date(event.scheduledTime)));
+    ctx.waitUntil(purgeInactive(env.DATA, event.scheduledTime).catch(e => console.log('retention error', e.message)));
+  },
   fetch() { return new Response('Times tables reminders run on a schedule.'); },
 };

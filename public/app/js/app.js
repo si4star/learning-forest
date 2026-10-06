@@ -378,6 +378,9 @@ function kidActions(c,a){
         <button class="link" data-act="kid-reassess" data-id="${c.id}">${a==='kid-reassess'?'Tap again: wipe progress and redo the check':'Redo starting check'}</button>
         <button class="link danger ${a==='kid-remove'?'armed':''}" data-act="kid-remove" data-id="${c.id}">${a==='kid-remove'?`Tap again to remove ${esc(c.name)} and their forest`:'Remove'}</button>`;
 }
+// Pupils who haven't played for 12 months are deleted (the reminders Worker does it); warn from 11 months
+const IDLE_DELETE=365*864e5, IDLE_WARN=334*864e5;
+const idleWarning=c=>c.activeAt&&Date.now()-c.activeAt>IDLE_WARN?`<p class="warn small">Not played for 11 months. ${esc(c.name)}'s data will be deleted on ${new Date(c.activeAt+IDLE_DELETE).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} unless they play before then.</p>`:'';
 const kidMeta=c=>`${c.assessedAt?`${c.planted} of 66 planted`:'Starting check not done yet'}${c.lastPlayed?` · last played ${ago(c.lastPlayed)}`:''}`;
 const deviceBanner=()=>classDev?`<div class="install"><p><b>This device is set up for ${esc(classDev.className)}.</b> When nobody is logged in, it shows the class's name tiles.</p>
   <button class="go" data-act="leave-device">Stop</button></div>`:'';
@@ -387,7 +390,7 @@ function renderParent(){
     const a=armed&&armed.id===c.id?armed.act:null;
     return `<li class="kid">
       <div class="kid-hd"><span class="pname">${esc(c.name)}</span><span class="pmeta">${esc(c.username)}</span></div>
-      <p class="pmeta">${c.assessedAt?`${c.planted} of 66 planted`:'Starting check not done yet'}${c.lastPlayed?` · last played ${ago(c.lastPlayed)}`:''}</p>
+      <p class="pmeta">${kidMeta(c)}</p>${idleWarning(c)}
       <div class="kid-acts">${kidActions(c,a)}</div></li>`;
   }).join('');
   const classRows=classes.map(k=>{const n=kids.filter(c=>c.classId===k.id).length;
@@ -409,6 +412,7 @@ function renderParent(){
       <input id="cn" name="name" maxlength="30" placeholder="Class name, e.g. Oak class" autocomplete="off" enterkeyhint="done">
       <button ${busy?'disabled':''}>Add</button></form>
     <p class="hint small">Signed in as ${esc(me.email||'')}</p>
+    <button class="link danger" data-act="delete-account">Delete my account</button>
     <p class="ver">Version ${esc(VERSION)}</p>
   </main>`;
 }
@@ -418,7 +422,7 @@ function renderClassAdmin(){
   const armedFor=(id,act)=>armed&&armed.id===id&&armed.act===act;
   const rows=pupils.map(c=>{const a=armed&&armed.id===c.id?armed.act:null;
     return `<li class="kid"><div class="kid-hd"><span class="pname">${esc(c.name)}</span><span class="pics-row">${picsHtml(c.pics)}</span></div>
-      <p class="pmeta">${esc(c.username)} · ${kidMeta(c)}</p><div class="kid-acts">${kidActions(c,a)}</div></li>`}).join('');
+      <p class="pmeta">${esc(c.username)} · ${kidMeta(c)}</p>${idleWarning(c)}<div class="kid-acts">${kidActions(c,a)}</div></li>`}).join('');
   app.innerHTML=`<main class="screen scroll">
     <header class="bar">${back('parent')}<h1>${esc(k.name)}</h1><span class="icon-gap"></span></header>
     ${err()}
@@ -1117,6 +1121,23 @@ function howSheet(){
   show();
 }
 
+// Deleting a grown-up account: asks for the password, then everything on the account goes
+function deleteAccountSheet(){
+  const bg=sheet(`<h2>Delete my account</h2>
+    <p>This deletes your account and everything on it: every child and class, their progress and answers, and their Forest Passes. It can't be undone.</p>
+    <form class="form" id="delAcc" novalidate><label>Your password<span class="pw"><input name="password" type="password" autocomplete="current-password" required>${pwToggle}</span></label>
+      <p class="err" role="alert" hidden></p>
+      <button class="cta danger-cta">Delete everything</button></form>`);
+  const f=bg.querySelector('#delAcc'),msg=f.querySelector('.err');
+  f.addEventListener('click',e=>{const t=e.target.closest('[data-act=pw]');if(t){e.preventDefault();e.stopPropagation();togglePw(t)}});
+  f.addEventListener('submit',async e=>{
+    e.preventDefault();msg.hidden=true;
+    try{await api('/parent/account',{password:f.elements.password.value},'DELETE');bg.remove();kids=[];classes=[];me={role:null};go('welcome')}
+    catch(err){msg.textContent=err.message;msg.hidden=false}
+  });
+  f.elements.password.focus();
+}
+
 /* flows */
 async function boot(){
   try{localStorage.removeItem('times-table-forest-v1')}catch(e){}   // progress from the old device-only version
@@ -1263,6 +1284,7 @@ app.addEventListener('click',e=>{
     case 'pick-pupil':pupil=classInfo.pupils.find(p=>p.id===+b.dataset.id);picks=[];picMsg='';go('classPics');break;
     case 'pic':pickPic(+b.dataset.i);break;
     case 'pic-undo':picks.pop();picMsg='';render();break;
+    case 'delete-account':deleteAccountSheet();break;
     case 'leave-device':api('/parent/device/leave',{}).then(()=>{classDev=null;render()},e=>{flash=e.message;render()});break;
     case 'scan':startScan();break;
   }

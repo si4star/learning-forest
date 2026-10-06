@@ -307,6 +307,25 @@ if (process.env.REBUILD) {
   assert.equal((await pp.evaluate(() => caches.keys())).filter(k => k.startsWith('lf-')).length, 1, 'old cache deleted');
 }
 
+step('a grown-up deletes their account (wrong password refused first)');
+{
+  const dc = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const email = `del${Date.now()}@example.com`;
+  await dc.request.post(BASE + '/api/parent/signup', { data: { email, password: 'a-long-enough-pass', consent: true } });
+  await dc.request.post(BASE + '/api/parent/children', { data: { name: 'Zed' } });
+  const dp = await dc.newPage(); watch(dp);
+  await dp.goto(BASE + '/app/'); await dp.waitForSelector('.kid');
+  await dp.click('[data-act=delete-account]');
+  await dp.fill('#delAcc input[name=password]', 'wrong-password-here');
+  await dp.click('#delAcc .cta');
+  await dp.waitForSelector('#delAcc .err:not([hidden])');
+  assert.match(await dp.textContent('#delAcc .err'), /password/);
+  await dp.fill('#delAcc input[name=password]', 'a-long-enough-pass');
+  await dp.click('#delAcc .cta');
+  await dp.waitForSelector("text=I'm a grown-up");
+  assert.equal((await dc.request.post(BASE + '/api/parent/login', { data: { email, password: 'a-long-enough-pass' } })).status(), 401, 'account is gone');
+}
+
 assert.deepEqual(errors, []);
 console.log('PASS');
 await browser.close();

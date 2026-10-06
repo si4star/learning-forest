@@ -184,6 +184,7 @@ async function parentLogin(ctx) {
   if (!(await verifySecret(String(b.password || ''), row?.pw_hash))) await fail(ctx, 'p:' + email, 'Email or password not right.');
   if (needsRehash(row.pw_hash))
     await ctx.db.prepare('UPDATE parents SET pw_hash = ? WHERE id = ?').bind(await hashSecret(String(b.password)), row.id).run();
+  await ctx.db.prepare('UPDATE parents SET last_seen = ? WHERE id = ?').bind(Date.now(), row.id).run();
   return json({ role: 'parent' }, 200, await startSession(ctx, 'parent', row.id));
 }
 
@@ -198,7 +199,7 @@ async function me(ctx) {
   if (!s) { const dev = await classDevice(ctx); return json({ role: null, device: dev ? { classId: dev.id, className: dev.name } : null }); }
   const dev = await classDevice(ctx), device = dev ? { classId: dev.id, className: dev.name } : null;
   if (s.role === 'parent') {
-    const p = await ctx.db.prepare('SELECT email FROM parents WHERE id = ?').bind(s.user_id).first();
+    const p = await ctx.db.prepare('UPDATE parents SET last_seen = ? WHERE id = ? RETURNING email').bind(Date.now(), s.user_id).first();   // keeps the account from being deleted as unused
     return p ? json({ role: 'parent', email: p.email, device }) : json({ role: null, device });
   }
   const c = await ctx.db.prepare('SELECT name FROM children WHERE id = ?').bind(s.user_id).first();
@@ -209,11 +210,26 @@ async function listChildren(ctx) {
   const pid = await need(ctx, 'parent');
   const { results } = await ctx.db.prepare(`
     SELECT c.id, c.name, c.display_username AS username, c.last_played AS lastPlayed, c.assessed_at AS assessedAt,
+      COALESCE(c.last_played, c.created_at) AS activeAt,
       (SELECT COUNT(*) FROM facts f WHERE f.child_id = c.id AND f.box > 0) AS planted, c.class_id AS classId, c.pics
     FROM children c WHERE c.parent_id = ? ORDER BY c.name COLLATE NOCASE`).bind(pid).all();
   const classes = (await ctx.db.prepare(`SELECT k.id, k.name, (SELECT COUNT(*) FROM class_devices d WHERE d.class_id = k.id) AS devices
     FROM classes k WHERE k.owner_id = ? ORDER BY k.created_at`).bind(pid).all()).results;
   return json({ children: results.map(c => ({ ...c, pics: c.pics ? c.pics.split(',').map(Number) : null })), classes });
+}
+
+// A grown-up deletes their own account: every pupil and class on it, and every login, go with it.
+async function deleteAccount(ctx) {
+  const pid = await need(ctx, 'parent');
+  const row = await ctx.db.prepare('SELECT email, pw_hash FROM parents WHERE id = ?').bind(pid).first();
+  await guard(ctx, 'p:' + row.email);
+  if (!(await verifySecret(String((await body(ctx)).password || ''), row.pw_hash))) await fail(ctx, 'p:' + row.email, 'That password isn\'t right.');
+  await ctx.db.batch([
+    ctx.db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id IN (SELECT id FROM children WHERE parent_id = ?)").bind(pid),
+    ctx.db.prepare("DELETE FROM sessions WHERE role = 'parent' AND user_id = ?").bind(pid),
+    ctx.db.prepare('DELETE FROM parents WHERE id = ?').bind(pid),   // children, classes, class devices and progress follow (ON DELETE CASCADE)
+  ]);
+  return json({ ok: true }, 200, { 'set-cookie': `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
 }
 
 async function addChild(ctx) {
@@ -581,6 +597,7 @@ const ROUTES = [
   ['POST', /^\/logout$/, logout],
   ['POST', /^\/parent\/signup$/, parentSignup],
   ['POST', /^\/parent\/login$/, parentLogin],
+  ['DELETE', /^\/parent\/account$/, deleteAccount],
   ['GET', /^\/parent\/children$/, listChildren],
   ['POST', /^\/parent\/children$/, addChild],
   ['POST', /^\/parent\/children\/(\d+)\/reset$/, resetChild],

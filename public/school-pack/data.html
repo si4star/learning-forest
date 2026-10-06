@@ -13,8 +13,7 @@
 
 <main class="wrap doc">
   <h1>What we store</h1>
-  <p class="meta">For your data protection impact assessment. Last updated <span class="fill">[date]</span>.</p>
-  <div class="draft"><b>Draft.</b> Highlighted items are still to be filled in. This page describes how the app is built today; it is not legal advice.</div>
+  <p class="meta">For your data protection impact assessment. Last updated 6 October 2026.</p>
 
   <h2>Who is who</h2>
   <ul>
@@ -56,7 +55,7 @@
   <div class="tablewrap"><table>
     <thead><tr><th>Sub-processor</th><th>What for</th><th>Data it handles</th></tr></thead>
     <tbody>
-      <tr><td>Cloudflare, Inc. (Pages, Workers, D1 database)</td><td>Hosting the app and the database.</td><td>Everything listed above. Database location: <span class="fill">[D1 region]</span>.</td></tr>
+      <tr><td>Cloudflare, Inc. (Pages, Workers, D1 database)</td><td>Hosting the app and the database.</td><td>Everything listed above. Database location: Western Europe.</td></tr>
       <tr><td>Apple, Google or Mozilla push services</td><td>Delivering daily reminders, only when turned on.</td><td>An empty message to the device's push address. The reminder text is written on the device.</td></tr>
     </tbody>
   </table></div>
@@ -75,12 +74,26 @@
   <ul>
     <li><b>A pupil</b>: the teacher removes them in the app. Their progress, answers, reminders and logins are deleted straight away.</li>
     <li><b>A whole class at the end of the year</b>: "Delete this class and all its pupils" deletes every pupil's data straight away and signs out the class devices.</li>
-    <li><b>A teacher account</b>: email <span class="fill">[contact email]</span>. We delete the account and everything on it within <span class="fill">[30]</span> days.</li>
-    <li>Cloudflare database backups (Time Travel) are kept for <span class="fill">[up to 30 days, confirm plan]</span> and then overwritten.</li>
+    <li><b>A teacher account</b>: "Delete my account" in the app deletes the account and everything on it straight away, after the teacher types their password. Or email <a href="mailto:learn@thetreefella.co.uk">learn@thetreefella.co.uk</a> and we will do it within 30 days and confirm by email.</li>
+    <li><b>Automatically</b>: a pupil who hasn't played for 12 months is deleted, with their progress, answers and logins. Their teacher sees a warning in the app from 11 months. A teacher account that hasn't been used for 12 months is deleted once it has no pupils left.</li>
+    <li>Cloudflare database backups (Time Travel) are kept for up to 30 days and then overwritten.</li>
   </ul>
 
+  <h2>The Children's Code</h2>
+  <p>The ICO's Age Appropriate Design Code applies to online services children are likely to use. How the app lines up with it:</p>
+  <ul>
+    <li><b>Data minimisation</b>: first names, nicknames or initials only. No surnames, dates of birth, photos, addresses, location or contact details.</li>
+    <li><b>High privacy by default</b>: nothing is shared or public. Pupils can't message anyone or see other pupils. Daily reminders are off and can't be turned on by pupils.</li>
+    <li><b>No profiling for other purposes</b>: answers are used only to choose a pupil's next questions and to show progress to their teacher or parent. No advertising, analytics or tracking.</li>
+    <li><b>No geolocation</b>: the app never asks for or records location.</li>
+    <li><b>No data sharing</b>: only the sub-processors above, to run the service.</li>
+    <li><b>No nudges to stay on</b>: rounds are about 20 questions. A run of days isn't broken by missing one day a week.</li>
+    <li><b>Grown-ups' view</b>: a pupil's teacher or parent can see their progress and tricky facts. The app shows nothing about what a pupil does outside it.</li>
+  </ul>
+  <p>Your school's data protection impact assessment can use this page.</p>
+
   <h2>Contact</h2>
-  <p>The Tree Fella NE Ltd, <span class="fill">[registered address]</span>. Company number 11632007. Email <span class="fill">[contact email]</span>.</p>
+  <p>The Tree Fella NE Ltd, 16 Prince of Wales Close, South Shields, NE34 6QT. Company number 11632007. ICO registration number ZA845692. Email <a href="mailto:learn@thetreefella.co.uk">learn@thetreefella.co.uk</a>.</p>
 </main>
 <!-- lf:footer -->
 </body>

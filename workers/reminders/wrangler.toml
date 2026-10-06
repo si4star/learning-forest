@@ -12,6 +12,6 @@ binding = "DATA"
 database_id = "31dd9b0f-0aa9-49ed-9339-766278bcd56e"
 
 [vars]
-SITE_URL = "https://tree-tables.pages.dev"
+SITE_URL = "https://learn.thetreefella.co.uk"
 
 # Secret (not in this file): VAPID_PRIVATE_JWK — set in the dashboard under Settings → Variables and Secrets.

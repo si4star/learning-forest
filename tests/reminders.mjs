@@ -44,7 +44,7 @@ const rows = [
 ];
 
 // run() signs with the real public key constant; give it ours by swapping the module's key via env
-const sent = await run({ DATA: fakeDb(rows), VAPID_PRIVATE_JWK: JSON.stringify(jwk), SITE_URL: 'https://tree-tables.pages.dev', VAPID_PUBLIC_KEY: publicRaw }, now);
+const sent = await run({ DATA: fakeDb(rows), VAPID_PRIVATE_JWK: JSON.stringify(jwk), SITE_URL: 'https://learn.thetreefella.co.uk', VAPID_PUBLIC_KEY: publicRaw }, now);
 server.close();
 
 assert.deepEqual(hits.map(h => h.path).sort(), ['/due', '/gone', '/ny']);
@@ -60,7 +60,7 @@ assert.ok(m, 'vapid header shape');
 const [, h64, c64, s64, k] = m;
 const claims = JSON.parse(Buffer.from(c64, 'base64url'));
 assert.equal(claims.aud, `http://127.0.0.1:${port}`);
-assert.equal(claims.sub, 'https://tree-tables.pages.dev');
+assert.equal(claims.sub, 'https://learn.thetreefella.co.uk');
 assert.ok(claims.exp > Date.now() / 1000 && claims.exp <= Date.now() / 1000 + 24 * 3600, "expiry within 24 hours (push services reject longer)");
 const pub = createPublicKey({ key: { kty: 'EC', crv: 'P-256', x: jwk.x, y: jwk.y }, format: 'jwk' });
 assert.ok(verify('sha256', Buffer.from(`${h64}.${c64}`), { key: pub, dsaEncoding: 'ieee-p1363' }, Buffer.from(s64, 'base64url')), 'signature verifies');

@@ -103,6 +103,10 @@ const MIGRATIONS = [
     // the one-off copy from the old DB binding is done; its marker goes
     `DROP TABLE IF EXISTS moved`,
   ],
+  [
+    // when a grown-up last used the app: accounts unused for 12 months (with no pupils left) are deleted
+    `ALTER TABLE parents ADD COLUMN last_seen INTEGER`,
+  ],
 ];
 
 let ready = null;

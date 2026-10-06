@@ -112,7 +112,7 @@ Pages Functions can't run on a schedule, so a small separate Worker sends the re
 1. **D1 database.** Set in `workers/reminders/wrangler.toml`: binding `DATA` and the database ID, the same database the Pages project binds as `DATA`. If the database changes, copy the new ID from Storage & Databases → D1.
 2. **Create the Worker.** Workers & Pages → Create → **Import a repository** → `si4star/learning-forest`. Set **Root directory** to `workers/reminders`. Leave the build command empty. Deploy.
 3. **Secret.** In the new Worker → Settings → Variables and Secrets → add a **Secret** named `VAPID_PRIVATE_JWK` with the private key (supplied separately, never committed). Redeploy.
-4. If the site isn't at `https://tree-tables.pages.dev`, change `SITE_URL` in `wrangler.toml`.
+4. `SITE_URL` in `wrangler.toml` is the site's address (`https://learn.thetreefella.co.uk`). Change it if the site moves.
 
 The matching public key is in `src/server/push.js` and `public/app/js/app.js` (`VAPID_PUBLIC_KEY`). If the key pair is ever replaced, change both and existing devices must turn reminders off and on again.
 
@@ -197,6 +197,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `tests/e2e.mjs` | End-to-end test: accounts, starting check, rounds, sync, PWA |
 | `tests/features.mjs` | End-to-end test: shapes, friends, streak, bests, practice check, tricky facts, reminders, offline |
 | `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
+| `tests/retention.mjs` | Deleting idle pupils and unused accounts; deleting your own account |
 | `tests/qr.mjs` | QR login on the server: keys, new QR card, old keys, rate limit |
 | `tests/qr-login.mjs` | QR login in the browser: card QR decodes, link login, camera scan, bad and replaced codes |
 | `tests/classes.mjs` | Classes on the server: class devices, picture login, lockouts, ownership |
@@ -221,9 +222,15 @@ node scripts/import-trees.mjs path/to/index.html
 
 The import adapts it to this site: the inline script moves to `public/trees/trees.js` (the security policy runs no inline scripts), Google Analytics and its cookie banner come out (the school pack promises no tracking), Google Fonts become self-hosted copies, addresses move from `/` to `/trees/`, the sharing image and logo come out, and The Learning Forest's header and footer replace the page's own. Its section links and progress bar stay as a sticky bar under the site header, and the book credits move into its closing section. Each change must match exactly once, so if the page's structure changes the import stops with the step that failed rather than publishing a half-converted page.
 
+## Keeping data (retention)
+
+- The reminders Worker (`workers/reminders/`, every 15 minutes) also runs `purgeInactive()`: a pupil who hasn't played for 12 months (or was added 12 months ago and never played) is deleted with their progress, answers, reminders and logins. A grown-up account with no login for 12 months (`parents.last_seen`, updated on login and on opening the app) is deleted once it has no pupils left.
+- Teachers see a warning on a pupil's row from 11 months (`idleWarning()` in `app.js`). There is no email warning, as the app doesn't send email.
+- **Delete my account** (grown-up page) deletes the account and everything on it after the grown-up types their password.
+- Tested in `tests/retention.mjs`.
+
 ## Not built yet
 
-- **Deleting a grown-up account in the app.** For now it's done on request (the school pack says so).
 
 - **Grown-up password reset by email** (planned). Until then a grown-up who forgets their password can't get back in. The current design leaves room for it:
   - Emails are stored lowercase and unique, so one email maps to one account.
