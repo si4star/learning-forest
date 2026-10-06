@@ -1,6 +1,6 @@
-/* The Learning Forest website (modules at /trees/, /tables/, /soil/). Same palette and font as the app. */
+/* The Learning Forest website. The app is at /app/. Same palette and font as the app. */
 @font-face{font-family:'Fredoka';font-style:normal;font-display:swap;font-weight:300 700;
-  src:url(/tables/fonts/fredoka-latin-wght-normal.woff2) format('woff2-variations')}
+  src:url(/app/fonts/fredoka-latin-wght-normal.woff2) format('woff2-variations')}
 :root{
   --bg:#F1F6E6; --surface:#FCFEF6; --ink:#1D2A17; --muted:#56664C; --line:#D5E3C3;
   --leaf:#2F8F46; --leaf-dark:#21683A; --canopy:#3E9A3E; --canopy-2:#7CC35A; --bark:#7A4E2D; --soil:#C9B48E;
@@ -103,3 +103,24 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-bet
 .logo small{font-family:var(--body);font-weight:400;font-size:12px;color:var(--muted)}
 .byline{font-family:var(--display);font-weight:500;font-size:22px;color:var(--leaf-dark);margin:6px 0 0}
 .card-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px !important}
+
+/* modules: expandable rows */
+.modlist{display:grid;gap:12px}
+.module{background:var(--surface);border-radius:20px;overflow:hidden}
+.module summary,.module .summary{display:flex;align-items:center;gap:16px;padding:18px 22px;list-style:none}
+.module summary{cursor:pointer}
+.module summary::-webkit-details-marker{display:none}
+.module summary::after{content:'';flex:none;width:11px;height:11px;margin:0 4px 4px auto;border-right:3px solid var(--muted);border-bottom:3px solid var(--muted);transform:rotate(45deg);transition:transform .2s}
+.module[open] summary::after{transform:rotate(-135deg);margin-bottom:-4px}
+.module summary:hover b{text-decoration:underline}
+.module .emo{font-size:34px;line-height:1;flex:none}
+.mt{min-width:0}
+.mt b{display:block;font-family:var(--display);font-weight:600;font-size:22px;line-height:1.2}
+.mt small{display:block;color:var(--muted);font-size:16px}
+.module-body{padding:4px 22px 22px;border-top:1px solid var(--line)}
+.module-body > p:first-child{margin-top:16px}
+.module-body h3{margin:24px 0 6px}
+.module-body h4{font-family:var(--display);font-weight:600;font-size:19px;margin:0 0 4px}
+.module-body .card{background:var(--bg)}
+.module-body .intro{margin-bottom:16px}
+.module.soon{opacity:.6}

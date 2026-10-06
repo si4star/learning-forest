@@ -6,9 +6,9 @@
 <title>The Learning Forest: free learning for primary schools</title>
 <meta name="description" content="The Learning Forest by The Tree Fella: free learning modules for primary schools: how a tree works, and grow your times tables. No ads, no tracking.">
 <meta name="theme-color" content="#F1F6E6">
-<link rel="icon" href="/tables/icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/tables/icons/apple-touch-icon.png">
-<link rel="preload" href="/tables/fonts/fredoka-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" href="/app/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png">
+<link rel="preload" href="/app/fonts/fredoka-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <script src="/site.js"></script>
 </head>
@@ -27,10 +27,10 @@
     <a class="logo" href="/"><svg aria-hidden="true"><use href="#t5"/></svg><span>The Learning Forest<small>by The Tree Fella</small></span></a>
     <nav aria-label="Main">
       <a href="#modules">Modules</a>
-      <a href="/tables/about/">Times tables</a>
+      <a href="#teachers">For teachers</a>
       <a href="#pack">School pack</a>
     </nav>
-    <a class="btn small" href="/tables/">Log in</a>
+    <a class="btn small" href="/app/">Log in</a>
   </div>
 </header>
 
@@ -43,7 +43,7 @@
       <p class="lead">Free learning for primary schools. Find out how trees work, and grow a forest of times tables.</p>
       <div class="ctas">
         <a class="btn" href="#modules">See the modules</a>
-        <a class="btn quiet" href="/tables/">Log in with your Forest Pass</a>
+        <a class="btn quiet" href="/app/">Log in with your Forest Pass</a>
       </div>
       <ul class="badges">
         <li>Free</li>
@@ -62,10 +62,65 @@
 <section class="band" id="modules">
   <div class="wrap">
     <h2>Modules</h2>
-    <div class="cards modules">
-      <a class="card" href="/trees/"><span class="emo" aria-hidden="true">🌳</span><h3>How does a tree work?</h3><p>No login needed.</p></a>
-      <div class="card"><span class="emo" aria-hidden="true">✖️</span><h3>Grow your times tables</h3><p>Every fact from 1 × 1 to 12 × 12 is a tree. Little and often, about 20 questions a day. Log in with your Forest Pass.</p><p class="card-links"><a class="btn small" href="/tables/">Open</a> <a class="btn small quiet" href="/tables/about/">How it works</a></p></div>
-      <div class="card soon" aria-disabled="true"><span class="emo" aria-hidden="true">🪱</span><h3>What is soil?</h3><p>Coming soon.</p></div>
+    <p class="intro">Tap a module to find out more.</p>
+    <div class="modlist">
+      <details class="module" id="trees">
+        <summary><span class="emo" aria-hidden="true">🌳</span><span class="mt"><b>How does a tree work?</b><small>No login needed</small></span></summary>
+        <div class="module-body">
+          <p><a class="btn" href="/trees/">Open How does a tree work?</a></p>
+        </div>
+      </details>
+      <details class="module" id="tables">
+        <summary><span class="emo" aria-hidden="true">✖️</span><span class="mt"><b>Grow your times tables</b><small>Every fact from 1 × 1 to 12 × 12 is a tree. Log in with your Forest Pass.</small></span></summary>
+        <div class="module-body">
+          <p>Each pupil grows a forest of 66 trees, one for every fact from 1&nbsp;×&nbsp;1 to 12&nbsp;×&nbsp;12. Little and often, about 20 questions a day.</p>
+          <h3>How it works</h3>
+    <p class="intro">The method is built on retrieval practice and spaced repetition, two well-evidenced ways to make facts stick.</p>
+    <div class="cards">
+      <div class="card"><span class="emo" aria-hidden="true">🌱</span><h4>A starting check</h4><p>Pupils pick the tables they think they know and answer a few questions on each. Only the tables they really know are planted.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">📅</span><h4>Spaced repetition</h4><p>A right answer sends a fact away for longer each time: same round, 1 day, 3 days, 7 days, then 21 days. A wrong answer sends it back to a seed.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">🧩</span><h4>Easy facts first</h4><p>Tables unlock in the order 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. New facts are worked out step by step from ones the pupil already knows.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">🔁</span><h4>One tree per fact pair</h4><p>6 × 7 and 7 × 6 are the same tree, which turns 121 facts into 66. Grown trees are also asked as 6 × ? = 42 and 42 ÷ 6.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">⏱️</span><h4>Accuracy, then speed</h4><p>No countdown. A tree can't grow past a sprout until it's answered within 6 seconds, the limit in the Year 4 Multiplication Tables Check.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">📝</span><h4>Practice check</h4><p>Once most of the forest is grown, a 25-question practice check opens, set out like the Year 4 check.</p></div>
+    </div>
+          <p><a class="btn" href="/app/">Open the app</a></p>
+        </div>
+      </details>
+      <div class="module soon" aria-disabled="true">
+        <div class="summary"><span class="emo" aria-hidden="true">🪱</span><span class="mt"><b>What is soil?</b><small>Coming soon</small></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="teachers">
+  <div class="wrap">
+    <h2>For teachers</h2>
+    <p class="intro">One account per teacher, and one Forest Pass per pupil for every module that needs a login. Setting up a class takes a few minutes.</p>
+    <ol class="steps">
+      <li><div><b>Make a teacher account</b>Open <a href="/app/">The Learning Forest app</a>, tap "I'm a grown-up" and create an account with your email.</div></li>
+      <li><div><b>Make a class and add pupils</b>Use first names or initials only. If two pupils share a name, add a surname initial, like "Bob A" and "Bob B".</div></li>
+      <li><div><b>Print the Forest Passes</b>Each pupil's card has three pictures to log in with in class, and a QR code to use at home.</div></li>
+      <li><div><b>Set up the class devices</b>On each tablet or computer, log in as the teacher and tap "Use this device for" your class. Pupils then tap their name and their three pictures.</div></li>
+      <li><div><b>Little and often</b>A few minutes a day. You can see each pupil's progress and when they last played.</div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <div class="split">
+    <div>
+      <h3>At home too</h3>
+      <p>Scanning the QR code on a pupil's Forest Pass logs them in on a phone or tablet at home. Their progress is the same in class and at home.</p>
+      <p>Picture logins only work on devices the teacher has set up for the class. Anywhere else, pupils use the QR code or their username and password.</p>
+    </div>
+    <div>
+      <h3>End of the year</h3>
+      <p>When a class moves on, delete the class and all its pupils' data in one go, or remove just the class and keep the pupils and their progress on your account.</p>
+      <p class="note">Ending a class's use never needs an email to us: the teacher deletes it in the app.</p>
+    </div>
     </div>
   </div>
 </section>
@@ -86,7 +141,7 @@
 <footer>
   <div class="wrap">
     <span>The Learning Forest is made by The Tree Fella.</span>
-    <span><a href="/school-pack/privacy.html">Privacy</a> · <a href="/tables/">Log in</a></span>
+    <span><a href="/school-pack/privacy.html">Privacy</a> · <a href="/app/">Log in</a></span>
   </div>
   <div class="wrap"><p class="small-print">The Tree Fella NE Ltd trading as The Tree Fella® is registered in England &amp; Wales Company Number 11632007. We are registered with the Information Commissioner's Office (ICO) &amp; our registration number is ZA845692. We are registered for VAT &amp; our registration number is GB341407236.</p></div>
 </footer>

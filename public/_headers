@@ -7,17 +7,17 @@
 /sw.js
   Cache-Control: no-cache
 
-/app/sw.js
-  Cache-Control: no-cache
-
 /tables/sw.js
   Cache-Control: no-cache
 
-/tables/manifest.webmanifest
+/app/sw.js
   Cache-Control: no-cache
 
-/tables/css/*
+/app/manifest.webmanifest
+  Cache-Control: no-cache
+
+/app/css/*
   Cache-Control: public, max-age=31536000, immutable
 
-/tables/js/*
+/app/js/*
   Cache-Control: public, max-age=31536000, immutable

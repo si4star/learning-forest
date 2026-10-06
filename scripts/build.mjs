@@ -7,6 +7,6 @@ const version = (process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 10) || 'dev' + 
 rmSync('dist', { recursive: true, force: true });
 cpSync('public', 'dist', { recursive: true });
 const stamp = (file, token) => writeFileSync(file, readFileSync(file, 'utf8').replaceAll(token, version));
-stamp('dist/tables/index.html', '__V__');
-stamp('dist/tables/sw.js', '__VERSION__');
+stamp('dist/app/index.html', '__V__');
+stamp('dist/app/sw.js', '__VERSION__');
 console.log('Built dist/ version', version);

@@ -47,7 +47,8 @@ assert.equal((await kr.post(BASE + '/api/child/sync', { data: {
 
 const kp = await kidCtx.newPage();
 kp.on('pageerror', e => errors.push(e.message));
-await kp.goto(BASE + '/tables/');
+await kp.goto(BASE + '/app/');
+await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('.forest');
 await kp.waitForFunction(() => navigator.serviceWorker.controller);   // service worker in charge, for offline later
 
@@ -166,7 +167,7 @@ await kp.click('.sheet [data-act=close]');
 step('grown-up sees tricky facts and the practice check score');
 const pp = await parent.newPage();
 pp.on('pageerror', e => errors.push(e.message));
-await pp.goto(BASE + '/tables/');
+await pp.goto(BASE + '/app/');
 await pp.waitForSelector('.kid');
 await pp.click('[data-act=tricky]');
 await pp.waitForSelector('.sheet .tricky li');
@@ -179,6 +180,7 @@ step('offline: the forest opens and a round can be played; answers save on recon
 const before = await (await parent.request.get(`${BASE}/api/parent/children/${(await (await parent.request.get(BASE + '/api/parent/children')).json()).children[0].id}/tricky`)).json();
 await kidCtx.setOffline(true);
 await kp.reload();
+await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('.forest');
 assert.match(await kp.textContent('.warn'), /offline/);
 await kp.click('[data-act=play]');

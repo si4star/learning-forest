@@ -1,2 +1,3 @@
-// The app moved from /app/ to /tables/. Old links, QR cards (/app/#qr=...) and installs land here.
-location.replace('/tables/' + location.hash);
+// Grow your times tables is now a module in The Learning Forest app at /app/.
+// Old links, QR cards (/tables/#qr=...) and installs land here.
+location.replace('/app/' + location.hash);

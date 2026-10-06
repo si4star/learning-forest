@@ -15,7 +15,7 @@ const step = (name) => console.log('•', name);
 // --- parent signs up and adds a child ---
 const parentCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
 const pp = await parentCtx.newPage(); watch(pp);
-await pp.goto(BASE + '/tables/');
+await pp.goto(BASE + '/app/');
 step('parent sign-up');
 await pp.click('text=I\'m a grown-up');
 await pp.click('[data-mode=signup]');
@@ -59,7 +59,7 @@ await kidCtx.addInitScript(() => {
   } } });
 });
 const kp = await kidCtx.newPage(); watch(kp);
-await kp.goto(BASE + '/tables/');
+await kp.goto(BASE + '/app/');
 step('child login: wrong password rejected');
 await kp.click('text=I\'m playing');
 await kp.fill('input[name=username]', username);
@@ -77,6 +77,10 @@ assert.ok(await kp.$("text=Which times tables do you already know?") === null, '
 await kp.click('.pw-toggle');
 assert.equal(await kp.getAttribute('input[name=password]', 'type'), 'password');
 await kp.click('form .cta');
+step('after login the pupil picks a module');
+await kp.waitForSelector('.mods');
+assert.deepEqual((await kp.$$eval('.mod b', els => els.map(e => e.textContent))), ['Grow your times tables', 'How does a tree work?', 'What is soil?']);
+await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('text=Which times tables do you already know?');
 
 step('starting check: claim 2, 5 and 7; know 2 and 5, not 7');
@@ -109,8 +113,14 @@ await kp.waitForTimeout(800);
 
 step('progress survives a reload (stored in D1)');
 await kp.reload();
+await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('.forest');
 assert.match(await kp.textContent('.tables'), /2, 5, 10/);
+await kp.click('[aria-label="All modules"]');
+await kp.waitForSelector('text=planted');
+assert.match(await kp.textContent('[data-act=mod-tables]'), /\d+ of 66 trees planted/);
+await kp.click('[data-act=mod-tables]');
+await kp.waitForSelector('.forest');
 
 step('play a round (screen kept awake, released after)');
 await kp.click('[data-act=play]');
@@ -184,7 +194,7 @@ assert.match(kidRow, /last played today/);
 
 step('recovery code issues a new password and the old one stops working');
 const kp2 = await (await browser.newContext()).newPage(); watch(kp2);
-await kp2.goto(BASE + '/tables/');
+await kp2.goto(BASE + '/app/');
 await kp2.click('text=I\'m playing');
 await kp2.click('text=Lost your password?');
 await kp2.fill('input[name=username]', username);
@@ -207,11 +217,12 @@ assert.equal((await r.post(BASE + '/api/child/sync', { data: {}, headers: { orig
 assert.equal((await r.get(BASE + '/api/child/state')).status(), 401);
 
 step('settings menu: child picks a season, and it is saved');
-await kp.goto(BASE + '/tables/');
+await kp.goto(BASE + '/app/');
 await kp.click("text=I'm playing");
 await kp.fill('input[name=username]', username);
 await kp.fill('input[name=password]', newPw);
 await kp.click('form .cta');
+await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('.forest');
 await kp.click('[data-act=settings]');
 await kp.click('.sheet [data-s=winter]');
@@ -222,6 +233,7 @@ await kp.waitForSelector('.sheet h2:text("How the method works")');
 await kp.click('.sheet [data-act=close]');
 await kp.waitForTimeout(800);
 await kp.reload();
+await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('.forest');
 assert.equal(await kp.evaluate(() => document.documentElement.dataset.season), 'winter');
 await kp.click('[data-act=settings]');
@@ -233,6 +245,7 @@ await kp.click("text=I'm playing");
 await kp.fill('input[name=username]', username);
 await kp.fill('input[name=password]', newPw);
 await kp.click('form .cta');
+await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('.forest');
 
 step('install banner shows when the browser offers install, and hides for 14 days');
@@ -242,18 +255,18 @@ await kp.click('.install .x');
 assert.equal(await kp.$('.install'), null);
 
 step('PWA: manifest and service worker');
-const manifest = await (await r.get(BASE + '/tables/manifest.webmanifest')).json();
+const manifest = await (await r.get(BASE + '/app/manifest.webmanifest')).json();
 assert.equal(manifest.display, 'standalone');
 for (const i of manifest.icons) assert.equal((await r.get(BASE + i.src)).status(), 200, i.src);
 const swVersion = async page => page.evaluate(async () => {
   const reg = await navigator.serviceWorker.ready;
-  return (await caches.keys()).find(k => k.startsWith('tables-'));
+  return (await caches.keys()).find(k => k.startsWith('lf-'));
 });
 console.log('  cache:', await swVersion(pp));
 
 if (process.env.REBUILD) {
   step('publishing a new version updates the open app');
-  await pp.goto(BASE + '/tables/');
+  await pp.goto(BASE + '/app/');
   await pp.waitForSelector('.ver');
   const before = await pp.textContent('.ver');
   const { execSync } = await import('node:child_process');
@@ -263,7 +276,7 @@ if (process.env.REBUILD) {
   await pp.waitForFunction(b => document.querySelector('.ver') && document.querySelector('.ver').textContent !== b, before, { timeout: 20000 });
   const after = await pp.textContent('.ver');
   console.log(`  ${before} → ${after}; caches:`, await pp.evaluate(() => caches.keys()));
-  assert.equal((await pp.evaluate(() => caches.keys())).filter(k => k.startsWith('tables-')).length, 1, 'old cache deleted');
+  assert.equal((await pp.evaluate(() => caches.keys())).filter(k => k.startsWith('lf-')).length, 1, 'old cache deleted');
 }
 
 assert.deepEqual(errors, []);

@@ -13,7 +13,7 @@ p.on('pageerror', e => errors.push(e.message));
 const email = `t${Date.now()}@school.test`;
 
 step('teacher makes a class and adds pupils from a list');
-await p.goto(BASE + '/tables/');
+await p.goto(BASE + '/app/');
 await p.click("text=I'm a grown-up");
 await p.click('[data-mode=signup]');
 await p.fill('input[name=email]', email);
@@ -69,6 +69,7 @@ assert.equal(await p.$$eval('.slot', els => els.filter(e => e.textContent).lengt
 await tap(ben.pics[0]); await tap(5 === ben.pics[0] ? 6 : 5);
 await p.click('[data-act=pic-undo]');
 for (const i of ben.pics.slice(1)) await tap(i);
+await p.click('[data-act=mod-tables]');   // module picker after login
 await p.waitForSelector('text=Which times tables do you already know?');
 
 step("\"I'm done\" goes back to the name tiles");

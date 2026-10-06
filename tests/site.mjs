@@ -1,4 +1,4 @@
-// Website, and the moves of the app from / and /app/ to /tables/. Usage (dev server running): BASE=http://localhost:8788 node tests/site.mjs
+// Website, and the moves of the app (from /, then /tables/) to /app/. Usage (dev server running): BASE=http://localhost:8788 node tests/site.mjs
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 
@@ -16,7 +16,7 @@ const watch = p => {
 step('home page and school pack load without errors, with no sideways scrolling on a phone');
 for (const [w, h] of [[390, 844], [1280, 900]]) {
   const p = watch(await (await browser.newContext({ viewport: { width: w, height: h } })).newPage());
-  for (const path of ['/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/404.html', '/tables/about/']) {
+  for (const path of ['/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/404.html']) {
     await p.goto(BASE + path);
     await p.evaluate(() => document.fonts.ready);
     assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${path} scrolls sideways at ${w}px`);
@@ -24,19 +24,17 @@ for (const [w, h] of [[390, 844], [1280, 900]]) {
   }
   await p.goto(BASE + '/');
   assert.equal(await p.locator('#grove svg').count(), 28);
-  assert.deepEqual(await p.locator('.modules h3').allTextContents(), ['How does a tree work?', 'Grow your times tables', 'What is soil?']);
+  assert.deepEqual(await p.locator('.module .mt b').allTextContents(), ['How does a tree work?', 'Grow your times tables', 'What is soil?']);
+  assert.equal(await p.isVisible('text=Spaced repetition'), false, 'module details start closed');
+  await p.click('#tables summary');
+  assert.ok(await p.isVisible('text=Spaced repetition'), 'tapping a module shows its details');
 }
 
-step('/tables/about/ is a web page, even once the app has installed its service worker');
+step('a link to /#tables opens that module');
 {
-  const ap = watch(await (await browser.newContext()).newPage());
-  await ap.goto(BASE + '/tables/');
-  await ap.waitForFunction(async () => !!(await navigator.serviceWorker.getRegistration('/tables/'))?.active);
-  await ap.reload();
-  await ap.waitForFunction(() => !!navigator.serviceWorker.controller);
-  await ap.goto(BASE + '/tables/about/');
-  assert.equal(await ap.textContent('h1'), 'Grow your times tables');
-  assert.ok(await ap.locator('#start').count(), 'getting started section');
+  const hp = watch(await (await browser.newContext()).newPage());
+  await hp.goto(BASE + '/#tables');
+  assert.ok(await hp.isVisible('text=Spaced repetition'));
 }
 
 step('an unknown address shows the not-found page');
@@ -44,27 +42,27 @@ const nf = await (await browser.newContext()).request.get(BASE + '/nope/');
 assert.equal(nf.status(), 404);
 assert.match(await nf.text(), /Page not found/);
 
-for (const old of ['/', '/app/']) {
-  step(`an old Forest Pass link (${old}#qr=) opens the app at /tables/`);
+for (const old of ['/', '/tables/']) {
+  step(`an old Forest Pass link (${old}#qr=) opens the app at /app/`);
   const qp = watch(await (await browser.newContext()).newPage());
   await qp.goto(`${BASE}${old}#qr=${'B'.repeat(43)}`);
-  await qp.waitForURL(/\/tables\/$/);
+  await qp.waitForURL(/\/app\/$/);
   await qp.waitForSelector('.err');
 }
 
-for (const scope of ['/', '/app/']) {
+for (const scope of ['/', '/tables/']) {
   step(`an old install (service worker at ${scope}) is retired, leaving the new app's caches alone`);
   const op = watch(await (await browser.newContext()).newPage());
-  await op.goto(BASE + '/tables/');
-  await op.waitForFunction(async () => (await caches.keys()).some(k => k.startsWith('tables-')));
+  await op.goto(BASE + '/app/');
+  await op.waitForFunction(async () => (await caches.keys()).some(k => k.startsWith('lf-')));
   await op.evaluate(async s => {
-    await caches.open('ttf-old').then(c => c.put('/x', new Response('x')));
+    await caches.open('tables-old').then(c => c.put('/x', new Response('x')));
     await navigator.serviceWorker.register(s + 'sw.js', { scope: s });
   }, scope);
-  await op.waitForFunction(async () => !(await caches.keys()).includes('ttf-old'));
+  await op.waitForFunction(async () => !(await caches.keys()).includes('tables-old'));
   await op.waitForFunction(async s => (await navigator.serviceWorker.getRegistrations()).every(r => new URL(r.scope).pathname !== s), scope);
-  assert.ok(await op.evaluate(async () => (await caches.keys()).some(k => k.startsWith('tables-'))), 'new app cache kept');
-  assert.ok(await op.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).some(r => new URL(r.scope).pathname === '/tables/')));
+  assert.ok(await op.evaluate(async () => (await caches.keys()).some(k => k.startsWith('lf-'))), 'new app cache kept');
+  assert.ok(await op.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).some(r => new URL(r.scope).pathname === '/app/')));
 }
 
 assert.deepEqual(errors, []);
