@@ -1,7 +1,6 @@
 // Website, and the moves of the app (from /, then /tables/) to /app/. Usage (dev server running): BASE=http://localhost:8788 node tests/site.mjs
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
 
 const BASE = process.env.BASE || 'http://localhost:8788';
 const SHOTS = process.env.SHOTS;   // folder for screenshots, optional
@@ -17,10 +16,13 @@ const watch = p => {
 step('home page and school pack load without errors, with no sideways scrolling on a phone');
 for (const [w, h] of [[390, 844], [1280, 900]]) {
   const p = watch(await (await browser.newContext({ viewport: { width: w, height: h } })).newPage());
-  for (const path of ['/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/404.html']) {
+  for (const path of ['/', '/trees/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/404.html']) {
     await p.goto(BASE + path);
     await p.evaluate(() => document.fonts.ready);
     assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${path} scrolls sideways at ${w}px`);
+    assert.equal(await p.locator('.lf-top').count(), 1, `${path}: The Learning Forest header`);
+    assert.equal(await p.locator('.lf-foot .lf-small').count(), 1, `${path}: The Learning Forest footer`);
+    assert.equal(await p.locator('text=lf:header').count(), 0, `${path}: header marker replaced`);
     if (SHOTS) await p.screenshot({ path: `${SHOTS}/${w}${path.replace(/\W+/g, '-')}.png`, fullPage: true });
   }
   await p.goto(BASE + '/');
@@ -43,16 +45,14 @@ step('How does a tree work?: works, loads nothing from other websites, stores no
   const tc = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const tp = watch(await tc.newPage()), outside = [];
   tp.on('request', r => { if (!r.url().startsWith(BASE)) outside.push(r.url()); });
-  // the logo and sharing image are supplied separately; until they're in public/trees/, their 404 is expected
-  const missing = ['logo.webp'].filter(f => !existsSync('public/trees/' + f));
-  tp.removeAllListeners('console');
-  tp.on('console', m => { if (m.type() === 'error' && !(missing.length && /status of 404/.test(m.text()))) errors.push(m.text()); });
   await tp.goto(BASE + '/trees/');
   await tp.click('#go');
   assert.equal(await tp.getAttribute('#go', 'aria-pressed'), 'true');
   await tp.click('[data-act=grow]');
   assert.match(await tp.textContent('#fig-grow .cap'), /^Year 2/);
-  assert.equal(await tp.getAttribute('.lf-strip a', 'href'), '/');
+  assert.equal(await tp.getAttribute('.lf-logo', 'href'), '/');
+  assert.ok(await tp.locator('.bar #nav a').count() > 5, 'the page keeps its section links');
+  assert.ok(await tp.isVisible('.finish .sources'), 'book credits in the closing section');
   assert.deepEqual(outside, []);
   assert.deepEqual(await tp.evaluate(() => Object.keys(localStorage)), []);
 }

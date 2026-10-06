@@ -195,6 +195,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `public/tables/index.html`, `public/moved.js` | Send `/tables/` links and QR cards on to `/app/` |
 | `public/trees/` | How does a tree work?: the imported page, its script, fonts (Atkinson Hyperlegible, SIL OFL) |
 | `scripts/import-trees.mjs` | Imports a new version of the How does a tree work? page |
+| `public/_partials/header.html`, `footer.html`, `public/chrome.css` | The Learning Forest header and footer. `scripts/build.mjs` puts them into every website page in place of `<!-- lf:header -->` and `<!-- lf:footer -->`, so they're changed in one place. |
 | `public/404.html` | Not-found page (without it, Pages serves the home page for unknown paths) |
 | `public/app/index.html` | App page shell and tree SVG symbols (the app's service worker only serves this page for `/app/` itself) |
 | `public/app/sw.js` | Service worker: offline app shell, versioned caches |
@@ -239,9 +240,7 @@ The page is written outside this repo as a single HTML file. To publish a new ve
 node scripts/import-trees.mjs path/to/index.html
 ```
 
-The import adapts it to this site: the inline script moves to `public/trees/trees.js` (the security policy runs no inline scripts), Google Analytics and its cookie banner come out (the school pack promises no tracking), Google Fonts become self-hosted copies, addresses move from `/` to `/trees/`, and a link back to The Learning Forest and the site's small print are added. Each change must match exactly once, so if the page's structure changes the import stops with the step that failed rather than publishing a half-converted page.
-
-`public/trees/logo.webp` (the header logo) and `public/trees/og-image.png` (the sharing image) are copied in by hand.
+The import adapts it to this site: the inline script moves to `public/trees/trees.js` (the security policy runs no inline scripts), Google Analytics and its cookie banner come out (the school pack promises no tracking), Google Fonts become self-hosted copies, addresses move from `/` to `/trees/`, the sharing image and logo come out, and The Learning Forest's header and footer replace the page's own. Its section links and progress bar stay as a sticky bar under the site header, and the book credits move into its closing section. Each change must match exactly once, so if the page's structure changes the import stops with the step that failed rather than publishing a half-converted page.
 
 ## Not built yet
 
