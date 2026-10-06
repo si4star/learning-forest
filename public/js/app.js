@@ -320,12 +320,12 @@ let round=null, summary=null, assessResult=null, mockResult=null, picked=[], pla
 function render(){
   applySeason();
   ({loading:renderLoading,welcome:renderWelcome,childLogin:renderChildLogin,recover:renderRecover,
-    grownup:renderGrownup,parent:renderParent,card:renderCard,
+    grownup:renderGrownup,parent:renderParent,card:renderCard,scan:renderScan,
     assessPick:renderAssessPick,assessResult:renderAssessResult,
     home:renderHome,play:renderPlay,summary:renderSummary,mockIntro:renderMockIntro,mockResult:renderMockResult})[view]();
   syncWakeLock();
 }
-function go(v){view=v;flash='';armed=null;render();maybeUpdate();autoInstallSheet()}
+function go(v){if(v!=='scan')stopScan();view=v;flash='';armed=null;render();maybeUpdate();autoInstallSheet()}
 const err=()=>flash?`<p class="err" role="alert">${esc(flash)}</p>`:'';
 const back=(to,label='Back')=>`<button class="icon" data-act="go" data-to="${to}" aria-label="${label}">‹</button>`;
 
@@ -358,6 +358,7 @@ function renderChildLogin(){
   app.innerHTML=`<main class="screen scroll">
     <header class="bar">${back('welcome')}<h1>Log in</h1><span class="icon-gap"></span></header>
     <p class="lead">Your username and password are on your Forest Pass card.</p>
+    ${canScan()?'<div class="stack"><button class="cta quiet" data-act="scan">📷 Scan my Forest Pass</button></div><p class="or">or type them in</p>':''}
     <form class="form" data-form="childLogin" novalidate>
       <label>Username<input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
       <label>Password<span class="pw"><input name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required>${pwToggle}</span>
@@ -412,6 +413,7 @@ function renderParent(){
       <p class="pmeta">${c.assessedAt?`${c.planted} of 66 planted`:'Starting check not done yet'}${c.lastPlayed?` · last played ${ago(c.lastPlayed)}`:''}</p>
       <div class="kid-acts">
         <button class="link" data-act="tricky" data-id="${c.id}">Tricky facts</button>
+        <button class="link" data-act="kid-qr" data-id="${c.id}">${a==='kid-qr'?'Tap again: new QR card (the old one stops working)':'New QR card'}</button>
         <button class="link" data-act="kid-reset" data-id="${c.id}">${a==='kid-reset'?'Tap again: new password and card':'New Forest Pass'}</button>
         <button class="link" data-act="kid-reassess" data-id="${c.id}">${a==='kid-reassess'?'Tap again: wipe progress and redo the check':'Redo starting check'}</button>
         <button class="link danger ${a==='kid-remove'?'armed':''}" data-act="kid-remove" data-id="${c.id}">${a==='kid-remove'?`Tap again to remove ${esc(c.name)} and their forest`:'Remove'}</button>
@@ -431,6 +433,76 @@ function renderParent(){
 }
 function ago(t){const d=Math.round((today()-new Date(t).setHours(0,0,0,0))/864e5);return d<=0?'today':d===1?'yesterday':`${d} days ago`}
 
+/* QR login: the Forest Pass carries a QR code of a link with the child's login key.
+   The two small libraries load only when a card or the scanner is shown. */
+const QRGEN_SRC='/js/vendor/qrcode-generator-1.5.2.min.js', JSQR_SRC='/js/vendor/jsqr-1.4.0.min.js';
+const scripts={};
+function loadScript(src){
+  return scripts[src]??=new Promise((ok,no)=>{
+    const el=document.createElement('script');el.src=src;el.onload=ok;
+    el.onerror=()=>{delete scripts[src];el.remove();no(new Error("Couldn't load. Check the internet connection."))};
+    document.head.appendChild(el);
+  });
+}
+const qrLink=t=>`${location.origin}/#qr=${t}`;
+async function makeQr(t){await loadScript(QRGEN_SRC);const q=qrcode(0,'M');q.addData(qrLink(t));q.make();return q}
+// accepts a scanned link or a bare key
+const qrKey=s=>{const m=/[#?&]qr=([A-Za-z0-9_-]{30,60})/.exec(s||'')||/^([A-Za-z0-9_-]{30,60})$/.exec(s||'');return m?m[1]:null};
+async function qrLogin(key){
+  stopScan();
+  try{await api('/child/qr',{key});me={role:'child'};return enterChild()}
+  catch(e){go('childLogin');flash=e.status===0?e.message:"That QR code didn't work. Ask a grown-up for a new Forest Pass.";render()}
+}
+
+// a card scanned while the app is already open only changes the #part of the address
+window.addEventListener('hashchange',()=>{
+  const k=qrKey(location.hash);if(!k)return;
+  history.replaceState(null,'',location.pathname+location.search);
+  if(round)clearTimeout(round.timer);round=null;stopSpeech();
+  flush().finally(()=>qrLogin(k));
+});
+
+/* scanner: the device camera, read a few times a second until a Forest Pass QR code is found */
+let scan=null;
+const canScan=()=>!!navigator.mediaDevices?.getUserMedia;
+async function startScan(){
+  go('scan');
+  try{
+    const [stream]=await Promise.all([navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}),loadScript(JSQR_SRC)]);
+    const video=document.getElementById('scanVideo');
+    if(view!=='scan'||!video){stream.getTracks().forEach(t=>t.stop());return}
+    scan={stream,video,canvas:document.createElement('canvas'),timer:0};
+    video.srcObject=stream;await video.play();
+    scanTick();
+  }catch(e){
+    stopScan();go('childLogin');
+    flash=e.name==='NotAllowedError'?'The camera isn\'t allowed. Type your username and password instead.':e.name==='NotFoundError'?'No camera found. Type your username and password instead.':e.message;
+    render();
+  }
+}
+function scanTick(){
+  if(!scan)return;
+  const {video,canvas}=scan;
+  if(video.readyState>=2&&video.videoWidth){
+    const k=Math.min(1,640/Math.max(video.videoWidth,video.videoHeight));
+    canvas.width=Math.round(video.videoWidth*k);canvas.height=Math.round(video.videoHeight*k);
+    const g=canvas.getContext('2d',{willReadFrequently:true});g.drawImage(video,0,0,canvas.width,canvas.height);
+    const img=g.getImageData(0,0,canvas.width,canvas.height);
+    const found=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+    const key=found&&qrKey(found.data);
+    if(key)return qrLogin(key);
+  }
+  scan.timer=setTimeout(scanTick,150);
+}
+function stopScan(){if(!scan)return;clearTimeout(scan.timer);scan.stream.getTracks().forEach(t=>t.stop());scan=null}
+function renderScan(){
+  app.innerHTML=`<main class="screen scroll">
+    <header class="bar">${back('childLogin')}<h1>Scan your card</h1><span class="icon-gap"></span></header>
+    <div class="scanbox"><video id="scanVideo" muted playsinline autoplay></video><div class="scanframe" aria-hidden="true"></div></div>
+    <p class="lead center">Hold your Forest Pass up so the square code fits inside the frame.</p>
+  </main>`;
+}
+
 /* Forest Pass as an image. window.print() does nothing in iPhone/iPad home-screen apps and is
    unreliable in Android installed apps, so phones get the share sheet (Print, Save Image, AirDrop...).
    The image is drawn as soon as the card shows, because iOS only allows sharing straight after a tap. */
@@ -447,9 +519,19 @@ async function drawCard(c){
   g.setLineDash([24,14]);g.lineWidth=8;g.strokeStyle=GREEN;g.stroke();g.setLineDash([]);
   try{g.drawImage(await loadImg('icons/icon-192.png'),95,95,150,150)}catch(e){}
   text('FOREST PASS',275,150,34,600,GREEN);
-  text(c.name,275,222,64,600,INK,640);
-  const rows=[['Website',location.host,44],['Username',c.username,60],['Password',c.password,60],['Recovery code',c.recovery,60]];
-  rows.forEach(([label,value,size],i)=>{const top=350+i*170;text(label,110,top,34,400,MUTED);text(value,110,top+70,size,600,INK,780)});
+  text(c.name,275,222,64,600,INK,c.qr?380:640);
+  if(c.qr){
+    const q=await makeQr(c.qr).catch(()=>null);
+    if(q){
+      const n=q.getModuleCount(),size=230,cell=size/(n+4),x0=W-110-size,y0=78;
+      g.fillStyle='#fff';g.fillRect(x0,y0,size,size);g.fillStyle='#000';
+      for(let r=0;r<n;r++)for(let col=0;col<n;col++)if(q.isDark(r,col))g.fillRect(x0+(col+2)*cell,y0+(r+2)*cell,Math.ceil(cell),Math.ceil(cell));
+      g.textAlign='center';text('Scan to log in',x0+size/2,y0+size+30,26,400,MUTED);g.textAlign='left';
+    }
+  }
+  const rows=c.password?[['Website',location.host,44],['Username',c.username,60],['Password',c.password,60],['Recovery code',c.recovery,60]]
+    :[['Website',location.host,44],['Username',c.username,60],['Password','Same as before',44]];
+  rows.forEach(([label,value,size],i)=>{const top=380+i*165;text(label,110,top,34,400,MUTED);text(value,110,top+70,size,600,INK,780)});
   ['Keep this card safe at home.','Never tell a friend your password.','Lost your password? Use the recovery code.']
     .forEach((t,i)=>text('•  '+t,110,1060+i*56,32,400,MUTED,780));
   const blob=await new Promise(ok=>cv.toBlob(ok,'image/png'));
@@ -469,14 +551,15 @@ function renderCard(){
   const c=card;
   app.innerHTML=`<main class="screen scroll">
     <h1 class="card-title">${cardFor==='parent'?`${esc(c.name)}'s Forest Pass`:'Your new Forest Pass'}</h1>
-    <p class="lead">Write this down or print it now. The password can't be shown again.</p>
+    <p class="lead">${c.password?"Write this down or print it now. The password can't be shown again.":'Print or save this card. The QR code on the old card no longer works.'}</p>
     <section class="pass" id="pass">
-      <div class="pass-hd">${tree(5)}<div><p class="pass-label">Forest Pass</p><p class="pass-name">${esc(c.name)}</p></div></div>
+      <div class="pass-hd">${tree(5)}<div class="pass-who"><p class="pass-label">Forest Pass</p><p class="pass-name">${esc(c.name)}</p></div>
+        ${c.qr?'<figure class="pass-qr"><div id="passQr" role="img" aria-label="QR code to log in"></div><figcaption>Scan to log in</figcaption></figure>':''}</div>
       <dl>
         <dt>Website</dt><dd>${esc(location.host)}</dd>
         <dt>Username</dt><dd class="cred">${esc(c.username)}</dd>
-        <dt>Password</dt><dd class="cred">${esc(c.password)}</dd>
-        <dt>Recovery code</dt><dd class="cred">${esc(c.recovery)}</dd>
+        ${c.password?`<dt>Password</dt><dd class="cred">${esc(c.password)}</dd>
+        <dt>Recovery code</dt><dd class="cred">${esc(c.recovery)}</dd>`:'<dt>Password</dt><dd>Same as before</dd>'}
       </dl>
       <ul class="pass-rules">
         <li>Keep this card safe at home.</li>
@@ -486,12 +569,13 @@ function renderCard(){
     </section>
     <div class="stack">
       <button class="cta quiet" data-act="print">Print or save card</button>
-      <label class="check"><input type="checkbox" id="wrote"> ${cardFor==='parent'?"We've written it down or printed it.":"I've written it down."}</label>
+      <label class="check"><input type="checkbox" id="wrote"> ${!c.password?"We've printed or saved it.":cardFor==='parent'?"We've written it down or printed it.":"I've written it down."}</label>
       <button class="cta" data-act="card-done" id="cardDone" disabled>${cardFor==='parent'?'Done':'Go to my forest'}</button>
     </div>
   </main>`;
   document.getElementById('wrote').addEventListener('change',e=>{document.getElementById('cardDone').disabled=!e.target.checked});
   cardFile=null;const forCard=c;drawCard(c).then(f=>{if(card===forCard)cardFile=f}).catch(()=>{});
+  if(c.qr)makeQr(c.qr).then(q=>{const el=document.getElementById('passQr');if(el&&card===forCard)el.innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true})}).catch(()=>{});
 }
 
 function renderAssessPick(){
@@ -931,6 +1015,8 @@ function howSheet(){
 /* flows */
 async function boot(){
   try{localStorage.removeItem('times-table-forest-v1')}catch(e){}   // progress from the old device-only version
+  const linkKey=qrKey(location.hash);
+  if(linkKey){history.replaceState(null,'',location.pathname+location.search);return qrLogin(linkKey)}   // opened from a scanned Forest Pass
   try{me=await api('/me')}catch(e){
     if(e.status===0&&readSnap()){me={role:'child'};return enterChild()}   // offline: open the last forest on this device
     me={role:null};flash=e.message;
@@ -998,6 +1084,7 @@ async function parentAction(act,id){
   armed=null;
   try{
     if(act==='kid-reset'){const r=await api(`/parent/children/${id}/reset`,{});card=r.card;cardFor='parent';return go('card')}
+    if(act==='kid-qr'){const r=await api(`/parent/children/${id}/qr`,{});card=r.card;cardFor='parent';return go('card')}
     if(act==='kid-reassess')await api(`/parent/children/${id}/reassess`,{});
     if(act==='kid-remove')await api(`/parent/children/${id}`,{},'DELETE');
     await enterParent();
@@ -1043,7 +1130,8 @@ app.addEventListener('click',e=>{
     case 'install':installSheet();break;
     case 'install-hide':LS.set('ttf-install-hide',String(Date.now()+14*864e5));render();break;
     case 'card-done':card=null;cardFile=null;if(cardFor==='child')enterChild();else enterParent();break;
-    case 'kid-reset':case 'kid-reassess':case 'kid-remove':parentAction(act,+b.dataset.id);break;
+    case 'kid-reset':case 'kid-reassess':case 'kid-remove':case 'kid-qr':parentAction(act,+b.dataset.id);break;
+    case 'scan':startScan();break;
   }
 });
 document.addEventListener('keydown',e=>{

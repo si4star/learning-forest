@@ -72,6 +72,11 @@ const MIGRATIONS = [
     `CREATE TABLE IF NOT EXISTS tts_cache(key TEXT PRIMARY KEY, mime TEXT NOT NULL, audio BLOB NOT NULL, created_at INTEGER NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS tts_usage(day TEXT NOT NULL, who TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY(day, who))`,
   ],
+  [
+    // QR login: hash of the random key printed as a QR code on the Forest Pass
+    `ALTER TABLE children ADD COLUMN qr_hash TEXT`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS children_qr ON children(qr_hash)`,
+  ],
 ];
 
 let ready = null;

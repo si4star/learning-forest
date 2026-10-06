@@ -13,6 +13,7 @@ Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. I
   - recovery code: `1234-5678`
 - The grown-up has to tick "We've written it down or printed it" before continuing.
 - Login is forgiving: case, spaces and dashes don't matter.
+- **QR login.** Each Forest Pass also carries a QR code: a link to the site with a 256-bit login key after `#qr=` (the part after `#` never reaches the server or its logs). Scanning it with the device's camera app opens the site logged in. Inside the installed app, **Scan my Forest Pass** on the login screen uses the camera directly (needed on iPhone/iPad, where the camera app opens Safari rather than the installed app). Only a hash of the key is stored. Grown-ups can make a **New QR card** (the password stays the same; the old QR stops working); a new Forest Pass or recovery also replaces it. Bad scans are limited to 30 per internet address in 15 minutes (higher than passwords, because a school shares one address). Children added before QR login get a code by making a New QR card.
 - A forgotten password is replaced with the recovery code (the child gets a new card) or by the grown-up ("New Forest Pass"). Both sign out the old sessions.
 - Passwords and recovery codes are stored as PBKDF2-SHA256 hashes (10,000 iterations for now; see **Upgrade later**). Sessions are random tokens in HttpOnly, Secure, SameSite=Lax cookies (30 days for grown-ups, 180 days for children).
 - 10 failed logins per account, or 50 per IP address, in 15 minutes locks out further attempts for 15 minutes.
@@ -170,6 +171,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `public/css/styles.css` | Styles, the four seasons, print layout for the Forest Pass |
 | `public/js/app.js` | Client: screens, scheduling, rounds, starting check, sync queue |
 | `public/fonts/` | Fredoka (SIL Open Font License) |
+| `public/js/vendor/` | QR code drawing (qrcode-generator, MIT) and reading (jsQR, Apache-2.0), loaded only when needed |
 | `functions/api/[[path]].js` | Pages Functions entry for `/api/*` |
 | `src/server/api.js` | API routes |
 | `src/server/auth.js` | Password hashing and session tokens |
@@ -182,6 +184,9 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `tests/features.mjs` | End-to-end test: shapes, read aloud, friends, streak, bests, practice check, tricky facts, reminders, offline |
 | `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
 | `tests/tts.mjs` | Read-aloud route: caching, fallback model, limits (runs the API on SQLite) |
+| `tests/qr.mjs` | QR login on the server: keys, new QR card, old keys, rate limit |
+| `tests/qr-login.mjs` | QR login in the browser: card QR decodes, link login, camera scan, bad and replaced codes |
+| `tests/d1-shim.mjs` | D1 stand-in over node:sqlite for the Node tests |
 
 ## Not built yet
 

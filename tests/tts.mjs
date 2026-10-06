@@ -1,31 +1,9 @@
 // Tests the read-aloud route (/api/tts) with the real API code, an in-memory SQLite database
 // standing in for D1, and a fake Workers AI binding.  Usage: node tests/tts.mjs
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
 import { handle } from '../src/server/api.js';
+import { d1 } from './d1-shim.mjs';
 import { toBytes, sniff } from '../src/server/tts.js';
-
-// --- minimal D1 over node:sqlite ---
-function d1() {
-  const db = new DatabaseSync(':memory:');
-  db.exec('PRAGMA foreign_keys = ON');
-  const conv = a => a.map(v => (v === undefined ? null : typeof v === 'boolean' ? Number(v) : v));
-  const reads = sql => /^\s*(SELECT|WITH)\b|\bRETURNING\b/i.test(sql);
-  const stmt = (sql, args = []) => ({
-    bind: (...a) => stmt(sql, a),
-    first: async () => db.prepare(sql).get(...conv(args)) ?? null,
-    all: async () => ({ results: db.prepare(sql).all(...conv(args)) }),
-    run: async () => { db.prepare(sql).run(...conv(args)); return {}; },
-    exec: () => (reads(sql) ? { results: db.prepare(sql).all(...conv(args)) } : (db.prepare(sql).run(...conv(args)), { results: [] })),
-  });
-  return {
-    prepare: sql => stmt(sql),
-    async batch(list) {
-      db.exec('BEGIN');
-      try { const out = list.map(s => s.exec()); db.exec('COMMIT'); return out; } catch (e) { db.exec('ROLLBACK'); throw e; }
-    },
-  };
-}
 
 // --- fake Workers AI: returns a short WAV, counts calls ---
 const wav = Uint8Array.from([...Buffer.from('RIFF'), ...new Array(200).fill(1)]);

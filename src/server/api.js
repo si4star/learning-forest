@@ -85,14 +85,14 @@ async function startSession(ctx, role, id) {
 }
 
 // Blocks guessing: 10 failures per account, or 50 per IP address, in 15 minutes.
-async function guard(ctx, k) {
+async function guard(ctx, k, limit = FAIL_LIMIT) {
   const since = Date.now() - FAIL_WINDOW;
   const q = 'SELECT COUNT(*) AS n FROM login_failures WHERE k = ? AND at > ?';
   const [a, b] = await ctx.db.batch([
     ctx.db.prepare(q).bind(k, since),
     ctx.db.prepare(q).bind('ip:' + ctx.ip, since),
   ]);
-  if (a.results[0].n >= FAIL_LIMIT || b.results[0].n >= IP_FAIL_LIMIT)
+  if (a.results[0].n >= limit || b.results[0].n >= IP_FAIL_LIMIT)
     throw new HttpError(429, 'Too many tries. Wait 15 minutes, then try again.');
 }
 
@@ -115,10 +115,16 @@ async function ownedChild(ctx, parentId, id) {
 
 async function newCredentials() {
   const password = newPassword(), recovery = newRecoveryCode();
-  return { password, recovery, pw_hash: await hashSecret(password), recovery_hash: await hashSecret(normRecovery(recovery)) };
+  return { password, recovery, pw_hash: await hashSecret(password), recovery_hash: await hashSecret(normRecovery(recovery)), ...(await newQr()) };
 }
 
-const card = (name, username, c) => ({ name, username, password: c.password, recovery: c.recovery });
+// QR login key: 32 random bytes, so a plain SHA-256 is enough to store it (no slow hash needed).
+async function newQr() {
+  const qr = newToken();
+  return { qr, qr_hash: await sha256(qr) };
+}
+
+const card = (name, username, c) => ({ name, username, password: c.password, recovery: c.recovery, qr: c.qr });
 
 const isFact = k => {
   const m = /^(\d{1,2})x(\d{1,2})$/.exec(k);
@@ -209,9 +215,9 @@ async function addChild(ctx) {
   }
   if (!username) throw new HttpError(500, 'Could not make a username. Try again.');
   const c = await newCredentials();
-  const row = await ctx.db.prepare(`INSERT INTO children(parent_id, name, username, display_username, pw_hash, recovery_hash, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`)
-    .bind(pid, name, normUsername(username), username, c.pw_hash, c.recovery_hash, Date.now()).first();
+  const row = await ctx.db.prepare(`INSERT INTO children(parent_id, name, username, display_username, pw_hash, recovery_hash, qr_hash, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
+    .bind(pid, name, normUsername(username), username, c.pw_hash, c.recovery_hash, c.qr_hash, Date.now()).first();
   return json({ id: row.id, card: card(name, username, c) });
 }
 
@@ -220,10 +226,19 @@ async function resetChild(ctx, id) {
   const child = await ownedChild(ctx, pid, id);
   const c = await newCredentials();
   await ctx.db.batch([
-    ctx.db.prepare('UPDATE children SET pw_hash = ?, recovery_hash = ? WHERE id = ?').bind(c.pw_hash, c.recovery_hash, child.id),
+    ctx.db.prepare('UPDATE children SET pw_hash = ?, recovery_hash = ?, qr_hash = ? WHERE id = ?').bind(c.pw_hash, c.recovery_hash, c.qr_hash, child.id),
     ctx.db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id = ?").bind(child.id),
   ]);
   return json({ card: card(child.name, child.display_username, c) });
+}
+
+// A new QR login code only: the password stays the same, the old QR code stops working.
+async function newChildQr(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const child = await ownedChild(ctx, pid, id);
+  const q = await newQr();
+  await ctx.db.prepare('UPDATE children SET qr_hash = ? WHERE id = ?').bind(q.qr_hash, child.id).run();
+  return json({ card: { name: child.name, username: child.display_username, qr: q.qr } });
 }
 
 async function reassessChild(ctx, id) {
@@ -265,10 +280,21 @@ async function childRecover(ctx) {
   if (!(await verifySecret(normRecovery(b.code), row?.recovery_hash))) await fail(ctx, 'r:' + u, 'Username or recovery code not right.');
   const c = await newCredentials();
   await ctx.db.batch([
-    ctx.db.prepare('UPDATE children SET pw_hash = ?, recovery_hash = ? WHERE id = ?').bind(c.pw_hash, c.recovery_hash, row.id),
+    ctx.db.prepare('UPDATE children SET pw_hash = ?, recovery_hash = ?, qr_hash = ? WHERE id = ?').bind(c.pw_hash, c.recovery_hash, c.qr_hash, row.id),
     ctx.db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id = ?").bind(row.id),
   ]);
   return json({ card: card(row.name, row.display_username, c) }, 200, await startSession(ctx, 'child', row.id));
+}
+
+async function childQrLogin(ctx) {
+  const key = String((await body(ctx)).key || '');
+  // keys are 256-bit, so this only stops hammering; it's higher than password limits because
+  // a whole school shares one internet address and old cards will get scanned by mistake
+  await guard(ctx, 'q:' + ctx.ip, 30);
+  const row = /^[A-Za-z0-9_-]{30,60}$/.test(key)
+    ? await ctx.db.prepare('SELECT id FROM children WHERE qr_hash = ?').bind(await sha256(key)).first() : null;
+  if (!row) await fail(ctx, 'q:' + ctx.ip, "That QR code didn't work. Ask a grown-up for a new Forest Pass.");
+  return json({ role: 'child' }, 200, await startSession(ctx, 'child', row.id));
 }
 
 async function childState(ctx) {
@@ -434,6 +460,8 @@ const ROUTES = [
   ['DELETE', /^\/parent\/children\/(\d+)$/, removeChild],
   ['POST', /^\/child\/login$/, childLogin],
   ['POST', /^\/child\/recover$/, childRecover],
+  ['POST', /^\/child\/qr$/, childQrLogin],
+  ['POST', /^\/parent\/children\/(\d+)\/qr$/, newChildQr],
   ['GET', /^\/child\/state$/, childState],
   ['POST', /^\/child\/sync$/, childSync],
   ['GET', /^\/child\/stats$/, childStats],
