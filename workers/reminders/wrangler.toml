@@ -8,9 +8,8 @@ compatibility_date = "2025-09-01"
 crons = ["*/15 * * * *"]
 
 [[d1_databases]]
-binding = "DB"
-database_name = "tree-tables"
-database_id = "b2da684b-b66a-4ba4-a163-93e69ef20c12"
+binding = "DATA"
+database_id = "31dd9b0f-0aa9-49ed-9339-766278bcd56e"
 
 [vars]
 SITE_URL = "https://tree-tables.pages.dev"
