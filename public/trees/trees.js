@@ -117,17 +117,7 @@ document.querySelectorAll('.kw').forEach(kw=>{const chip=document.getElementById
 const pb=document.getElementById('progress');
 const setP=()=>{const h=document.documentElement.scrollHeight-innerHeight;pb.style.width=(h>0?Math.min(100,scrollY/h*100):0)+'%'};
 addEventListener('scroll',setP,{passive:true});setP();
-// share
-const URL_='https://learn.thetreefella.co.uk/trees/',sm=document.getElementById('share-msg');
-document.getElementById('share').addEventListener('click',async()=>{
- track('share_click',{method:navigator.share?'native':'copy'});
- const data={title:'How does a tree work?',text:'121 questions about how trees work, answered like you’re five.',url:URL_};
- try{if(navigator.share){await navigator.share(data);return}}catch(e){if(e&&e.name==='AbortError')return}
- try{await navigator.clipboard.writeText(URL_);sm.textContent='Link copied. Paste it anywhere.'}catch(e){sm.textContent='Copy this link: '+URL_}
-});
 
-document.querySelectorAll('a[href*="trees.org.uk"]').forEach(a=>a.addEventListener('click',()=>track('find_professional',{location:a.closest('header')?'header':'finish'})));
-document.querySelectorAll('a[href^="https://thetreefella.co.uk"]').forEach(a=>a.addEventListener('click',()=>track('main_site_click',{location:a.closest('header')?'header':(a.closest('footer')?'footer':'finish')})));
 
 // back to top
 (()=>{const b=document.getElementById('totop'),h1=document.getElementById('t'),cons=document.getElementById('consent');

@@ -53,6 +53,13 @@ step('How does a tree work?: works, loads nothing from other websites, stores no
   assert.equal(await tp.getAttribute('.lf-logo', 'href'), '/');
   assert.ok(await tp.locator('.bar #nav a').count() > 5, 'the page keeps its section links');
   assert.ok(await tp.isVisible('.finish .sources'), 'book credits in the closing section');
+  assert.equal(await tp.locator('#share').count(), 0, 'no share button');
+  assert.equal(await tp.locator('main a[href^="http"]').count(), 0, 'no links out to other sites');
+  // the site header and the page's section bar stay on top wherever you scroll
+  for (const y of [1500, 15000]) {
+    assert.ok(await tp.evaluate(y => { document.documentElement.style.scrollBehavior = 'auto'; scrollTo(0, y);
+      return !!document.elementFromPoint(innerWidth / 2, 3).closest('.lf-stick .lf-top'); }, y), `header on top at ${y}px`);
+  }
   assert.deepEqual(outside, []);
   assert.deepEqual(await tp.evaluate(() => Object.keys(localStorage)), []);
 }

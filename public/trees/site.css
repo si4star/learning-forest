@@ -7,6 +7,11 @@
 @font-face{font-family:'Atkinson Hyperlegible';font-style:normal;font-display:swap;font-weight:700;
   src:url(/trees/fonts/atkinson-hyperlegible-latin-700-normal.woff2) format('woff2')}
 
-/* the page's own bar (section links and progress) sticks to the top; the site header scrolls away */
-.lf-top{position:static}
+/* The site header and the page's section bar stick to the top as one block, above everything on the
+   page. Its background reaches up behind the iPhone status bar, so the page doesn't show through there.
+   (The page's own styles come later, hence the doubled-up selectors.) */
+html:root{padding-top:0}
+.lf-stick{position:sticky;top:0;z-index:40;padding-top:env(safe-area-inset-top,0px);background:#F1F6E6}
+.lf-stick .lf-top,.lf-stick .bar.bar{position:static}
+.zone .zone-head{top:calc(var(--stick-h,7rem) + 1rem)}
 .finish .sources{font-size:.95rem;opacity:.85;max-width:70ch}

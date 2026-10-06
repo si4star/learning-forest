@@ -10,8 +10,7 @@
 <link rel="canonical" href="https://learn.thetreefella.co.uk/trees/">
 <link rel="icon" href="/app/icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png">
-<meta name="theme-color" content="#CDE8F3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#13283A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F1F6E6">
 <meta property="og:type" content="article">
 <meta property="article:published_time" content="2026-09-28">
 <meta property="article:author" content="https://thetreefella.co.uk/">
@@ -248,12 +247,14 @@ main:focus{outline:none}
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
+<div class="lf-stick">
 <!-- lf:header -->
 <div class="bar">
   <div class="bar-in">
     <nav id="nav" aria-label="Parts of the tree"><a href="#tree">What is a tree?</a><a href="#leaves">Leaves</a><a href="#time">Light &amp; time</a><a href="#messages">Messages</a><a href="#branches">Branches</a><a href="#trunk">Trunk</a><a href="#defence">Fighting germs</a><a href="#seeds">Flowers &amp; seeds</a><a href="#roots">Roots &amp; soil</a><a href="#stress">Hard times</a><a href="#people">Trees &amp; us</a></nav>
     <div class="progress" aria-hidden="true"><span id="progress"></span></div>
   </div>
+</div>
 </div>
 <main id="main" tabindex="-1" itemscope itemtype="https://schema.org/FAQPage">
 <section class="hero" aria-labelledby="t">
@@ -571,15 +572,14 @@ main:focus{outline:none}
 <section class="finish" aria-labelledby="finish-h">
   <div class="finish-in">
     <h2 id="finish-h">You made it all the way down to the roots.</h2>
-    <p>That’s 121 questions about how trees work. Know someone who’d rather doom-scroll a tree than the news? Send it to them.</p>
-    <p><button type="button" class="go" id="share">Share this tree</button> <span id="share-msg" class="share-msg" aria-live="polite"></span></p>
-    <p>Got a real tree that needs looking after? <a href="https://www.trees.org.uk/ARB-Approved-Contractor-Directory" target="_blank" rel="noopener">Find an ARB Approved Contractor near you<span class="sr"> (opens in a new tab)</span></a>, or if you’re in the North East, <a href="https://thetreefella.co.uk/" target="_blank" rel="noopener">talk to The Tree Fella’s tree surgeons in South Shields<span class="sr"> (opens in a new tab)</span></a>.</p>
+    <p>That’s 121 questions about how trees work.</p>
     <p class="sources">The topics follow two books I absolutely love to bury my head in when I’ve got time for learning: <cite>Applied Tree Biology</cite> by Andrew Hirons and Peter Thomas (Wiley, 2018), and <cite>Plant Physiology</cite> by Lincoln Taiz and Eduardo Zeiger. If this page has got you hooked, they’re the grown-up version, and they’re brilliant. No connection, I just rate them.</p>
   </div>
 </section>
 </main>
 <!-- lf:footer -->
 <button type="button" class="totop" id="totop" aria-label="Back to the top" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<script src="/trees/stick.js"></script>
 <script src="/trees/trees.js"></script>
 </body>
 </html>
