@@ -1,0 +1,15 @@
+/* How does a tree work?: self-hosted fonts (Fredoka from the app, Atkinson Hyperlegible here, both
+   SIL Open Font License) and the link back to The Learning Forest. */
+@font-face{font-family:'Fredoka';font-style:normal;font-display:swap;font-weight:300 700;
+  src:url(/app/fonts/fredoka-latin-wght-normal.woff2) format('woff2-variations')}
+@font-face{font-family:'Atkinson Hyperlegible';font-style:normal;font-display:swap;font-weight:400;
+  src:url(/trees/fonts/atkinson-hyperlegible-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Atkinson Hyperlegible';font-style:italic;font-display:swap;font-weight:400;
+  src:url(/trees/fonts/atkinson-hyperlegible-latin-400-italic.woff2) format('woff2')}
+@font-face{font-family:'Atkinson Hyperlegible';font-style:normal;font-display:swap;font-weight:700;
+  src:url(/trees/fonts/atkinson-hyperlegible-latin-700-normal.woff2) format('woff2')}
+
+.lf-strip{margin:0;padding:.35rem 1rem;background:#1D3B1A;font-family:var(--head);font-weight:600;font-size:.9rem}
+.lf-strip a{color:#fff;text-decoration:none}
+.lf-strip a:hover{text-decoration:underline}
+.small-print{font-size:.8rem}

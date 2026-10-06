@@ -1,6 +1,7 @@
 // Website, and the moves of the app (from /, then /tables/) to /app/. Usage (dev server running): BASE=http://localhost:8788 node tests/site.mjs
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 
 const BASE = process.env.BASE || 'http://localhost:8788';
 const SHOTS = process.env.SHOTS;   // folder for screenshots, optional
@@ -35,6 +36,25 @@ step('a link to /#tables opens that module');
   const hp = watch(await (await browser.newContext()).newPage());
   await hp.goto(BASE + '/#tables');
   assert.ok(await hp.isVisible('text=Spaced repetition'));
+}
+
+step('How does a tree work?: works, loads nothing from other websites, stores nothing');
+{
+  const tc = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const tp = watch(await tc.newPage()), outside = [];
+  tp.on('request', r => { if (!r.url().startsWith(BASE)) outside.push(r.url()); });
+  // the logo and sharing image are supplied separately; until they're in public/trees/, their 404 is expected
+  const missing = ['logo.webp'].filter(f => !existsSync('public/trees/' + f));
+  tp.removeAllListeners('console');
+  tp.on('console', m => { if (m.type() === 'error' && !(missing.length && /status of 404/.test(m.text()))) errors.push(m.text()); });
+  await tp.goto(BASE + '/trees/');
+  await tp.click('#go');
+  assert.equal(await tp.getAttribute('#go', 'aria-pressed'), 'true');
+  await tp.click('[data-act=grow]');
+  assert.match(await tp.textContent('#fig-grow .cap'), /^Year 2/);
+  assert.equal(await tp.getAttribute('.lf-strip a', 'href'), '/');
+  assert.deepEqual(outside, []);
+  assert.deepEqual(await tp.evaluate(() => Object.keys(localStorage)), []);
 }
 
 step('an unknown address shows the not-found page');

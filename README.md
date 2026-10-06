@@ -9,7 +9,7 @@ This repo is **The Learning Forest** (`learn.thetreefella.co.uk`), free learning
 | Path | Module |
 | --- | --- |
 | `/` | Portal and website for schools, school pack |
-| `/trees/` | How does a tree work? (flat page, no login) |
+| `/trees/` | How does a tree work? (one page, no login; see **How does a tree work?** below) |
 | `/app/` | The Learning Forest app: one login (Forest Pass for pupils, email for grown-ups), classes and class devices for every module. After logging in, a pupil picks a module. |
 | (in the app) | Grow your times tables: the module described below |
 | `/tables/` | Old address: forwards to `/app/` |
@@ -193,6 +193,8 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `public/site.js` | Sends old QR links (`/#qr=`) and old home-screen installs to `/app/` |
 | `public/sw.js`, `public/tables/sw.js` | Retire the service workers from before the app's moves |
 | `public/tables/index.html`, `public/moved.js` | Send `/tables/` links and QR cards on to `/app/` |
+| `public/trees/` | How does a tree work?: the imported page, its script, fonts (Atkinson Hyperlegible, SIL OFL) |
+| `scripts/import-trees.mjs` | Imports a new version of the How does a tree work? page |
 | `public/404.html` | Not-found page (without it, Pages serves the home page for unknown paths) |
 | `public/app/index.html` | App page shell and tree SVG symbols (the app's service worker only serves this page for `/app/` itself) |
 | `public/app/sw.js` | Service worker: offline app shell, versioned caches |
@@ -228,6 +230,18 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 - **One app, many modules.** Login, Forest Passes, grown-up accounts, classes and class devices belong to the app, not to a module. After logging in, a pupil sees the module picker (`renderHub` in `app.js`); Grow your times tables opens the forest, which has a back button to the picker. Modules without a login (How does a tree work?) are web pages linked from the picker. A new module with a login adds a card to the picker, its own screens, and its own progress tables in a new migration.
 - **Address history.** The app was at `/`, then `/app/`, then `/tables/`, and is back at `/app/` (scope `/app/`). Old installs and cards keep working: `public/sw.js` (also served as `/tables/sw.js`) replaces an old service worker, deletes its `ttf-`/`tables-` caches, unregisters itself and reloads open pages; `site.js` and `/tables/index.html` send them on to `/app/`, keeping any `#qr=` key. Installs from the first `/app/` days pick up the current service worker directly. The app's caches are named `lf-` so the retiring workers leave them alone (caches are shared across the whole site).
 - Daily reminders turned on before a move belonged to the old service worker and stop. The app notices the missing subscription and shows reminders as off, so they can be turned on again.
+
+## How does a tree work?
+
+The page is written outside this repo as a single HTML file. To publish a new version:
+
+```
+node scripts/import-trees.mjs path/to/index.html
+```
+
+The import adapts it to this site: the inline script moves to `public/trees/trees.js` (the security policy runs no inline scripts), Google Analytics and its cookie banner come out (the school pack promises no tracking), Google Fonts become self-hosted copies, addresses move from `/` to `/trees/`, and a link back to The Learning Forest and the site's small print are added. Each change must match exactly once, so if the page's structure changes the import stops with the step that failed rather than publishing a half-converted page.
+
+`public/trees/logo.webp` (the header logo) and `public/trees/og-image.png` (the sharing image) are copied in by hand.
 
 ## Not built yet
 
