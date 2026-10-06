@@ -1,6 +1,6 @@
 # Reminders Worker
 
-Sends Times Table Forest's daily reminder notifications. Runs every 15 minutes (cron in `wrangler.toml`).
+Sends Grow your times tables' daily reminder notifications. Runs every 15 minutes (cron in `wrangler.toml`).
 
 For each device that turned a reminder on (table `push_subs`), it sends one push a day, at or up to an hour after the chosen local time, and only if the child hasn't played yet that day. Expired subscriptions (404/410 from the push service) are deleted.
 

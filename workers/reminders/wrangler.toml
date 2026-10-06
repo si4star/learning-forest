@@ -1,4 +1,4 @@
-# Times Table Forest: daily reminder sender (a Cloudflare Worker, separate from the Pages site).
+# Grow your times tables (Forest School): daily reminder sender (a Cloudflare Worker, separate from the Pages site).
 # Setup steps are in the README under "Daily reminders".
 name = "tree-tables-reminders"
 main = "index.js"

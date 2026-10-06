@@ -1,6 +1,6 @@
-/* Times Table Forest website (the app lives at /app/). Same palette and font as the app. */
+/* Forest School website (modules at /trees/, /tables/, /soil/). Same palette and font as the app. */
 @font-face{font-family:'Fredoka';font-style:normal;font-display:swap;font-weight:300 700;
-  src:url(/app/fonts/fredoka-latin-wght-normal.woff2) format('woff2-variations')}
+  src:url(/tables/fonts/fredoka-latin-wght-normal.woff2) format('woff2-variations')}
 :root{
   --bg:#F1F6E6; --surface:#FCFEF6; --ink:#1D2A17; --muted:#56664C; --line:#D5E3C3;
   --leaf:#2F8F46; --leaf-dark:#21683A; --canopy:#3E9A3E; --canopy-2:#7CC35A; --bark:#7A4E2D; --soil:#C9B48E;
@@ -97,3 +97,5 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-bet
 }
 @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 .small-print{flex-basis:100%;font-size:12px;line-height:1.5;margin:14px 0 0;color:var(--muted)}
+.modules .card h3{font-size:23px}
+.card.soon{opacity:.6}

@@ -10,11 +10,14 @@
 /app/sw.js
   Cache-Control: no-cache
 
-/app/manifest.webmanifest
+/tables/sw.js
   Cache-Control: no-cache
 
-/app/css/*
+/tables/manifest.webmanifest
+  Cache-Control: no-cache
+
+/tables/css/*
   Cache-Control: public, max-age=31536000, immutable
 
-/app/js/*
+/tables/js/*
   Cache-Control: public, max-age=31536000, immutable

@@ -1,10 +1,17 @@
-# Times Table Forest
+# Forest School: Grow your times tables
 
 A times table practice app for children aged 7–9. Each fact is a tree on an 11 × 11 grid (2–12 × 2–12; 6 × 7 and 7 × 6 are the same tree, so 66 trees). A tree only grows when the fact is recalled correctly on the day it is due, so the forest shows retention rather than time played.
 
 Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. It's a PWA: installable, and it updates itself when a new version is published.
 
-The site has two parts: a short website for schools at `/` (with the school pack), and the app at `/app/`.
+This repo is **Forest School** (`learn.thetreefella.co.uk`), free learning modules from The Tree Fella:
+
+| Path | Module |
+| --- | --- |
+| `/` | Portal and website for schools, school pack |
+| `/trees/` | How does a tree work? (flat page, no login) |
+| `/tables/` | Grow your times tables: the app described below. Pupils log in with their Forest Pass. |
+| `/soil/` | What is soil? (coming soon) |
 
 ## Accounts
 
@@ -65,9 +72,9 @@ On first login the child taps the tables they think they know.
 
 ## Splash screens
 
-- iPhone and iPad show a launch screen (tree and title on the summer green) when the installed app opens. There are 38 images in `public/app/splash/`, one per screen shape in portrait and landscape, matched by the `apple-touch-startup-image` tags in `index.html`.
+- iPhone and iPad show a launch screen (tree and title on the summer green) when the installed app opens. There are 38 images in `public/tables/splash/`, one per screen shape in portrait and landscape, matched by the `apple-touch-startup-image` tags in `index.html`.
 - Android builds its splash from the manifest's `background_color` and 512 px icon.
-- To regenerate the icons and splash screens after changing `public/app/icons/icon.svg`: `node scripts/make-images.mjs`.
+- To regenerate the icons and splash screens after changing `public/tables/icons/icon.svg`: `node scripts/make-images.mjs`.
 
 ## Seasons
 
@@ -118,7 +125,7 @@ Pages Functions can't run on a schedule, so a small separate Worker sends the re
 3. **Secret.** In the new Worker → Settings → Variables and Secrets → add a **Secret** named `VAPID_PRIVATE_JWK` with the private key (supplied separately, never committed). Redeploy.
 4. If the site isn't at `https://tree-tables.pages.dev`, change `SITE_URL` in `wrangler.toml`.
 
-The matching public key is in `src/server/push.js` and `public/app/js/app.js` (`VAPID_PUBLIC_KEY`). If the key pair is ever replaced, change both and existing devices must turn reminders off and on again.
+The matching public key is in `src/server/push.js` and `public/tables/js/app.js` (`VAPID_PUBLIC_KEY`). If the key pair is ever replaced, change both and existing devices must turn reminders off and on again.
 
 ## Method
 
@@ -126,7 +133,7 @@ The matching public key is in `src/server/push.js` and `public/app/js/app.js` (`
 - **Spaced repetition (Leitner).** Correct answers move a fact through: same round → 1 day → 3 days → 7 days → 21 days. A wrong answer resets it to a seed.
 - **Strategy sequencing.** Tables unlock in the order 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. Harder facts are taught from easier ones (×9 = ×10 minus one lot; ×8 = double three times). The next table unlocks once every fact in the unlocked tables is planted and 80% have reached sprout.
 - **Immediate error correction.** After a wrong answer, the child works the fact out step by step with its strategy (below), and the fact returns 3 questions later.
-- **Interactive strategies.** New seeds and corrections don't show the answer; the child builds it in 1–3 small steps, typing each one. For example, 9 × 7: `10 × 7 = 70` → `70 − 7 = 63`. 8 × 6 is three doubles: `12` → `24` → `48`. A wrong step shows its answer and the child types it. Steps are defined in `walkSteps()` in `public/app/js/app.js`, using the same strategy choice as the text hints.
+- **Interactive strategies.** New seeds and corrections don't show the answer; the child builds it in 1–3 small steps, typing each one. For example, 9 × 7: `10 × 7 = 70` → `70 − 7 = 63`. 8 × 6 is three doubles: `12` → `24` → `48`. A wrong step shows its answer and the child types it. Steps are defined in `walkSteps()` in `public/tables/js/app.js`, using the same strategy choice as the text hints.
 - **Accuracy before speed.** No countdown. Answers slower than 6 seconds (the Multiplication Tables Check limit) still count, but the tree stays at sprout until it is answered quickly.
 
 Rounds are 20 questions (about 4 minutes); the first is shorter. ×1 facts are excluded.
@@ -181,17 +188,19 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | --- | --- |
 | `public/index.html`, `public/site.css`, `public/site-grove.js` | Website for schools |
 | `public/school-pack/` | What we store, parents' privacy notice, data processing agreement (drafts) |
-| `public/site.js` | Sends old QR links (`/#qr=`) and old home-screen installs to `/app/` |
-| `public/sw.js` | Retires the service worker from before the move to `/app/` |
-| `public/app/index.html` | App page shell and tree SVG symbols |
-| `public/app/sw.js` | Service worker: offline app shell, versioned caches |
-| `public/app/manifest.webmanifest`, `public/app/icons/` | PWA manifest and icons |
+| `public/site.js` | Sends old QR links (`/#qr=`) and old home-screen installs to `/tables/` |
+| `public/sw.js`, `public/app/sw.js` | Retire the service workers from before the moves to `/app/` and `/tables/` |
+| `public/app/index.html`, `public/moved.js` | Send `/app/` links and QR cards on to `/tables/` |
+| `public/404.html` | Not-found page (without it, Pages serves the home page for unknown paths) |
+| `public/tables/index.html` | App page shell and tree SVG symbols |
+| `public/tables/sw.js` | Service worker: offline app shell, versioned caches |
+| `public/tables/manifest.webmanifest`, `public/tables/icons/` | PWA manifest and icons |
 | `public/_headers` | Cache and security headers (Cloudflare Pages) |
 | `scripts/build.mjs` | Copies `public/` to `dist/` and stamps the version |
-| `public/app/css/styles.css` | Styles, the four seasons, print layout for the Forest Pass |
-| `public/app/js/app.js` | Client: screens, scheduling, rounds, starting check, sync queue |
-| `public/app/fonts/` | Fredoka (SIL Open Font License) |
-| `public/app/js/vendor/` | QR code drawing (qrcode-generator, MIT) and reading (jsQR, Apache-2.0), loaded only when needed |
+| `public/tables/css/styles.css` | Styles, the four seasons, print layout for the Forest Pass |
+| `public/tables/js/app.js` | Client: screens, scheduling, rounds, starting check, sync queue |
+| `public/tables/fonts/` | Fredoka (SIL Open Font License) |
+| `public/tables/js/vendor/` | QR code drawing (qrcode-generator, MIT) and reading (jsQR, Apache-2.0), loaded only when needed |
 | `functions/api/[[path]].js` | Pages Functions entry for `/api/*` |
 | `src/server/api.js` | API routes |
 | `src/server/auth.js` | Password hashing and session tokens |
@@ -211,11 +220,11 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `tests/site.mjs` | Website pages, old QR links, retiring the old service worker |
 | `tests/d1-shim.mjs` | D1 stand-in over node:sqlite for the Node tests |
 
-## Website and the move to /app
+## Website and the moves to /tables
 
-- The website (`/`) is plain HTML and CSS sharing the app's font and colours. The school pack pages print cleanly and are **drafts**: highlighted placeholders (company number, address, contact email, ICO number, database region, retention periods) must be filled in, and the processing agreement needs legal review.
-- The app moved from `/` to `/app/` (scope `/app/`). Old installs and old cards keep working: `public/sw.js` replaces the old root service worker, deletes its caches, unregisters itself and reloads open pages; `site.js` sends `/#qr=` links and home-screen launches of the old install to `/app/`.
-- Daily reminders turned on before the move belonged to the old service worker and stop. The app notices the missing subscription and shows reminders as off, so they can be turned on again.
+- The website (`/`) is plain HTML and CSS sharing the app's font and colours. The school pack pages print cleanly and are **drafts**: highlighted placeholders (address, contact email, database region, retention periods) must be filled in, and the processing agreement needs legal review.
+- The app was at `/`, then `/app/`, and is now at `/tables/` (scope `/tables/`). Old installs and old cards keep working: `public/sw.js` (also served as `/app/sw.js`) replaces an old service worker, deletes its `ttf-` caches, unregisters itself and reloads open pages; `site.js` and `/app/index.html` send them on to `/tables/`, keeping any `#qr=` key. The app's own caches are named `tables-` so the retiring workers leave them alone (caches are shared across the whole site).
+- Daily reminders turned on before a move belonged to the old service worker and stop. The app notices the missing subscription and shows reminders as off, so they can be turned on again.
 
 ## Not built yet
 
@@ -226,7 +235,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
   - Schema changes go in a new migration in `src/server/schema.js`: a `password_resets(token_hash, parent_id, expires_at, used_at)` table. Store only a hash of the token, as sessions do.
   - Routes: `POST /api/parent/forgot {email}` always replies the same way, so it doesn't reveal which emails have accounts, and is rate-limited with the existing `guard()`/`fail()` helpers. `POST /api/parent/reset {token, password}` sets a new hash and deletes the parent's sessions, as child resets already do.
   - It needs an email provider (for example Resend), with an API key stored as a Pages secret.
-  - The client needs a "Forgot password?" link on the grown-up login screen, and a reset screen opened from the emailed link (`/app/?reset=<token>`). The service worker already serves the app for any URL.
+  - The client needs a "Forgot password?" link on the grown-up login screen, and a reset screen opened from the emailed link (`/tables/?reset=<token>`). The service worker already serves the app for any URL.
   - Optionally, add email verification at sign-up using the same token table.
 
 The first Cloudflare version started fresh: progress from the earlier device-only version was not imported. That old data is deleted from each device the first time it opens the new version.
