@@ -1,10 +1,10 @@
-# Forest School: Grow your times tables
+# The Learning Forest: Grow your times tables
 
 A times table practice app for children aged 7–9. Each fact is a tree on an 11 × 11 grid (2–12 × 2–12; 6 × 7 and 7 × 6 are the same tree, so 66 trees). A tree only grows when the fact is recalled correctly on the day it is due, so the forest shows retention rather than time played.
 
 Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. It's a PWA: installable, and it updates itself when a new version is published.
 
-This repo is **Forest School** (`learn.thetreefella.co.uk`), free learning modules from The Tree Fella:
+This repo is **The Learning Forest** (`learn.thetreefella.co.uk`), free learning modules from The Tree Fella:
 
 | Path | Module |
 | --- | --- |

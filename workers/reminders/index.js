@@ -1,4 +1,4 @@
-// Grow your times tables (Forest School) daily reminders. Runs every 15 minutes (see wrangler.toml).
+// Grow your times tables (The Learning Forest) daily reminders. Runs every 15 minutes (see wrangler.toml).
 // Each device that turned reminders on gets one push a day, at or up to an hour after its
 // chosen local time, and only if the child hasn't played yet that day.
 import { sendPush, VAPID_PUBLIC_KEY } from '../../src/server/push.js';

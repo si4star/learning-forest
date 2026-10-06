@@ -1,4 +1,4 @@
-/* Forest School website (modules at /trees/, /tables/, /soil/). Same palette and font as the app. */
+/* The Learning Forest website (modules at /trees/, /tables/, /soil/). Same palette and font as the app. */
 @font-face{font-family:'Fredoka';font-style:normal;font-display:swap;font-weight:300 700;
   src:url(/tables/fonts/fredoka-latin-wght-normal.woff2) format('woff2-variations')}
 :root{
@@ -99,3 +99,6 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-bet
 .small-print{flex-basis:100%;font-size:12px;line-height:1.5;margin:14px 0 0;color:var(--muted)}
 .modules .card h3{font-size:23px}
 .card.soon{opacity:.6}
+.logo span{display:flex;flex-direction:column;line-height:1.1}
+.logo small{font-family:var(--body);font-weight:400;font-size:12px;color:var(--muted)}
+.byline{font-family:var(--display);font-weight:500;font-size:22px;color:var(--leaf-dark);margin:6px 0 0}

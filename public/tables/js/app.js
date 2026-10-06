@@ -339,7 +339,7 @@ function renderLoading(){app.innerHTML=`<main class="screen"><div class="done">$
 
 function renderWelcome(){
   app.innerHTML=`<main class="screen scroll">
-    <header class="brand">${tree(5)}<div><p class="brand-kicker">Forest School</p><h1>Grow your times tables</h1></div></header>
+    <header class="brand">${tree(5)}<div><p class="brand-kicker">The Learning Forest</p><h1>Grow your times tables</h1></div></header>
     <p class="lead">Every times table fact is a tree. Get it right on the right day and it grows.</p>
     ${installBanner()}
     ${err()}
