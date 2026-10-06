@@ -52,7 +52,7 @@ const MIGRATIONS = [
     `ALTER TABLE children ADD COLUMN theme TEXT NOT NULL DEFAULT 'auto'`,
   ],
   [
-    // extra: per-child settings and progress extras as JSON (read aloud, forest friends,
+    // extra: per-child settings and progress extras as JSON (forest friends,
     // table intros seen, streak rest day, practice check scores). New keys need no migration.
     `ALTER TABLE children ADD COLUMN extra TEXT NOT NULL DEFAULT '{}'`,
     `ALTER TABLE answers ADD COLUMN shape TEXT NOT NULL DEFAULT 'mul'`,
@@ -93,6 +93,11 @@ const MIGRATIONS = [
       class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
       created_at INTEGER NOT NULL,
       last_used INTEGER)`,
+  ],
+  [
+    // read aloud removed: its audio cache and daily counts go
+    `DROP TABLE IF EXISTS tts_cache`,
+    `DROP TABLE IF EXISTS tts_usage`,
   ],
 ];
 

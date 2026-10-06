@@ -1,4 +1,4 @@
-// End-to-end tests for: question shapes, read aloud, forest friends, streak rest day,
+// End-to-end tests for: question shapes, forest friends, streak rest day,
 // personal bests, practice check, tricky facts, reminder settings and offline play.
 // Usage (dev server running): BASE=http://localhost:8788 node tests/features.mjs
 import { chromium } from 'playwright';
@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 
 const BASE = process.env.BASE || 'http://localhost:8788';
 const ORDER = [10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7];
-const browser = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), args: ['--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), });
 const errors = [];
 const step = name => console.log('•', name);
 
@@ -16,15 +16,8 @@ await parent.request.post(BASE + '/api/parent/signup', { data: { email: `f${Date
 const { card } = await (await parent.request.post(BASE + '/api/parent/children', { data: { name: 'Ava' } })).json();
 
 const kidCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
-// a stand-in voice that records what is read out, and a stand-in push service
+// a stand-in push service
 await kidCtx.addInitScript(() => {
-  window.__said = [];
-  class U { constructor(t) { this.text = t; } }
-  window.SpeechSynthesisUtterance = U;
-  Object.defineProperty(window, 'speechSynthesis', { value: {
-    getVoices: () => [], addEventListener() {}, cancel() {},
-    speak(u) { window.__said.push(u.text); setTimeout(() => u.onend && u.onend(), 30); },
-  } });
   window.Notification = { permission: 'default', requestPermission: async () => 'granted' };
   window.PushManager = function () {};
   const sub = { endpoint: 'https://push.example.com/abc', toJSON: () => ({ endpoint: 'https://push.example.com/abc', keys: { p256dh: 'BPk', auth: 'au' } }), unsubscribe: async () => true };
@@ -56,10 +49,9 @@ step('practice check is offered once the forest is grown');
 assert.ok(await kp.$('[data-act=mock-intro]'));
 assert.match(await kp.textContent('.streak'), /5 days in a row/);
 
-step('read aloud: switched on in settings');
+step('settings has no read aloud');
 await kp.click('[data-act=settings]');
-await kp.click('.sheet [data-act=read-aloud]');
-assert.equal(await kp.getAttribute('.sheet [data-act=read-aloud]', 'aria-pressed'), 'true');
+assert.equal(await kp.locator('.sheet h3', { hasText: /read aloud/i }).count(), 0);
 await kp.click('.sheet [data-act=close]');
 
 const type = async v => { for (const d of String(v)) await kp.keyboard.press(d); await kp.keyboard.press('Enter'); };
@@ -82,26 +74,7 @@ const solveStep = q => {
   throw new Error('unknown step ' + q);
 };
 
-step('read aloud uses the natural voice from the server when it is available');
-// the dev server has no Workers AI, so stand in for it with a short silent WAV
-const wavBytes = (() => { const n = 4000, b = Buffer.alloc(44 + n); b.write('RIFF', 0); b.writeUInt32LE(36 + n, 4); b.write('WAVEfmt ', 8);
-  b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(8000, 24); b.writeUInt32LE(8000, 28);
-  b.writeUInt16LE(1, 32); b.writeUInt16LE(8, 34); b.write('data', 36); b.writeUInt32LE(n, 40); b.fill(128, 44); return b; })();
-const ttsAsked = [];
-await kidCtx.route('**/api/tts?*', route => { ttsAsked.push(new URL(route.request().url()).searchParams.get('t')); route.fulfill({ status: 200, contentType: 'audio/wav', body: wavBytes }); });
-await kp.evaluate(() => { window.__said.length = 0; ttsDown = false; });   // the earlier 503 switched this session to the device voice
-await kp.click('[data-act=settings]');
-await kp.click('.sheet [data-act=read-aloud]');   // off
-await kp.click('.sheet [data-act=read-aloud]');   // on again: says a short confirmation
-await kp.waitForFunction(() => true);
-await kp.waitForTimeout(800);
-await kp.click('.sheet [data-act=close]');
-assert.ok(ttsAsked.includes('Questions will be read out loud.'), 'confirmation fetched from the server voice');
-assert.deepEqual(await kp.evaluate(() => window.__said), [], 'device voice not used');
-await kidCtx.unroute('**/api/tts?*');
-await kp.evaluate(() => { ttsDown = false; });
-
-step('grown trees are asked in different shapes; one wrong answer gets the walk-through (device voice fallback)');
+step('grown trees are asked in different shapes; one wrong answer gets the walk-through');
 await kp.click('[data-act=play]');
 const shapes = { mul: 0, missing: 0, div: 0 };
 let missedOne = false;
@@ -120,9 +93,6 @@ for (let n = 0; n < 60 && !(await kp.$('.done')); n++) {
 console.log('  shapes:', shapes);
 assert.ok(shapes.missing + shapes.div > 0, 'some questions asked another way round');
 assert.ok(missedOne);
-const said = await kp.evaluate(() => window.__said);
-assert.ok(said.some(t => /divided by|times what equals/.test(t)), 'shaped questions read aloud');
-assert.ok(said.some(t => /^\d+ times \d+\?$/.test(t) || /Times|double|tens/i.test(t)));
 
 step('forest friends move in, and the streak survives one missed day');
 const summary = await kp.textContent('.done');

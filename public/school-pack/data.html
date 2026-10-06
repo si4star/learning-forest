@@ -34,13 +34,11 @@
       <tr><td><b>Picture password</b>: the three pictures the pupil taps, stored readable.</td><td>So the teacher can look up a pupil's pictures when they forget them. Picture logins only work on devices the teacher has set up for the class.</td><td>The teacher deletes the pupil or the class, or removes the class.</td></tr>
       <tr><td><b>Progress</b>: for each of the 66 facts, its stage and when it is next due. Tables known at the start, date of the starting check, run of days played, last day played.</td><td>To choose each day's questions.</td><td>The pupil is deleted.</td></tr>
       <tr><td><b>Answers</b>: every answer given: the question, the answer typed, right or wrong, how long it took, the question type and the time.</td><td>To schedule facts, find tricky facts and show progress.</td><td>The pupil is deleted.</td></tr>
-      <tr><td><b>Settings and extras</b>: forest season, read aloud on or off, forest friends earned, table introductions seen, rest day used, practice check scores.</td><td>To run those features.</td><td>The pupil is deleted.</td></tr>
+      <tr><td><b>Settings and extras</b>: forest season, forest friends earned, table introductions seen, rest day used, practice check scores.</td><td>To run those features.</td><td>The pupil is deleted.</td></tr>
       <tr><td><b>Daily reminder</b> (only if turned on at home): the device's push notification address and keys, chosen time and time zone.</td><td>To send the reminder.</td><td>Turned off, or the pupil is deleted.</td></tr>
       <tr><td><b>Logins</b>: a hash of each login token, with its role and expiry.</td><td>To keep people logged in.</td><td>Logout or expiry: teacher 30 days, pupil at home 180 days, pupil on a class device 8 hours.</td></tr>
       <tr><td><b>Class devices</b>: a hash of each device's token, when it was set up and last used.</td><td>To let pupils use picture logins on that device.</td><td>The teacher signs out all class devices, or deletes or removes the class.</td></tr>
       <tr><td><b>Failed logins</b>: the email, username or pupil number that was tried, the IP address, and the time.</td><td>To stop password guessing.</td><td>24 hours.</td></tr>
-      <tr><td><b>Read-aloud counts</b>: number of phrases generated per login per day.</td><td>To cap use of the voice service.</td><td>2 days.</td></tr>
-      <tr><td><b>Read-aloud audio</b>: recordings of app phrases such as "6 times 7". No names or personal data.</td><td>So each phrase is only generated once.</td><td>Not personal data.</td></tr>
     </tbody>
   </table></div>
 
@@ -59,7 +57,6 @@
     <thead><tr><th>Sub-processor</th><th>What for</th><th>Data it handles</th></tr></thead>
     <tbody>
       <tr><td>Cloudflare, Inc. (Pages, Workers, D1 database)</td><td>Hosting the app and the database.</td><td>Everything listed above. Database location: <span class="fill">[D1 region]</span>.</td></tr>
-      <tr><td>Cloudflare Workers AI</td><td>The read-aloud voice.</td><td>Only the text of app phrases. No names or identifiers.</td></tr>
       <tr><td>Apple, Google or Mozilla push services</td><td>Delivering daily reminders, only when turned on.</td><td>An empty message to the device's push address. The reminder text is written on the device.</td></tr>
     </tbody>
   </table></div>

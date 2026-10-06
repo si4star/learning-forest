@@ -30,7 +30,7 @@
     <li>Your child's first name or nickname, as typed by the grown-up, and their username.</li>
     <li>Scrambled copies of your child's password, recovery code and QR code. In a class, the three pictures your child taps to log in.</li>
     <li>Your child's answers: each question, the answer, whether it was right and how long it took. This is how the app picks the next questions.</li>
-    <li>Settings, such as the forest season and whether questions are read aloud.</li>
+    <li>Settings, such as the forest season.</li>
     <li>If you turn on a daily reminder: your device's notification address and the time you chose.</li>
     <li>Failed login attempts and the internet address they came from, for 24 hours, to stop people guessing passwords.</li>
   </ul>
@@ -39,7 +39,6 @@
   <h2>Who else handles it</h2>
   <ul>
     <li><b>Cloudflare</b> hosts the app and the database. Database location: <span class="fill">[D1 region]</span>.</li>
-    <li><b>Cloudflare Workers AI</b> makes the read-aloud voice. It only receives app phrases like "6 times 7", never names.</li>
     <li>If you turn on reminders, your phone's push service (<b>Apple</b>, <b>Google</b> or <b>Mozilla</b>) passes on an empty message to wake the app. The reminder is written on your device.</li>
   </ul>
   <p>We don't sell or share data with anyone else.</p>

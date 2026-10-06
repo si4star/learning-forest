@@ -271,47 +271,6 @@ async function syncWakeLock(){
 }
 document.addEventListener('visibilitychange',syncWakeLock);
 
-/* read aloud: a natural voice from the server (Cloudflare Workers AI, each phrase generated once
-   and cached), falling back to the device's own voice if that isn't available. When it's on,
-   the answer timer (and the practice check clock) starts when the reading finishes. */
-const canSpeak='speechSynthesis' in window;
-let voice=null;
-function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>v.lang==='en-GB')||vs.find(v=>/^en/.test(v.lang))||null}
-if(canSpeak){pickVoice();speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}
-const readAloud=()=>!!kid?.extra?.readAloud;
-const spoken=s=>s.replace(/×/g,' times ').replace(/÷/g,' divided by ').replace(/−/g,' take away ').replace(/\+/g,' add ').replace(/\?/g,' what ').replace(/=/g,' equals ');
-const player=new Audio();
-let speechId=0, ttsDown=false, playerUrl=null, playerUnlocked=false;
-// iPhone and iPad only let a page play sound after a tap; one silent play on the first tap unlocks the player
-const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
-document.addEventListener('pointerdown',()=>{if(playerUnlocked||!readAloud())return;playerUnlocked=true;player.onended=player.onerror=null;player.src=SILENT;player.play().catch(()=>{})},true);
-const ttsText=t=>t.replace(/\s+/g,' ').trim();
-function stopSpeech(){speechId++;player.pause();if(canSpeak)speechSynthesis.cancel()}
-function deviceSpeak(text,fin){
-  if(!canSpeak)return fin();
-  const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=.95;if(voice)u.voice=voice;
-  u.onend=fin;u.onerror=fin;speechSynthesis.speak(u);
-}
-function speak(text,then){
-  if(!readAloud()){then&&then();return}
-  stopSpeech();
-  const id=speechId;let fired=false;
-  const fin=()=>{if(!fired&&id===speechId){fired=true;clearTimeout(guard);then&&then()}};
-  const guard=setTimeout(fin,15000);   // never leave a question waiting on a silent voice
-  if(ttsDown)return deviceSpeak(text,fin);
-  fetch('/api/tts?t='+encodeURIComponent(ttsText(text)),{credentials:'same-origin'}).then(res=>{
-    if(!res.ok){if(res.status===503||res.status===429)ttsDown=true;throw new Error(res.status)}
-    return res.blob();
-  }).then(blob=>{
-    if(id!==speechId)return;
-    if(playerUrl)URL.revokeObjectURL(playerUrl);
-    playerUrl=URL.createObjectURL(blob);
-    player.onended=fin;player.onerror=()=>{if(id===speechId)deviceSpeak(text,fin)};
-    player.src=playerUrl;
-    return player.play();
-  }).catch(()=>{if(id===speechId)deviceSpeak(text,fin)});
-}
-
 /* views */
 const app=document.getElementById('app');
 let view='loading', me={role:null}, kid=null, kids=[], classes=[], card=null, cardFor='parent';
@@ -590,7 +549,7 @@ async function qrLogin(key){
 window.addEventListener('hashchange',()=>{
   const k=qrKey(location.hash);if(!k)return;
   history.replaceState(null,'',location.pathname+location.search);
-  if(round)clearTimeout(round.timer);round=null;stopSpeech();
+  if(round)clearTimeout(round.timer);round=null;
   flush().finally(()=>qrLogin(k));
 });
 
@@ -826,18 +785,13 @@ function nextItem(){
   if(it.example)startWalk('example');
   else if(it.isNew&&!it.seen)startWalk('intro');
   renderPlay();
-  if(r.mode==='ask')askNow(it);else sayWalk();
+  if(r.mode==='ask')askNow(it);
 }
 const answerOf=it=>it.shape==='mul'?it.a*it.b:it.b;
 const qText=it=>it.shape==='missing'?`${it.a} × ? = ${it.a*it.b}`:it.shape==='div'?`${it.a*it.b} ÷ ${it.a}`:`${it.a} × ${it.b}`;
-const spokenQ=it=>it.shape==='missing'?`${it.a} times what equals ${it.a*it.b}?`:it.shape==='div'?`${it.a*it.b} divided by ${it.a}?`:`${it.a} times ${it.b}?`;
 function askNow(it){
   const r=round;r.start=performance.now();
-  speak(spokenQ(it),()=>{if(round!==r||r.items[r.i]!==it||r.mode!=='ask')return;r.start=performance.now();if(r.mock)startMockClock()});
-}
-function sayAgain(){
-  const r=round;if(!r)return;
-  if(r.mode==='walk')sayWalk();else if(r.mode==='ask'&&!r.mock)speak(spokenQ(r.items[r.i]));
+  if(r.mock)startMockClock();
 }
 function renderPlay(){
   syncWakeLock();
@@ -856,7 +810,7 @@ function renderPlay(){
   app.innerHTML=`<main class="screen play">
     <header class="pbar"><button class="icon" data-act="quit" aria-label="Stop">×</button>
       <div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="count">${count}/${r.planned}</span>
-      ${readAloud()&&!r.mock?'<button class="icon" data-act="say-again" aria-label="Read it again">🔊</button>':''}</header>
+</header>
     <section class="stage">${stage}</section>
     <section class="pad ${walkDone||paused?'off':''}">${keys}</section></main>`;
 }
@@ -866,12 +820,6 @@ function renderPlay(){
 function startWalk(kind){
   const it=round.items[round.i];round.mode='walk';round.input='';round.lock=false;
   round.walk={kind,steps:walkSteps(it.a,it.b,kind==='example'?round.tableIntro:undefined),i:0,reveal:false};
-}
-function sayWalk(){
-  const r=round,w=r.walk,it=r.items[r.i],cur=w.steps[w.i];
-  if(!cur)return speak(`${it.a} times ${it.b} is ${it.a*it.b}.`);
-  const lead=w.kind==='example'&&w.i===0&&r.i===0?TABLE_INTROS[r.tableIntro]+' ':'';
-  speak(`${lead}${cur.say} ${spoken(cur.q)}?`);
 }
 function walkHtml(it){
   const w=round.walk,cur=w.steps[w.i],done=!cur;
@@ -891,10 +839,9 @@ function walkHtml(it){
 }
 function walkSubmit(){
   const r=round,w=r.walk,s=w.steps[w.i];
-  if(Number(r.input)===s.ans){w.i++;w.reveal=false;r.input='';renderPlay();return sayWalk()}
+  if(Number(r.input)===s.ans){w.i++;w.reveal=false;r.input='';return renderPlay()}
   w.reveal=true;r.input='';renderPlay();
   const a=document.getElementById('ans');if(a)a.classList.add('wrong','shake');
-  speak(`It's ${s.ans}. Type ${s.ans}.`);
 }
 function walkNext(){
   const r=round,it=r.items[r.i];
@@ -948,7 +895,7 @@ function submit(){
     requeue({k:it.k,retry:true,extra:!it.isNew},3);   // a new fact's comeback slot is already counted
     r.lock=true;ansEl.classList.add('wrong','shake');
     msg.innerHTML='<p class="msg">Not quite.</p>';
-    setTimeout(()=>{if(round!==r)return;startWalk('fix');renderPlay();sayWalk()},700);
+    setTimeout(()=>{if(round!==r)return;startWalk('fix');renderPlay()},700);
   }
 }
 function finishRound(){
@@ -1051,7 +998,6 @@ function sheet(html){
     if(act==='season')return pickSeason(e.target.closest('[data-act]').dataset.s,bg);
     if(act==='how'){bg.remove();return howSheet()}
     if(act==='logout'){bg.remove();return logout()}
-    if(act==='read-aloud'){kid.extra.readAloud=!kid.extra.readAloud;saveMeta();bg.remove();settingsSheet();if(kid.extra.readAloud)speak('Questions will be read out loud.');return}
     if(act==='reminder-on')return setReminder(bg);
     if(act==='reminder-off')return clearReminder(bg);
     if(e.target===bg||act==='close'){bg.remove();maybeUpdate()}
@@ -1068,9 +1014,6 @@ function settingsSheet(){
       <div class="seasons" role="group" aria-label="Forest season">${SEASONS.map(([k,l])=>
         `<button data-act="season" data-s="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>
       <p class="hint small">Auto follows the time of year.</p></section>
-    <section class="set"><h3>Read aloud</h3>
-      <button class="toggle" data-act="read-aloud" aria-pressed="${!!kid.extra.readAloud}">${kid.extra.readAloud?'On':'Off'}</button>
-      <p class="hint small">Reads each question and step out loud.</p></section>
     <section class="set"><h3>Daily reminder</h3>${reminderHtml()}</section>
     <nav class="menu"><button class="menu-row" data-act="how"><span>How the method works</span><span class="chev" aria-hidden="true">›</span></button>
       <button class="menu-row" data-act="logout"><span>Log out</span><span class="pmeta">${esc(kid.username)}</span></button></nav>`);
@@ -1260,7 +1203,6 @@ async function parentAction(act,id){
 }
 
 function logout(){
-  stopSpeech();
   flush().finally(()=>api('/logout',{}).catch(()=>{}).finally(()=>{LS.del('ttf-snap');kid=null;kids=[];signedOut()}));
 }
 
@@ -1283,8 +1225,7 @@ app.addEventListener('click',e=>{
     case 'play':startRound();break;
     case 'home':go('home');break;
     case 'mod-tables':go(kid.assessedAt?'home':'assessPick');break;
-    case 'quit':if(round)clearTimeout(round.timer);round=null;stopSpeech();go(kid.assessedAt?'home':'assessPick');break;
-    case 'say-again':sayAgain();break;
+    case 'quit':if(round)clearTimeout(round.timer);round=null;go(kid.assessedAt?'home':'assessPick');break;
     case 'pw':e.preventDefault();togglePw(b);break;
     case 'mock-intro':go('mockIntro');break;
     case 'mock-start':startMock();break;

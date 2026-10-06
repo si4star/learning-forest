@@ -3,8 +3,7 @@
 // worker to take over when the child isn't mid-round, then reloads.
 const VERSION = '__VERSION__';
 const CACHE = 'lf-' + VERSION;
-const TTS_CACHE = 'tts-v1';   // not deleted on update
-const OLD = k => k.startsWith('ttf-') || k.startsWith('tables-') || (k.startsWith('lf-') && k !== CACHE);   // ttf-, tables-: from before the app's moves
+const OLD = k => k.startsWith('ttf-') || k.startsWith('tables-') || k.startsWith('tts-') || (k.startsWith('lf-') && k !== CACHE);   // ttf-, tables-: from before the app's moves; tts-: the old read-aloud clips
 const SHELL = [
   '/app/',
   '/app/css/styles.css?v=' + VERSION,
@@ -33,17 +32,6 @@ self.addEventListener('message', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // read-aloud clips: kept across app versions, so each phrase downloads once and works offline
-  if (e.request.method === 'GET' && url.origin === location.origin && url.pathname === '/api/tts') {
-    e.respondWith(caches.open(TTS_CACHE).then(async c => {
-      const hit = await c.match(e.request);
-      if (hit) return hit;
-      const res = await fetch(e.request);
-      if (res.ok) c.put(e.request, res.clone());
-      return res;
-    }));
-    return;
-  }
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
   if (e.request.mode === 'navigate') {
     // The app is only /app/ itself; any other page under /app/ is a plain web page

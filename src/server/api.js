@@ -1,6 +1,5 @@
 import { migrate } from './schema.js';
 import { configure, hashSecret, verifySecret, needsRehash, newToken, sha256 } from './auth.js';
-import { synth, normText, TEXT_OK, ttsConfig } from './tts.js';
 import { newUsername, newPassword, newRecoveryCode, normUsername, normPassword, normRecovery } from './words.js';
 
 const DAY = 864e5;
@@ -149,7 +148,6 @@ const tableList = x => Array.isArray(x) && x.length <= 11 && x.every(t => ORDER.
 function cleanExtra(x) {
   if (!x || typeof x !== 'object' || Array.isArray(x)) throw new HttpError(400, 'Bad progress.');
   const out = {};
-  if ('readAloud' in x) { if (typeof x.readAloud !== 'boolean') throw new HttpError(400, 'Bad progress.'); out.readAloud = x.readAloud; }
   for (const k of ['friends', 'intros']) if (k in x) { if (!tableList(x[k])) throw new HttpError(400, 'Bad progress.'); out[k] = x[k]; }
   if ('restDay' in x) { if (x.restDay !== null && !Number.isFinite(x.restDay)) throw new HttpError(400, 'Bad progress.'); out.restDay = x.restDay; }
   if ('mocks' in x) {
@@ -434,36 +432,6 @@ async function reminderOff(ctx) {
   return json({ ok: true });
 }
 
-// Read-aloud audio. Logged-in users only; cached phrases are free, new ones are capped per day
-// (per user and overall) so the Workers AI free allowance can't be used up.
-const TTS_PER_USER = 400;
-async function tts(ctx) {
-  const s = await currentSession(ctx);
-  if (!s) throw new HttpError(401, 'Please log in.');
-  const text = normText(new URL(ctx.request.url).searchParams.get('t'));
-  if (!TEXT_OK.test(text)) throw new HttpError(400, 'Bad text.');
-  const key = await sha256(`${ttsConfig(ctx.env)}|${text}`);
-  const audio = (mime, bytes) => new Response(bytes, { headers: { 'content-type': mime, 'cache-control': 'private, max-age=31536000, immutable' } });
-  const hit = await ctx.db.prepare('SELECT mime, audio FROM tts_cache WHERE key = ?').bind(key).first();
-  if (hit) return audio(hit.mime, new Uint8Array(hit.audio));
-  if (!ctx.env.AI) throw new HttpError(503, 'The read-aloud voice is not set up.');
-  const day = new Date().toISOString().slice(0, 10), who = `${s.role}:${s.user_id}`;
-  const cap = Number(ctx.env.TTS_DAILY_CAP) || 3000;
-  const q = 'SELECT n FROM tts_usage WHERE day = ? AND who = ?';
-  const [mine, all] = await ctx.db.batch([ctx.db.prepare(q).bind(day, who), ctx.db.prepare(q).bind(day, '*')]);
-  if ((mine.results[0]?.n || 0) >= TTS_PER_USER || (all.results[0]?.n || 0) >= cap) throw new HttpError(429, 'Read-aloud limit reached for today.');
-  let out;
-  try { out = await synth(ctx.env, text); } catch { throw new HttpError(503, 'The read-aloud voice is not available.'); }
-  const bump = 'INSERT INTO tts_usage(day, who, n) VALUES (?, ?, 1) ON CONFLICT(day, who) DO UPDATE SET n = n + 1';
-  await ctx.db.batch([
-    ctx.db.prepare('INSERT OR IGNORE INTO tts_cache(key, mime, audio, created_at) VALUES (?, ?, ?, ?)').bind(key, out.mime, out.bytes, Date.now()),
-    ctx.db.prepare(bump).bind(day, who),
-    ctx.db.prepare(bump).bind(day, '*'),
-    ctx.db.prepare('DELETE FROM tts_usage WHERE day < ?').bind(new Date(Date.now() - 2 * DAY).toISOString().slice(0, 10)),   // counts are only needed for today
-  ]);
-  return audio(out.mime, out.bytes);
-}
-
 /* classes */
 
 const newPics = () => {
@@ -634,7 +602,6 @@ const ROUTES = [
   ['GET', /^\/parent\/children\/(\d+)\/tricky$/, childTricky],
   ['POST', /^\/child\/reminder$/, reminderOn],
   ['POST', /^\/child\/reminder\/off$/, reminderOff],
-  ['GET', /^\/tts$/, tts],
   ['POST', /^\/parent\/classes$/, addClass],
   ['POST', /^\/parent\/classes\/(\d+)\/pupils$/, addPupils],
   ['POST', /^\/parent\/classes\/(\d+)\/device$/, useDeviceForClass],

@@ -30,7 +30,7 @@ This repo is **The Learning Forest** (`learn.thetreefella.co.uk`), free learning
 - Passwords and recovery codes are stored as PBKDF2-SHA256 hashes (10,000 iterations for now; see **Upgrade later**). Sessions are random tokens in HttpOnly, Secure, SameSite=Lax cookies (30 days for grown-ups, 180 days for children).
 - 10 failed logins per account, or 50 per IP address, in 15 minutes locks out further attempts for 15 minutes.
 
-Data held: grown-up email; child first name or nickname; facts progress; settings (season, read aloud); forest friends; practice check scores; for reminders, the device's push address, time and time zone; every answer (fact, answer given, right/wrong, time taken, kind). Failed login records are deleted after a day. The font is self-hosted, so the page makes no third-party requests.
+Data held: grown-up email; child first name or nickname; facts progress; settings (season); forest friends; practice check scores; for reminders, the device's push address, time and time zone; every answer (fact, answer given, right/wrong, time taken, kind). Failed login records are deleted after a day. The font is self-hosted, so the page makes no third-party requests.
 
 ## Classes (schools)
 
@@ -98,7 +98,6 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 
 - **Table introductions.** When a table is newly planted, the next round opens with its strategy in one sentence and three worked examples (×2, ×3, ×4) using that table's strategy. Tables passed in the starting check skip this.
 - **Question shapes.** Trees (and Great trees) are sometimes asked as `6 × ? = 42` or `42 ÷ 6` (a third each), so the whole fact family is practised. A wrong answer walks through the multiplication.
-- **Read aloud** (Settings). A natural voice reads each question and strategy step (see **Read-aloud voice** below), falling back to the device's own voice if that isn't available. The answer timer starts when the reading ends. A 🔊 button repeats it.
 - **Forest friends.** When every fact in a table is a Tree or Great tree, an animal moves in (10s owl, 2s squirrel, 5s hedgehog, 11s rabbit, 3s fox, 4s robin, 9s deer, 6s badger, 8s butterfly, 12s frog, 7s ladybird). Friends stay once earned.
 - **Gentler streak.** One missed day in any 7 doesn't break a run of days.
 - **Personal bests.** Quickest facts in the last 7 days, and facts whose best time beat the week before by 0.3 s or more.
@@ -106,17 +105,6 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 - **Tricky facts** (grown-up screen). For each child: this week's questions and % right; up to 8 facts, ordered by how often they're wrong, then by how slow they are, over the last 30 days; and practice check scores.
 - **Daily reminder** (Settings, on the child's device). One notification a day at the chosen time, only if the child hasn't played yet that day. Needs the reminders Worker (below). On iPhone and iPad it needs iOS 16.4 or later, and the app installed to the home screen.
 - **Offline play.** The last forest is kept on the device. With no connection the app opens it and rounds can be played; answers save when the connection returns. Logging in, personal bests and the practice check need the internet.
-
-## Read-aloud voice (one-off setup)
-
-The voice comes from Cloudflare Workers AI. Each phrase is generated the first time it's needed, stored in D1 (`tts_cache`), and served from there afterwards. Each device also keeps the clips it has played (service worker cache `tts-v1`), so they work offline and survive app updates. The app only ever says a fixed set of phrases (about 1,500), so generation is mostly a one-off.
-
-Setup: Pages project → **Settings → Bindings → Add → Workers AI**, variable name `AI`, for Production and Preview. Then retry the latest deployment.
-
-- Default voice: `@cf/deepgram/aura-1`, speaker `athena` (British English, female). If that fails, `@cf/myshell-ai/melotts` is tried, then the device voice.
-- To change it, set environment variables `TTS_MODEL` (e.g. `@cf/deepgram/aura-1`) and `TTS_VOICE` (e.g. `helios` for a British male voice). Changing them starts a fresh set of clips.
-- Limits: only logged-in users; only plain phrase text (letters, numbers, basic punctuation, up to 200 characters); at most 400 new phrases per user per day and 3,000 overall (`TTS_DAILY_CAP`). Cached phrases don't count.
-- Usage shows in the Cloudflare dashboard under AI → Workers AI. Generating the whole phrase set once should fit within the free daily allowance spread over a few days of normal use.
 
 ## Daily reminders (one-off setup)
 
@@ -212,12 +200,10 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `src/server/words.js` | Username, password and recovery code generation |
 | `src/server/schema.js` | D1 schema and migrations |
 | `src/server/push.js` | Web Push (VAPID) signing and sending |
-| `src/server/tts.js` | Read-aloud voice via Workers AI |
 | `workers/reminders/` | Scheduled Worker that sends daily reminders |
 | `tests/e2e.mjs` | End-to-end test: accounts, starting check, rounds, sync, PWA |
-| `tests/features.mjs` | End-to-end test: shapes, read aloud, friends, streak, bests, practice check, tricky facts, reminders, offline |
+| `tests/features.mjs` | End-to-end test: shapes, friends, streak, bests, practice check, tricky facts, reminders, offline |
 | `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
-| `tests/tts.mjs` | Read-aloud route: caching, fallback model, limits (runs the API on SQLite) |
 | `tests/qr.mjs` | QR login on the server: keys, new QR card, old keys, rate limit |
 | `tests/qr-login.mjs` | QR login in the browser: card QR decodes, link login, camera scan, bad and replaced codes |
 | `tests/classes.mjs` | Classes on the server: class devices, picture login, lockouts, ownership |
