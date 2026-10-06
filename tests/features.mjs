@@ -47,7 +47,7 @@ assert.equal((await kr.post(BASE + '/api/child/sync', { data: {
 
 const kp = await kidCtx.newPage();
 kp.on('pageerror', e => errors.push(e.message));
-await kp.goto(BASE);
+await kp.goto(BASE + '/app/');
 await kp.waitForSelector('.forest');
 await kp.waitForFunction(() => navigator.serviceWorker.controller);   // service worker in charge, for offline later
 
@@ -166,7 +166,7 @@ await kp.click('.sheet [data-act=close]');
 step('grown-up sees tricky facts and the practice check score');
 const pp = await parent.newPage();
 pp.on('pageerror', e => errors.push(e.message));
-await pp.goto(BASE);
+await pp.goto(BASE + '/app/');
 await pp.waitForSelector('.kid');
 await pp.click('[data-act=tricky]');
 await pp.waitForSelector('.sheet .tricky li');

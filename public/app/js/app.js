@@ -234,7 +234,7 @@ const VERSION=(document.currentScript&&new URL(document.currentScript.src).searc
 let swReg=null, updateReady=false, applyingUpdate=false;
 const SAFE_TO_UPDATE=new Set(['loading','welcome','home','parent','assessPick','mockIntro']);
 if('serviceWorker' in navigator&&VERSION!=='__V__'){
-  navigator.serviceWorker.register('/sw.js').then(reg=>{
+  navigator.serviceWorker.register('/app/sw.js',{scope:'/app/'}).then(reg=>{
     swReg=reg;
     const ready=()=>{if(navigator.serviceWorker.controller){updateReady=true;maybeUpdate()}};
     const track=w=>w&&w.addEventListener('statechange',()=>{if(w.state==='installed')ready()});
@@ -403,8 +403,8 @@ function renderGrownup(){
       <label>Email<input name="email" type="email" autocomplete="email" required></label>
       <label>Password<span class="pw"><input name="password" type="password" autocomplete="${up?'new-password':'current-password'}" minlength="10" required>${pwToggle}</span>
         ${up?'<span class="field-hint">At least 10 characters.</span>':''}</label>
-      ${up?`<label class="check"><input type="checkbox" name="consent"> I'm the parent or carer of the children I'll add.</label>
-      <p class="hint small">We store your email, each child's first name or nickname, and their times table answers. If a daily reminder is turned on, we also store that device's notification address and chosen time. Failed logins are kept for a day to stop guessing. No ads, no tracking.</p>`:''}
+      ${up?`<label class="check"><input type="checkbox" name="consent"> I'm the parent or carer of the children I'll add, or their teacher.</label>
+      <p class="hint small">We store your email, each child's first name or nickname, and their times table answers. If a daily reminder is turned on, we also store that device's notification address and chosen time. Failed logins are kept for a day to stop guessing. No ads, no tracking. <a href="/school-pack/privacy.html" target="_blank" rel="noopener">Privacy notice</a></p>`:''}
       ${err()}
       <button class="cta" ${busy?'disabled':''}>${up?'Create account':'Log in'}</button>
     </form>
@@ -438,7 +438,7 @@ function renderParent(){
   app.innerHTML=`<main class="screen scroll">
     <header class="bar"><span class="pill-gap"></span><h1>Your children</h1><button class="pill" data-act="logout">Log out</button></header>
     ${deviceBanner()}
-    <p class="hint">Children log in at <b>${esc(location.host)}</b> with the username and password on their Forest Pass, or by scanning its QR code.</p>
+    <p class="hint">Children log in at <b>${esc(appHost())}</b> with the username and password on their Forest Pass, or by scanning its QR code.</p>
     ${err()}
     ${family.length?`<ul class="kids">${rows}</ul>`:'<p class="lead">Add a child to make their Forest Pass.</p>'}
     <form class="add" data-form="addChild" novalidate><label for="nm" class="vh">Child's first name or nickname</label>
@@ -476,7 +476,8 @@ function renderClassAdmin(){
         <span class="field-hint">Use first names or initials only. If two pupils share a name, add a surname initial, like "Bob A" and "Bob B". Each pupil gets three pictures and a QR code.</span></label>
       <button class="cta" ${busy?'disabled':''}>Add pupils</button>
     </form>
-    <button class="link danger ${armedFor(k.id,'class-remove')?'armed':''}" data-act="class-remove" data-id="${k.id}">${armedFor(k.id,'class-remove')?'Tap again to remove the class (pupils and their forests stay on your account)':'Remove this class'}</button>
+    <button class="link danger ${armedFor(k.id,'class-remove')?'armed':''}" data-act="class-remove" data-id="${k.id}">${armedFor(k.id,'class-remove')?'Tap again to remove the class (pupils and their forests stay on your account)':'Remove this class, keep the pupils'}</button>
+    <button class="link danger ${armedFor(k.id,'class-delete')?'armed':''}" data-act="class-delete" data-id="${k.id}">${armedFor(k.id,'class-delete')?`Tap again to delete ${esc(k.name)} and all ${pupils.length} pupils' data. This can't be undone.`:'Delete this class and all its pupils (end of year)'}</button>
   </main>`;
 }
 function renderClassCards(){
@@ -551,6 +552,7 @@ async function classAction(act,id){
     if(act==='class-device'){const r=await api(`/parent/classes/${id}/device`,{});classDev=r.device;me={role:null};kids=[];classes=[];return enterClass()}
     if(act==='class-signout'){await api(`/parent/classes/${id}/devices/signout`,{});await loadParent();if(classDev?.classId===id)classDev=null;return render()}
     if(act==='class-remove'){await api(`/parent/classes/${id}`,{},'DELETE');await loadParent();return go('parent')}
+    if(act==='class-delete'){await api(`/parent/classes/${id}`,{deletePupils:true},'DELETE');await loadParent();return go('parent')}
     if(act==='class-cards'){
       const pupils=kids.filter(c=>c.classId===id);
       classCards=[];
@@ -564,7 +566,7 @@ function ago(t){const d=Math.round((today()-new Date(t).setHours(0,0,0,0))/864e5
 
 /* QR login: the Forest Pass carries a QR code of a link with the child's login key.
    The two small libraries load only when a card or the scanner is shown. */
-const QRGEN_SRC='/js/vendor/qrcode-generator-1.5.2.min.js', JSQR_SRC='/js/vendor/jsqr-1.4.0.min.js';
+const QRGEN_SRC='/app/js/vendor/qrcode-generator-1.5.2.min.js', JSQR_SRC='/app/js/vendor/jsqr-1.4.0.min.js';
 const scripts={};
 function loadScript(src){
   return scripts[src]??=new Promise((ok,no)=>{
@@ -573,7 +575,8 @@ function loadScript(src){
     document.head.appendChild(el);
   });
 }
-const qrLink=t=>`${location.origin}/#qr=${t}`;
+const qrLink=t=>`${location.origin}/app/#qr=${t}`;
+const appHost=()=>location.host+'/app';   // the address printed on cards
 async function makeQr(t){await loadScript(QRGEN_SRC);const q=qrcode(0,'M');q.addData(qrLink(t));q.make();return q}
 // accepts a scanned link or a bare key
 const qrKey=s=>{const m=/[#?&]qr=([A-Za-z0-9_-]{30,60})/.exec(s||'')||/^([A-Za-z0-9_-]{30,60})$/.exec(s||'');return m?m[1]:null};
@@ -658,8 +661,8 @@ async function drawCard(c){
       g.textAlign='center';text('Scan to log in',x0+size/2,y0+size+30,26,400,MUTED);g.textAlign='left';
     }
   }
-  const rows=c.password?[['Website',location.host,44],['Username',c.username,60],['Password',c.password,60],['Recovery code',c.recovery,60]]
-    :[['Website',location.host,44],['Username',c.username,60],['Password','Same as before',44]];
+  const rows=c.password?[['Website',appHost(),44],['Username',c.username,60],['Password',c.password,60],['Recovery code',c.recovery,60]]
+    :[['Website',appHost(),44],['Username',c.username,60],['Password','Same as before',44]];
   rows.forEach(([label,value,size],i)=>{const top=380+i*165;text(label,110,top,34,400,MUTED);text(value,110,top+70,size,600,INK,780)});
   ['Keep this card safe at home.','Never tell a friend your password.','Lost your password? Use the recovery code.']
     .forEach((t,i)=>text('•  '+t,110,1060+i*56,32,400,MUTED,780));
@@ -685,7 +688,7 @@ function renderCard(){
       <div class="pass-hd">${tree(5)}<div class="pass-who"><p class="pass-label">Forest Pass</p><p class="pass-name">${esc(c.name)}</p></div>
         ${c.qr?'<figure class="pass-qr"><div id="passQr" role="img" aria-label="QR code to log in"></div><figcaption>Scan to log in</figcaption></figure>':''}</div>
       <dl>
-        <dt>Website</dt><dd>${esc(location.host)}</dd>
+        <dt>Website</dt><dd>${esc(appHost())}</dd>
         <dt>Username</dt><dd class="cred">${esc(c.username)}</dd>
         ${c.password?`<dt>Password</dt><dd class="cred">${esc(c.password)}</dd>
         <dt>Recovery code</dt><dd class="cred">${esc(c.recovery)}</dd>`:'<dt>Password</dt><dd>Same as before</dd>'}
@@ -1162,6 +1165,8 @@ async function enterChild(){
     if(e.status===0&&snap?.kid){kid=snap.kid;offline=true}else return signedOut(e);
   }
   kid.extra=kid.extra||{};
+  // a reminder set up before the app moved to /app belonged to the old service worker
+  if(reminderSaved()&&pushable())navigator.serviceWorker.ready.then(r=>r.pushManager.getSubscription()).then(sub=>{if(!sub)LS.del('ttf-reminder')}).catch(()=>{});
   loadPending();
   // answers saved on this device but not yet on the server win over the server copy
   Object.assign(kid.facts,pending.facts);if(pending.meta)Object.assign(kid,pending.meta);
@@ -1281,7 +1286,7 @@ app.addEventListener('click',e=>{
     case 'kid-reset':case 'kid-reassess':case 'kid-remove':case 'kid-qr':case 'kid-pics':parentAction(act,+b.dataset.id);break;
     case 'open-class':openClass=+b.dataset.id;go('classAdmin');break;
     case 'rename':renameSheet(+b.dataset.id);break;
-    case 'class-device':case 'class-signout':case 'class-remove':case 'class-cards':classAction(act,+b.dataset.id);break;
+    case 'class-device':case 'class-signout':case 'class-remove':case 'class-delete':case 'class-cards':classAction(act,+b.dataset.id);break;
     case 'print-cards':window.print();break;
     case 'pick-pupil':pupil=classInfo.pupils.find(p=>p.id===+b.dataset.id);picks=[];picMsg='';go('classPics');break;
     case 'pic':pickPic(+b.dataset.i);break;

@@ -29,11 +29,11 @@ const DEVICES = [
   [1032, 1376, 2], // iPad Pro 13" (M4)
 ];
 
-const svg = readFileSync('public/icons/icon.svg', 'utf8');
+const svg = readFileSync('public/app/icons/icon.svg', 'utf8');
 const square = svg.replace('rx="5.5" ', '');                                   // full bleed: Apple and maskable
 const maskable = square.replace('translate(2.4 1.6) scale(.8)', 'translate(4.2 3.6) scale(.65)');
 const tree = svg.replace(/<rect[^>]*\/>/, '');                                 // tree only, for splash screens
-const font = readFileSync('public/fonts/fredoka-latin-wght-normal.woff2').toString('base64');
+const font = readFileSync('public/app/fonts/fredoka-latin-wght-normal.woff2').toString('base64');
 
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await browser.newPage();
@@ -44,11 +44,11 @@ for (const [file, size, src] of [
 ]) {
   await page.setViewportSize({ width: size, height: size });
   await page.setContent(`<style>html,body{margin:0;background:transparent}svg{display:block;width:${size}px;height:${size}px}</style>${src}`);
-  await page.screenshot({ path: 'public/icons/' + file, omitBackground: true });
+  await page.screenshot({ path: 'public/app/icons/' + file, omitBackground: true });
 }
 
-rmSync('public/splash', { recursive: true, force: true });
-mkdirSync('public/splash');
+rmSync('public/app/splash', { recursive: true, force: true });
+mkdirSync('public/app/splash');
 const links = [];
 for (const [w, h, dpr] of DEVICES) {
   for (const orientation of ['portrait', 'landscape']) {
@@ -65,16 +65,16 @@ for (const [w, h, dpr] of DEVICES) {
       h1{margin:0;color:${INK};font-weight:700;font-size:${Math.round(s * 0.2)}px;letter-spacing:-.01em}
     </style>${tree}<h1>Times Table Forest</h1>`);
     await p.evaluate(() => document.fonts.ready);
-    await p.screenshot({ path: 'public/' + file });
+    await p.screenshot({ path: 'public/app/' + file });
     await ctx.close();
     links.push(`<link rel="apple-touch-startup-image" href="${file}" media="(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: ${orientation})">`);
   }
 }
 await browser.close();
 
-const html = readFileSync('public/index.html', 'utf8');
+const html = readFileSync('public/app/index.html', 'utf8');
 const out = html.replace(/<!-- splash:start -->[\s\S]*<!-- splash:end -->/,
   `<!-- splash:start -->\n${links.join('\n')}\n<!-- splash:end -->`);
 if (out === html && !html.includes(links[0])) throw new Error('splash markers missing from index.html');
-writeFileSync('public/index.html', out);
+writeFileSync('public/app/index.html', out);
 console.log(`Wrote 4 icons and ${links.length} splash screens`);

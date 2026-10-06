@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data processing agreement: Times Table Forest</title>
+<link rel="icon" href="/app/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="/">Times Table Forest</a>
+  <nav aria-label="School pack"><a href="/school-pack/data.html">What we store</a><a href="/school-pack/privacy.html">Privacy notice</a><a href="/school-pack/dpa.html">Processing agreement</a></nav>
+</div></header>
+
+<main class="wrap doc">
+  <h1>Data processing agreement</h1>
+  <p class="meta">Between the school named below and The Tree Fella NE Ltd. Version <span class="fill">[1.0, date]</span>.</p>
+  <div class="draft no-print"><b>Draft for legal review.</b> These terms follow UK GDPR Article 28. Highlighted items are still to be filled in. Have it checked before schools sign it.</div>
+
+  <h2>1. Parties</h2>
+  <p><b>Controller:</b> the school named in the signature block (the "School").</p>
+  <p><b>Processor:</b> The Tree Fella NE Ltd, company number <span class="fill">[company number]</span>, <span class="fill">[registered address]</span>, ICO registration number <span class="fill">[ICO number]</span> ("we").</p>
+
+  <h2>2. What we process</h2>
+  <table>
+    <tr><th>Subject matter</th><td>Providing Times Table Forest, a times tables practice app, free of charge.</td></tr>
+    <tr><th>Duration</th><td>While the School uses the app, then until deletion under section 8.</td></tr>
+    <tr><th>Nature and purpose</th><td>Storing pupils' practice and progress, logging pupils and staff in, and showing teachers their pupils' progress.</td></tr>
+    <tr><th>Data subjects</th><td>Pupils; school staff who hold teacher accounts.</td></tr>
+    <tr><th>Personal data</th><td>As listed in <a href="/school-pack/data.html">What we store</a>: staff email addresses; pupil first names, nicknames or initials; usernames; hashed credentials; picture passwords; class names; answers and progress; settings; optional reminder subscriptions; failed login records including IP addresses.</td></tr>
+    <tr><th>Special category data</th><td>None. The School should not enter any.</td></tr>
+  </table>
+
+  <h2>3. Our obligations</h2>
+  <ol>
+    <li>We process the personal data only on the School's documented instructions. Using the app as designed, and teachers' actions in it, are those instructions. If we think an instruction breaks data protection law, we will tell the School.</li>
+    <li>Everyone who can access the data is bound by confidentiality.</li>
+    <li>We keep the security measures in section 5 in place.</li>
+    <li>We use the sub-processors in section 6 only, and follow section 6 before adding or changing one.</li>
+    <li>We help the School respond to requests from data subjects (to see, correct or delete data), taking into account what the app lets the School do itself.</li>
+    <li>We help the School meet its duties on security, breach notification and data protection impact assessments, by providing the information in this pack and answering reasonable questions.</li>
+    <li>At the end of the service we delete the data under section 8.</li>
+    <li>We give the School the information it reasonably needs to show compliance with Article 28, and allow and contribute to reasonable audits, normally by written questions.</li>
+  </ol>
+
+  <h2>4. The School's obligations</h2>
+  <ol>
+    <li>The School has a lawful basis for the processing and tells parents about it (a <a href="/school-pack/privacy.html">privacy notice</a> is provided).</li>
+    <li>Staff enter only first names, nicknames or initials for pupils, and no special category data.</li>
+    <li>Staff keep their passwords and pupils' login cards safe, and set up only school-controlled devices as class devices.</li>
+    <li>Staff delete pupils and classes when they no longer need them.</li>
+  </ol>
+
+  <h2>5. Security</h2>
+  <ul>
+    <li>Encryption in transit (HTTPS) for all traffic.</li>
+    <li>Passwords, recovery codes, QR keys and login tokens stored only as hashes; passwords and recovery codes with salted PBKDF2.</li>
+    <li>Rate limits on all login methods; picture logins restricted to class devices set up by a teacher.</li>
+    <li>HttpOnly session cookies, cross-site request checks and a strict content security policy.</li>
+    <li>Each teacher account can only access its own classes and pupils.</li>
+    <li>No analytics, advertising or third-party scripts.</li>
+    <li>Access to the production database is limited to <span class="fill">[named people]</span> with two-factor authentication on the hosting account.</li>
+  </ul>
+
+  <h2>6. Sub-processors</h2>
+  <p>The School gives general authorisation for these sub-processors:</p>
+  <ul>
+    <li>Cloudflare, Inc.: hosting, database (location <span class="fill">[D1 region]</span>) and the read-aloud voice (Workers AI, which receives app phrases only). International transfers are covered by Cloudflare's data processing addendum, including the UK International Data Transfer Addendum <span class="fill">[confirm against Cloudflare's current DPA]</span>.</li>
+    <li>Apple, Google and Mozilla push services: only when a family turns on reminders at home; they receive an empty message.</li>
+  </ul>
+  <p>We will give at least <span class="fill">[30]</span> days' notice on this page and by email to teacher accounts before adding or replacing a sub-processor. The School may object, and may stop using the app and have its data deleted.</p>
+
+  <h2>7. Personal data breaches</h2>
+  <p>We will tell the School without undue delay, and within <span class="fill">[48 hours]</span> of becoming aware of a breach affecting its data, with what we know: what happened, the data and people affected, likely consequences and what we have done. We will update the School as we learn more.</p>
+
+  <h2>8. Deletion at the end</h2>
+  <p>Teachers can delete pupils and classes in the app at any time, with immediate effect. When the School stops using the app, it can delete its classes itself, or ask us at <span class="fill">[contact email]</span> to delete its teacher accounts and everything on them; we will do so within <span class="fill">[30]</span> days and confirm in writing. Backups are overwritten within <span class="fill">[30]</span> days. We keep no copies unless the law requires it.</p>
+
+  <h2>9. Liability and law</h2>
+  <p><span class="fill">[Liability terms to be agreed after legal review and insurance cover is confirmed.]</span> This agreement is governed by the law of England and Wales.</p>
+
+  <h2>Signatures</h2>
+  <div class="sign">
+    <div>For the School: name, role, school, date</div>
+    <div>For The Tree Fella NE Ltd: name, role, date</div>
+  </div>
+</main>
+<footer><div class="wrap"><span>Times Table Forest is made by The Tree Fella NE Ltd.</span><span><a href="/">Home</a></span></div></footer>
+</body>
+</html>

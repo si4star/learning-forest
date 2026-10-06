@@ -13,7 +13,7 @@ p.on('pageerror', e => errors.push(e.message));
 const email = `t${Date.now()}@school.test`;
 
 step('teacher makes a class and adds pupils from a list');
-await p.goto(BASE);
+await p.goto(BASE + '/app/');
 await p.click("text=I'm a grown-up");
 await p.click('[data-mode=signup]');
 await p.fill('input[name=email]', email);

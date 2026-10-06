@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What we store: Times Table Forest school pack</title>
+<link rel="icon" href="/app/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="/">Times Table Forest</a>
+  <nav aria-label="School pack"><a href="/school-pack/data.html">What we store</a><a href="/school-pack/privacy.html">Privacy notice</a><a href="/school-pack/dpa.html">Processing agreement</a></nav>
+</div></header>
+
+<main class="wrap doc">
+  <h1>What we store</h1>
+  <p class="meta">For your data protection impact assessment. Last updated <span class="fill">[date]</span>.</p>
+  <div class="draft"><b>Draft.</b> Highlighted items are still to be filled in. This page describes how the app is built today; it is not legal advice.</div>
+
+  <h2>Who is who</h2>
+  <ul>
+    <li><b>Your school</b> is the controller. You decide which pupils use Times Table Forest and why.</li>
+    <li><b>The Tree Fella NE Ltd</b> (trading as Times Table Forest) is the processor. We hold the data only to run the app for you. ICO registration number <span class="fill">[ICO number]</span>.</li>
+    <li><b>Lawful basis</b> is for the school to decide. Schools usually rely on public task for teaching tools.</li>
+  </ul>
+
+  <h2>What the app stores</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Data</th><th>Why</th><th>Kept until</th></tr></thead>
+    <tbody>
+      <tr><td><b>Teacher account</b>: email address, password (stored as a salted hash, never readable), date created.</td><td>To log the teacher in.</td><td>The account is deleted.</td></tr>
+      <tr><td><b>Class</b>: class name, date created.</td><td>To group pupils.</td><td>The teacher deletes the class.</td></tr>
+      <tr><td><b>Pupil</b>: first name, nickname or initials as typed by the teacher; generated username; password, recovery code and QR code key (all stored as hashes); class.</td><td>To log the pupil in and show the teacher who is who.</td><td>The teacher deletes the pupil or the class.</td></tr>
+      <tr><td><b>Picture password</b>: the three pictures the pupil taps, stored readable.</td><td>So the teacher can look up a pupil's pictures when they forget them. Picture logins only work on devices the teacher has set up for the class.</td><td>The teacher deletes the pupil or the class, or removes the class.</td></tr>
+      <tr><td><b>Progress</b>: for each of the 66 facts, its stage and when it is next due. Tables known at the start, date of the starting check, run of days played, last day played.</td><td>To choose each day's questions.</td><td>The pupil is deleted.</td></tr>
+      <tr><td><b>Answers</b>: every answer given: the question, the answer typed, right or wrong, how long it took, the question type and the time.</td><td>To schedule facts, find tricky facts and show progress.</td><td>The pupil is deleted.</td></tr>
+      <tr><td><b>Settings and extras</b>: forest season, read aloud on or off, forest friends earned, table introductions seen, rest day used, practice check scores.</td><td>To run those features.</td><td>The pupil is deleted.</td></tr>
+      <tr><td><b>Daily reminder</b> (only if turned on at home): the device's push notification address and keys, chosen time and time zone.</td><td>To send the reminder.</td><td>Turned off, or the pupil is deleted.</td></tr>
+      <tr><td><b>Logins</b>: a hash of each login token, with its role and expiry.</td><td>To keep people logged in.</td><td>Logout or expiry: teacher 30 days, pupil at home 180 days, pupil on a class device 8 hours.</td></tr>
+      <tr><td><b>Class devices</b>: a hash of each device's token, when it was set up and last used.</td><td>To let pupils use picture logins on that device.</td><td>The teacher signs out all class devices, or deletes or removes the class.</td></tr>
+      <tr><td><b>Failed logins</b>: the email, username or pupil number that was tried, the IP address, and the time.</td><td>To stop password guessing.</td><td>24 hours.</td></tr>
+      <tr><td><b>Read-aloud counts</b>: number of phrases generated per login per day.</td><td>To cap use of the voice service.</td><td>2 days.</td></tr>
+      <tr><td><b>Read-aloud audio</b>: recordings of app phrases such as "6 times 7". No names or personal data.</td><td>So each phrase is only generated once.</td><td>Not personal data.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>On the pupil's device</h3>
+  <p>The browser keeps a copy of the pupil's forest so it opens without a connection, any answers waiting to be sent, and a few display flags (install prompt seen, reminder on). A class device also keeps a cookie that marks it as a class device for up to a year. Logging out clears the forest copy.</p>
+
+  <h3>What we don't collect</h3>
+  <ul>
+    <li>No surnames, dates of birth, photos, addresses or pupil numbers are asked for.</li>
+    <li>No analytics, advertising or tracking. No third-party scripts or fonts.</li>
+    <li>Pupils can't message anyone or see other pupils' data.</li>
+  </ul>
+
+  <h2>Where it is stored</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Sub-processor</th><th>What for</th><th>Data it handles</th></tr></thead>
+    <tbody>
+      <tr><td>Cloudflare, Inc. (Pages, Workers, D1 database)</td><td>Hosting the app and the database.</td><td>Everything listed above. Database location: <span class="fill">[D1 region]</span>.</td></tr>
+      <tr><td>Cloudflare Workers AI</td><td>The read-aloud voice.</td><td>Only the text of app phrases. No names or identifiers.</td></tr>
+      <tr><td>Apple, Google or Mozilla push services</td><td>Delivering daily reminders, only when turned on.</td><td>An empty message to the device's push address. The reminder text is written on the device.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Security</h2>
+  <ul>
+    <li>All traffic is encrypted (HTTPS).</li>
+    <li>Passwords, recovery codes, QR keys, login tokens and device tokens are stored only as hashes.</li>
+    <li>Logins are limited: 10 failed tries per account and 50 per network address in 15 minutes; 5 wrong picture tries per pupil.</li>
+    <li>Picture logins work only on class devices the teacher has set up.</li>
+    <li>Login cookies can't be read by scripts. Requests from other websites are refused.</li>
+    <li>A teacher can only see and change their own classes and pupils.</li>
+  </ul>
+
+  <h2>Deleting data</h2>
+  <ul>
+    <li><b>A pupil</b>: the teacher removes them in the app. Their progress, answers, reminders and logins are deleted straight away.</li>
+    <li><b>A whole class at the end of the year</b>: "Delete this class and all its pupils" deletes every pupil's data straight away and signs out the class devices.</li>
+    <li><b>A teacher account</b>: email <span class="fill">[contact email]</span>. We delete the account and everything on it within <span class="fill">[30]</span> days.</li>
+    <li>Cloudflare database backups (Time Travel) are kept for <span class="fill">[up to 30 days, confirm plan]</span> and then overwritten.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>The Tree Fella NE Ltd, <span class="fill">[registered address]</span>. Company number <span class="fill">[company number]</span>. Email <span class="fill">[contact email]</span>.</p>
+</main>
+<footer><div class="wrap"><span>Times Table Forest is made by The Tree Fella NE Ltd.</span><span><a href="/">Home</a></span></div></footer>
+</body>
+</html>

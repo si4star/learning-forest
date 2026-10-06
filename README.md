@@ -4,9 +4,11 @@ A times table practice app for children aged 7–9. Each fact is a tree on an 11
 
 Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. It's a PWA: installable, and it updates itself when a new version is published.
 
+The site has two parts: a short website for schools at `/` (with the school pack), and the app at `/app/`.
+
 ## Accounts
 
-- **Grown-ups** create an account with email and password (at least 10 characters), confirming they are the parent or carer.
+- **Grown-ups** create an account with email and password (at least 10 characters), confirming they are the parent, carer or teacher.
 - Each **child** added gets generated credentials, shown once on a printable **Forest Pass**:
   - username: adjective + tree + two digits, e.g. `MightyOak42`
   - password: three easy words, e.g. `otter-river-lemon`
@@ -30,7 +32,8 @@ A grown-up account can run classes (up to 10, up to 40 pupils each), alongside i
 - **Class devices:** on a shared iPad or Chromebook, the teacher logs in and taps **Use this device for [class]**. The teacher is logged out, and the device shows the class's name tiles whenever nobody is logged in. A pupil taps their name, then their three pictures in order. **I'm done** logs them out and returns to the tiles. Pupil sessions on class devices last 8 hours. The device stays set up for a year, until a grown-up taps **Stop** (on the grown-up screen on that device) or **Sign out all class devices**.
 - **Picture login only works on class devices.** Three pictures from 12 is about 1,300 combinations, too few for the open internet. 5 wrong tries lock that pupil for 15 minutes; others carry on.
 - **Shared school address:** failed logins from class devices don't count towards the 50-per-address limit, so a class's typing mistakes can't lock the school out.
-- Removing a class keeps its pupils (and their forests) on the account, without pictures.
+- **Remove this class, keep the pupils** keeps its pupils (and their forests) on the account, without pictures.
+- **Delete this class and all its pupils** (end of year) deletes every pupil's progress, answers, reminders and logins straight away, and signs out the class devices.
 - **Same first names:** names in a class must be different (capitals ignored), because each pupil has a name tile. Adding a second "Bob" is refused with a suggestion to add a surname initial ("Bob A", "Bob B"). **Rename** changes a pupil's name without touching their progress, pictures or QR code.
 
 ## Starting check
@@ -62,9 +65,9 @@ On first login the child taps the tables they think they know.
 
 ## Splash screens
 
-- iPhone and iPad show a launch screen (tree and title on the summer green) when the installed app opens. There are 38 images in `public/splash/`, one per screen shape in portrait and landscape, matched by the `apple-touch-startup-image` tags in `index.html`.
+- iPhone and iPad show a launch screen (tree and title on the summer green) when the installed app opens. There are 38 images in `public/app/splash/`, one per screen shape in portrait and landscape, matched by the `apple-touch-startup-image` tags in `index.html`.
 - Android builds its splash from the manifest's `background_color` and 512 px icon.
-- To regenerate the icons and splash screens after changing `public/icons/icon.svg`: `node scripts/make-images.mjs`.
+- To regenerate the icons and splash screens after changing `public/app/icons/icon.svg`: `node scripts/make-images.mjs`.
 
 ## Seasons
 
@@ -115,7 +118,7 @@ Pages Functions can't run on a schedule, so a small separate Worker sends the re
 3. **Secret.** In the new Worker → Settings → Variables and Secrets → add a **Secret** named `VAPID_PRIVATE_JWK` with the private key (supplied separately, never committed). Redeploy.
 4. If the site isn't at `https://tree-tables.pages.dev`, change `SITE_URL` in `wrangler.toml`.
 
-The matching public key is in `src/server/push.js` and `public/js/app.js` (`VAPID_PUBLIC_KEY`). If the key pair is ever replaced, change both and existing devices must turn reminders off and on again.
+The matching public key is in `src/server/push.js` and `public/app/js/app.js` (`VAPID_PUBLIC_KEY`). If the key pair is ever replaced, change both and existing devices must turn reminders off and on again.
 
 ## Method
 
@@ -123,7 +126,7 @@ The matching public key is in `src/server/push.js` and `public/js/app.js` (`VAPI
 - **Spaced repetition (Leitner).** Correct answers move a fact through: same round → 1 day → 3 days → 7 days → 21 days. A wrong answer resets it to a seed.
 - **Strategy sequencing.** Tables unlock in the order 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. Harder facts are taught from easier ones (×9 = ×10 minus one lot; ×8 = double three times). The next table unlocks once every fact in the unlocked tables is planted and 80% have reached sprout.
 - **Immediate error correction.** After a wrong answer, the child works the fact out step by step with its strategy (below), and the fact returns 3 questions later.
-- **Interactive strategies.** New seeds and corrections don't show the answer; the child builds it in 1–3 small steps, typing each one. For example, 9 × 7: `10 × 7 = 70` → `70 − 7 = 63`. 8 × 6 is three doubles: `12` → `24` → `48`. A wrong step shows its answer and the child types it. Steps are defined in `walkSteps()` in `public/js/app.js`, using the same strategy choice as the text hints.
+- **Interactive strategies.** New seeds and corrections don't show the answer; the child builds it in 1–3 small steps, typing each one. For example, 9 × 7: `10 × 7 = 70` → `70 − 7 = 63`. 8 × 6 is three doubles: `12` → `24` → `48`. A wrong step shows its answer and the child types it. Steps are defined in `walkSteps()` in `public/app/js/app.js`, using the same strategy choice as the text hints.
 - **Accuracy before speed.** No countdown. Answers slower than 6 seconds (the Multiplication Tables Check limit) still count, but the tree stays at sprout until it is answered quickly.
 
 Rounds are 20 questions (about 4 minutes); the first is shorter. ×1 facts are excluded.
@@ -176,15 +179,19 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 
 | Path | Contents |
 | --- | --- |
-| `public/index.html` | Page shell and tree SVG symbols |
-| `public/sw.js` | Service worker: offline app shell, versioned caches |
-| `public/manifest.webmanifest`, `public/icons/` | PWA manifest and icons |
+| `public/index.html`, `public/site.css`, `public/site-grove.js` | Website for schools |
+| `public/school-pack/` | What we store, parents' privacy notice, data processing agreement (drafts) |
+| `public/site.js` | Sends old QR links (`/#qr=`) and old home-screen installs to `/app/` |
+| `public/sw.js` | Retires the service worker from before the move to `/app/` |
+| `public/app/index.html` | App page shell and tree SVG symbols |
+| `public/app/sw.js` | Service worker: offline app shell, versioned caches |
+| `public/app/manifest.webmanifest`, `public/app/icons/` | PWA manifest and icons |
 | `public/_headers` | Cache and security headers (Cloudflare Pages) |
 | `scripts/build.mjs` | Copies `public/` to `dist/` and stamps the version |
-| `public/css/styles.css` | Styles, the four seasons, print layout for the Forest Pass |
-| `public/js/app.js` | Client: screens, scheduling, rounds, starting check, sync queue |
-| `public/fonts/` | Fredoka (SIL Open Font License) |
-| `public/js/vendor/` | QR code drawing (qrcode-generator, MIT) and reading (jsQR, Apache-2.0), loaded only when needed |
+| `public/app/css/styles.css` | Styles, the four seasons, print layout for the Forest Pass |
+| `public/app/js/app.js` | Client: screens, scheduling, rounds, starting check, sync queue |
+| `public/app/fonts/` | Fredoka (SIL Open Font License) |
+| `public/app/js/vendor/` | QR code drawing (qrcode-generator, MIT) and reading (jsQR, Apache-2.0), loaded only when needed |
 | `functions/api/[[path]].js` | Pages Functions entry for `/api/*` |
 | `src/server/api.js` | API routes |
 | `src/server/auth.js` | Password hashing and session tokens |
@@ -201,16 +208,25 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `tests/qr-login.mjs` | QR login in the browser: card QR decodes, link login, camera scan, bad and replaced codes |
 | `tests/classes.mjs` | Classes on the server: class devices, picture login, lockouts, ownership |
 | `tests/classes-e2e.mjs` | Classes in the browser: add pupils, login cards, class device, picture login, I'm done |
+| `tests/site.mjs` | Website pages, old QR links, retiring the old service worker |
 | `tests/d1-shim.mjs` | D1 stand-in over node:sqlite for the Node tests |
 
+## Website and the move to /app
+
+- The website (`/`) is plain HTML and CSS sharing the app's font and colours. The school pack pages print cleanly and are **drafts**: highlighted placeholders (company number, address, contact email, ICO number, database region, retention periods) must be filled in, and the processing agreement needs legal review.
+- The app moved from `/` to `/app/` (scope `/app/`). Old installs and old cards keep working: `public/sw.js` replaces the old root service worker, deletes its caches, unregisters itself and reloads open pages; `site.js` sends `/#qr=` links and home-screen launches of the old install to `/app/`.
+- Daily reminders turned on before the move belonged to the old service worker and stop. The app notices the missing subscription and shows reminders as off, so they can be turned on again.
+
 ## Not built yet
+
+- **Deleting a grown-up account in the app.** For now it's done on request (the school pack says so).
 
 - **Grown-up password reset by email** (planned). Until then a grown-up who forgets their password can't get back in. The current design leaves room for it:
   - Emails are stored lowercase and unique, so one email maps to one account.
   - Schema changes go in a new migration in `src/server/schema.js`: a `password_resets(token_hash, parent_id, expires_at, used_at)` table. Store only a hash of the token, as sessions do.
   - Routes: `POST /api/parent/forgot {email}` always replies the same way, so it doesn't reveal which emails have accounts, and is rate-limited with the existing `guard()`/`fail()` helpers. `POST /api/parent/reset {token, password}` sets a new hash and deletes the parent's sessions, as child resets already do.
   - It needs an email provider (for example Resend), with an API key stored as a Pages secret.
-  - The client needs a "Forgot password?" link on the grown-up login screen, and a reset screen opened from the emailed link (`/?reset=<token>`). The service worker already serves the app for any URL.
+  - The client needs a "Forgot password?" link on the grown-up login screen, and a reset screen opened from the emailed link (`/app/?reset=<token>`). The service worker already serves the app for any URL.
   - Optionally, add email verification at sign-up using the same token table.
 
 The first Cloudflare version started fresh: progress from the earlier device-only version was not imported. That old data is deleted from each device the first time it opens the new version.

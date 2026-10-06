@@ -87,4 +87,15 @@ assert.equal((await call('other', 'POST', `/parent/classes/${k.id}/device`, {}))
 await ok(await call('teacher', 'DELETE', `/parent/classes/${k2.id}`, {}));
 const after = await ok(await call('teacher', 'GET', '/parent/children'));
 assert.equal(after.children.find(c => c.name === 'Dev').classId, null);
+// end of year: delete a class and every pupil's data
+const k3 = await ok(await call('teacher', 'POST', '/parent/classes', { name: 'Elm class' }));
+const [gone] = (await ok(await call('teacher', 'POST', `/parent/classes/${k3.id}/pupils`, { names: ['Gus'] }))).cards;
+await ok(await call('gus', 'POST', '/child/qr', { key: gone.qr }));
+await ok(await call('gus', 'POST', '/child/sync', { facts: { '2x3': { box: 2, due: 0 } }, answers: [{ fact: '2x3', a: 2, b: 3, given: 6, correct: true, ms: 900, kind: 'new', at: Date.now() }] }));
+await ok(await call('teacher', 'DELETE', `/parent/classes/${k3.id}`, { deletePupils: true }));
+assert.ok(!(await ok(await call('teacher', 'GET', '/parent/children'))).children.some(c => c.name === 'Gus'));
+assert.equal((await call('gus', 'GET', '/child/state')).status, 401, 'pupil logged out');
+const leftovers = await Promise.all(['facts', 'answers'].map(t => env.DB.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE child_id = ?`).bind(gone.id).first()));
+assert.deepEqual(leftovers.map(x => x.n), [0, 0], 'progress and answers deleted');
+
 console.log('PASS classes: class devices, picture login, lockouts, school address, ownership');

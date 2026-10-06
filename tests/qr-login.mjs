@@ -11,7 +11,7 @@ const watch = p => { p.on('pageerror', e => errors.push(e.message)); return p; }
 step('a new Forest Pass shows a QR code');
 const parentCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
 const pp = watch(await parentCtx.newPage());
-await pp.goto(BASE);
+await pp.goto(BASE + '/app/');
 await pp.click("text=I'm a grown-up");
 await pp.click('[data-mode=signup]');
 await pp.fill('input[name=email]', `q${Date.now()}@example.com`);
@@ -26,7 +26,7 @@ assert.match(key, /^[A-Za-z0-9_-]{40,}$/);
 
 step('the QR code in the printable card image reads back as the login link');
 await pp.waitForFunction(() => cardFile);
-await pp.addScriptTag({ url: '/js/vendor/jsqr-1.4.0.min.js' });
+await pp.addScriptTag({ url: '/app/js/vendor/jsqr-1.4.0.min.js' });
 const decoded = await pp.evaluate(async () => {
   const img = await createImageBitmap(cardFile);
   const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
@@ -34,7 +34,7 @@ const decoded = await pp.evaluate(async () => {
   const d = g.getImageData(0, 0, c.width, c.height);
   return jsQR(d.data, d.width, d.height)?.data;
 });
-assert.equal(decoded, `${BASE}/#qr=${key}`);
+assert.equal(decoded, `${BASE}/app/#qr=${key}`);
 const qrPng = (await pp.locator('#passQr').screenshot()).toString('base64');
 await pp.check('#wrote');
 await pp.click('#cardDone');
@@ -43,7 +43,7 @@ await pp.waitForSelector('.kid');
 step('opening the scanned link logs the child in, and the key leaves the address bar');
 const linkCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
 const lp = watch(await linkCtx.newPage());
-await lp.goto(`${BASE}/#qr=${key}`);
+await lp.goto(`${BASE}/app/#qr=${key}`);
 await lp.waitForSelector('text=Which times tables do you already know?');
 assert.equal(new URL(lp.url()).hash, '');
 
@@ -61,7 +61,7 @@ await camCtx.addInitScript(png => {
   };
 }, qrPng);
 const cp = watch(await camCtx.newPage());
-await cp.goto(BASE);
+await cp.goto(BASE + '/app/');
 await cp.click("text=I'm playing");
 await cp.click('[data-act=scan]');
 await cp.waitForSelector('text=Which times tables do you already know?', { timeout: 15000 });
@@ -69,7 +69,7 @@ await cp.waitForSelector('text=Which times tables do you already know?', { timeo
 step('a bad link explains what to do');
 const badCtx = await browser.newContext();
 const bp = watch(await badCtx.newPage());
-await bp.goto(`${BASE}/#qr=${'B'.repeat(43)}`);
+await bp.goto(`${BASE}/app/#qr=${'B'.repeat(43)}`);
 await bp.waitForSelector('.err');
 assert.match(await bp.textContent('.err'), /didn't work/);
 
@@ -81,9 +81,9 @@ assert.match(await pp.textContent('#pass'), /Same as before/);
 const newKey = await pp.evaluate(() => card.qr);
 assert.notEqual(newKey, key);
 const op = watch(await (await browser.newContext()).newPage());
-await op.goto(`${BASE}/#qr=${key}`);
+await op.goto(`${BASE}/app/#qr=${key}`);
 await op.waitForSelector('.err');
-await op.goto(`${BASE}/#qr=${newKey}`);
+await op.goto(`${BASE}/app/#qr=${newKey}`);
 await op.waitForSelector('text=Which times tables do you already know?');
 
 assert.deepEqual(errors, []);

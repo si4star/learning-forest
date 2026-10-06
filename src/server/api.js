@@ -459,6 +459,7 @@ async function tts(ctx) {
     ctx.db.prepare('INSERT OR IGNORE INTO tts_cache(key, mime, audio, created_at) VALUES (?, ?, ?, ?)').bind(key, out.mime, out.bytes, Date.now()),
     ctx.db.prepare(bump).bind(day, who),
     ctx.db.prepare(bump).bind(day, '*'),
+    ctx.db.prepare('DELETE FROM tts_usage WHERE day < ?').bind(new Date(Date.now() - 2 * DAY).toISOString().slice(0, 10)),   // counts are only needed for today
   ]);
   return audio(out.mime, out.bytes);
 }
@@ -545,6 +546,15 @@ async function newPupilPics(ctx, id) {
 async function removeClass(ctx, id) {
   const pid = await need(ctx, 'parent');
   const k = await ownedClass(ctx, pid, id);
+  const b = await body(ctx);
+  if (b.deletePupils === true) {   // end of year: the class and every pupil's data go
+    await ctx.db.batch([
+      ctx.db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id IN (SELECT id FROM children WHERE class_id = ?)").bind(k.id),
+      ctx.db.prepare('DELETE FROM children WHERE class_id = ?').bind(k.id),   // facts, answers, reminders follow (ON DELETE CASCADE)
+      ctx.db.prepare('DELETE FROM classes WHERE id = ?').bind(k.id),
+    ]);
+    return json({ ok: true });
+  }
   await ctx.db.batch([   // pupils stay on the account, without a class or pictures
     ctx.db.prepare('UPDATE children SET class_id = NULL, pics = NULL WHERE class_id = ?').bind(k.id),
     ctx.db.prepare('DELETE FROM classes WHERE id = ?').bind(k.id),

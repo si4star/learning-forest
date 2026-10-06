@@ -15,7 +15,7 @@ const step = (name) => console.log('•', name);
 // --- parent signs up and adds a child ---
 const parentCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
 const pp = await parentCtx.newPage(); watch(pp);
-await pp.goto(BASE);
+await pp.goto(BASE + '/app/');
 step('parent sign-up');
 await pp.click('text=I\'m a grown-up');
 await pp.click('[data-mode=signup]');
@@ -59,7 +59,7 @@ await kidCtx.addInitScript(() => {
   } } });
 });
 const kp = await kidCtx.newPage(); watch(kp);
-await kp.goto(BASE);
+await kp.goto(BASE + '/app/');
 step('child login: wrong password rejected');
 await kp.click('text=I\'m playing');
 await kp.fill('input[name=username]', username);
@@ -184,7 +184,7 @@ assert.match(kidRow, /last played today/);
 
 step('recovery code issues a new password and the old one stops working');
 const kp2 = await (await browser.newContext()).newPage(); watch(kp2);
-await kp2.goto(BASE);
+await kp2.goto(BASE + '/app/');
 await kp2.click('text=I\'m playing');
 await kp2.click('text=Lost your password?');
 await kp2.fill('input[name=username]', username);
@@ -207,7 +207,7 @@ assert.equal((await r.post(BASE + '/api/child/sync', { data: {}, headers: { orig
 assert.equal((await r.get(BASE + '/api/child/state')).status(), 401);
 
 step('settings menu: child picks a season, and it is saved');
-await kp.goto(BASE);
+await kp.goto(BASE + '/app/');
 await kp.click("text=I'm playing");
 await kp.fill('input[name=username]', username);
 await kp.fill('input[name=password]', newPw);
@@ -242,7 +242,7 @@ await kp.click('.install .x');
 assert.equal(await kp.$('.install'), null);
 
 step('PWA: manifest and service worker');
-const manifest = await (await r.get(BASE + '/manifest.webmanifest')).json();
+const manifest = await (await r.get(BASE + '/app/manifest.webmanifest')).json();
 assert.equal(manifest.display, 'standalone');
 for (const i of manifest.icons) assert.equal((await r.get(BASE + i.src)).status(), 200, i.src);
 const swVersion = async page => page.evaluate(async () => {
@@ -253,7 +253,7 @@ console.log('  cache:', await swVersion(pp));
 
 if (process.env.REBUILD) {
   step('publishing a new version updates the open app');
-  await pp.goto(BASE);
+  await pp.goto(BASE + '/app/');
   await pp.waitForSelector('.ver');
   const before = await pp.textContent('.ver');
   const { execSync } = await import('node:child_process');
