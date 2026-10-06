@@ -16,7 +16,7 @@ const watch = p => {
 step('home page and school pack load without errors, with no sideways scrolling on a phone');
 for (const [w, h] of [[390, 844], [1280, 900]]) {
   const p = watch(await (await browser.newContext({ viewport: { width: w, height: h } })).newPage());
-  for (const path of ['/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/404.html']) {
+  for (const path of ['/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/404.html', '/tables/about/']) {
     await p.goto(BASE + path);
     await p.evaluate(() => document.fonts.ready);
     assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${path} scrolls sideways at ${w}px`);
@@ -25,6 +25,18 @@ for (const [w, h] of [[390, 844], [1280, 900]]) {
   await p.goto(BASE + '/');
   assert.equal(await p.locator('#grove svg').count(), 28);
   assert.deepEqual(await p.locator('.modules h3').allTextContents(), ['How does a tree work?', 'Grow your times tables', 'What is soil?']);
+}
+
+step('/tables/about/ is a web page, even once the app has installed its service worker');
+{
+  const ap = watch(await (await browser.newContext()).newPage());
+  await ap.goto(BASE + '/tables/');
+  await ap.waitForFunction(async () => !!(await navigator.serviceWorker.getRegistration('/tables/'))?.active);
+  await ap.reload();
+  await ap.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await ap.goto(BASE + '/tables/about/');
+  assert.equal(await ap.textContent('h1'), 'Grow your times tables');
+  assert.ok(await ap.locator('#start').count(), 'getting started section');
 }
 
 step('an unknown address shows the not-found page');

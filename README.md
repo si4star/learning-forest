@@ -11,6 +11,7 @@ This repo is **The Learning Forest** (`learn.thetreefella.co.uk`), free learning
 | `/` | Portal and website for schools, school pack |
 | `/trees/` | How does a tree work? (flat page, no login) |
 | `/tables/` | Grow your times tables: the app described below. Pupils log in with their Forest Pass. |
+| `/tables/about/` | Grow your times tables for schools: how it works, getting started, home use, end of year |
 | `/soil/` | What is soil? (coming soon) |
 
 ## Accounts
@@ -191,6 +192,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `public/site.js` | Sends old QR links (`/#qr=`) and old home-screen installs to `/tables/` |
 | `public/sw.js`, `public/app/sw.js` | Retire the service workers from before the moves to `/app/` and `/tables/` |
 | `public/app/index.html`, `public/moved.js` | Send `/app/` links and QR cards on to `/tables/` |
+| `public/tables/about/index.html` | Times tables page for schools (a plain page: the app's service worker only serves the app at `/tables/` itself) |
 | `public/404.html` | Not-found page (without it, Pages serves the home page for unknown paths) |
 | `public/tables/index.html` | App page shell and tree SVG symbols |
 | `public/tables/sw.js` | Service worker: offline app shell, versioned caches |

@@ -46,6 +46,8 @@ self.addEventListener('fetch', e => {
   }
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
   if (e.request.mode === 'navigate') {
+    // Other pages under /tables/ (like /tables/about/) are plain web pages, not the app
+    if (url.pathname !== '/tables/' && url.pathname !== '/tables/index.html') return;
     // The app is one page: serve this version's copy, so page, script and styles always match.
     e.respondWith(caches.open(CACHE).then(c => c.match('/tables/')).then(r => r || fetch(e.request)));
     return;

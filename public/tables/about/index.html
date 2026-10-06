@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grow your times tables · The Learning Forest</title>
+<meta name="description" content="Grow your times tables: a free times tables tool for primary schools, part of The Learning Forest by The Tree Fella. Spaced repetition, a starting check, picture logins on class devices and QR codes for home.">
+<meta name="theme-color" content="#F1F6E6">
+<link rel="icon" href="/tables/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/tables/icons/apple-touch-icon.png">
+<link rel="preload" href="/tables/fonts/fredoka-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="t0" viewBox="0 0 24 24"><ellipse cx="12" cy="20" rx="5" ry="1.8" style="fill:var(--soil)"/></symbol>
+  <symbol id="t1" viewBox="0 0 24 24"><ellipse cx="12" cy="20" rx="6" ry="2.2" style="fill:var(--soil)"/><ellipse cx="12" cy="18.4" rx="2" ry="1.5" style="fill:var(--bark)"/></symbol>
+  <symbol id="t2" viewBox="0 0 24 24"><ellipse cx="12" cy="20" rx="6" ry="2.2" style="fill:var(--soil)"/><path d="M12 19.5V13.5" style="stroke:var(--sprout);stroke-width:1.8;stroke-linecap:round;fill:none"/><path d="M12 15C8.6 15 7.4 12.2 7.4 11C10.3 11 12 12.6 12 15Z" style="fill:var(--sprout-2)"/><path d="M12 14.2C15.4 14.2 16.6 11.4 16.6 10.2C13.7 10.2 12 11.8 12 14.2Z" style="fill:var(--sprout)"/></symbol>
+  <symbol id="t3" viewBox="0 0 24 24"><ellipse cx="12" cy="20.2" rx="6.5" ry="2.2" style="fill:var(--soil)"/><rect x="11.2" y="12" width="1.6" height="8" rx=".8" style="fill:var(--bark)"/><circle cx="12" cy="10" r="4.6" style="fill:var(--canopy-2)"/></symbol>
+  <symbol id="t4" viewBox="0 0 24 24"><ellipse cx="12" cy="20.5" rx="7" ry="2.2" style="fill:var(--soil)"/><rect x="10.9" y="12" width="2.2" height="8.4" rx="1" style="fill:var(--bark)"/><circle cx="12" cy="8.6" r="6.4" style="fill:var(--canopy)"/><circle cx="9.6" cy="6.8" r="2.6" style="fill:var(--canopy-2);opacity:.75"/></symbol>
+  <symbol id="t5" viewBox="0 0 24 24"><ellipse cx="12" cy="21" rx="8" ry="2.2" style="fill:var(--soil)"/><rect x="10.6" y="13" width="2.8" height="7.8" rx="1.2" style="fill:var(--bark)"/><circle cx="12" cy="8.6" r="8" style="fill:var(--canopy)"/><circle cx="8.8" cy="6.2" r="3.2" style="fill:var(--canopy-2);opacity:.75"/><circle cx="15.4" cy="7" r="1.3" style="fill:var(--fruit)"/><circle cx="9.6" cy="11.4" r="1.3" style="fill:var(--fruit-2)"/><circle cx="14.6" cy="12" r="1.2" style="fill:var(--fruit)"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/"><svg aria-hidden="true"><use href="#t5"/></svg><span>The Learning Forest<small>by The Tree Fella</small></span></a>
+    <nav aria-label="Main">
+      <a href="/#modules">Modules</a>
+      <a href="/tables/about/">Times tables</a>
+      <a href="/#pack">School pack</a>
+    </nav>
+    <a class="btn small" href="/tables/">Log in</a>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Grow your times tables</h1>
+      <p class="lead">A free times tables tool for primary schools. Each pupil grows a forest of 66 trees, one for every fact from 1&nbsp;×&nbsp;1 to 12&nbsp;×&nbsp;12. Little and often, about 20 questions a day.</p>
+      <div class="ctas">
+        <a class="btn" href="/tables/">Open the app</a>
+        <a class="btn quiet" href="#start">How to start</a>
+      </div>
+    </div>
+    <div class="grove" aria-label="A forest with trees at different stages, from seed to great tree">
+      <div class="grove-grid" id="grove"></div>
+      <p>Seed, sprout, sapling, tree, great tree. Each spaced check answered right grows a tree a stage.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p class="intro">The method is built on retrieval practice and spaced repetition, two well-evidenced ways to make facts stick.</p>
+    <div class="cards">
+      <div class="card"><span class="emo" aria-hidden="true">🌱</span><h3>A starting check</h3><p>Pupils pick the tables they think they know and answer a few questions on each. Only the tables they really know are planted.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">📅</span><h3>Spaced repetition</h3><p>A right answer sends a fact away for longer each time: same round, 1 day, 3 days, 7 days, then 21 days. A wrong answer sends it back to a seed.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">🧩</span><h3>Easy facts first</h3><p>Tables unlock in the order 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. New facts are worked out step by step from ones the pupil already knows.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">🔁</span><h3>One tree per fact pair</h3><p>6 × 7 and 7 × 6 are the same tree, which turns 121 facts into 66. Grown trees are also asked as 6 × ? = 42 and 42 ÷ 6.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">⏱️</span><h3>Accuracy, then speed</h3><p>No countdown. A tree can't grow past a sprout until it's answered within 6 seconds, the limit in the Year 4 Multiplication Tables Check.</p></div>
+      <div class="card"><span class="emo" aria-hidden="true">📝</span><h3>Practice check</h3><p>Once most of the forest is grown, a 25-question practice check opens, set out like the Year 4 check.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2 id="start">Getting started in a class</h2>
+    <p class="intro">One account per teacher. Setting up a class takes a few minutes.</p>
+    <ol class="steps">
+      <li><div><b>Make a teacher account</b>Open <a href="/tables/">Grow your times tables</a>, tap "I'm a grown-up" and create an account with your email.</div></li>
+      <li><div><b>Make a class and add pupils</b>Use first names or initials only. If two pupils share a name, add a surname initial, like "Bob A" and "Bob B".</div></li>
+      <li><div><b>Print the Forest Passes</b>Each pupil's card has three pictures to log in with in class, and a QR code to use at home.</div></li>
+      <li><div><b>Set up the class devices</b>On each tablet or computer, log in as the teacher and tap "Use this device for" your class. Pupils then tap their name and their three pictures.</div></li>
+      <li><div><b>Little and often</b>A few minutes a day. You can see how many trees each pupil has planted and when they last played.</div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="band alt">
+  <div class="wrap split">
+    <div>
+      <h2>At home too</h2>
+      <p>Scanning the QR code on a pupil's Forest Pass logs them in on a phone or tablet at home. The forest is the same one they grow in class.</p>
+      <p>Picture logins only work on devices the teacher has set up for the class. Anywhere else, pupils use the QR code or their username and password.</p>
+    </div>
+    <div>
+      <h2>End of the year</h2>
+      <p>When a class moves on, delete the class and all its pupils' data in one go, or remove just the class and keep the pupils' forests on your account.</p>
+      <p class="note">Ending a class's use never needs an email to us: the teacher deletes it in the app.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="pack">
+  <div class="wrap">
+    <h2>For your data protection officer</h2>
+    <p class="intro">The <a href="/#pack">school pack</a> covers what this app stores, a privacy notice for parents and a data processing agreement.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>The Learning Forest is made by The Tree Fella.</span>
+    <span><a href="/school-pack/privacy.html">Privacy</a> · <a href="/tables/">Log in</a></span>
+  </div>
+  <div class="wrap"><p class="small-print">The Tree Fella NE Ltd trading as The Tree Fella® is registered in England &amp; Wales Company Number 11632007. We are registered with the Information Commissioner's Office (ICO) &amp; our registration number is ZA845692. We are registered for VAT &amp; our registration number is GB341407236.</p></div>
+</footer>
+<script src="/site-grove.js" defer></script>
+</body>
+</html>
