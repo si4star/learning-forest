@@ -80,6 +80,19 @@ await kp.click('form .cta');
 step('after login the pupil picks a module');
 await kp.waitForSelector('.mods');
 assert.deepEqual((await kp.$$eval('.mod b', els => els.map(e => e.textContent))), ['Grow your times tables', 'How does a tree work?', 'What is soil?']);
+step('the module screen has settings (with log out), not a log out button');
+assert.equal(await kp.locator('.bar [data-act=logout]').count(), 0);
+await kp.click('.bar [data-act=settings]');
+await kp.waitForSelector('.sheet [data-act=logout]');
+assert.ok(await kp.locator('.sheet [data-s=winter]').count(), 'season choice in settings');
+await kp.click('.sheet [data-act=close]');
+step('How does a tree work? opens inside the app, with a back button and no website menu');
+await kp.click('a.mod[href="/app/trees/"]');
+await kp.waitForSelector('.lf-in-app');
+assert.equal(await kp.locator('.lf-btn, .lf-nav, .lf-foot').count(), 0, 'no log in button, menu or website footer');
+assert.ok(await kp.locator('#nav a').count() > 5, 'the page itself is all there');
+await kp.click('.lf-back');
+await kp.waitForSelector('.mods');
 await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('text=Which times tables do you already know?');
 

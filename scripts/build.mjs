@@ -3,7 +3,8 @@
 // Cloudflare Pages sets CF_PAGES_COMMIT_SHA; locally a timestamp is used.
 // Website pages get the shared header and footer (public/_partials/) in place of
 // <!-- lf:header --> and <!-- lf:footer -->; the app (/app/) has its own screens.
-import { cpSync, rmSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
+// public/_partials/ isn't published.
+import { cpSync, rmSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const version = (process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 10) || 'dev' + Date.now().toString(36);
@@ -25,4 +26,13 @@ for (const file of pages('dist')) {
   writeFileSync(file, html.replace('<!-- lf:header -->', parts.header).replace('<!-- lf:footer -->', parts.footer));
   n++;
 }
-console.log('Built dist/ version', version, `(header and footer on ${n} pages)`);
+// Module pages opened from the app: the same page under /app/ (so an installed app stays in its own
+// window), with the app's back bar in place of the website header and no website footer.
+const appHeader = readFileSync('public/_partials/app-header.html', 'utf8').trim();
+for (const mod of ['trees']) {
+  const html = readFileSync(`public/${mod}/index.html`, 'utf8');
+  mkdirSync(`dist/app/${mod}`, { recursive: true });
+  writeFileSync(`dist/app/${mod}/index.html`, html.replace('<!-- lf:header -->', appHeader).replace('<!-- lf:footer -->\n', '')
+    .replace('<meta name="robots" content="index, follow, max-image-preview:large">', '<meta name="robots" content="noindex">'));
+}
+console.log('Built dist/ version', version, `(header and footer on ${n} pages; in-app copies of the module pages)`);

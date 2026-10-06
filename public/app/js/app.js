@@ -701,12 +701,12 @@ function renderAssessResult(){
 function renderHub(){
   const p=kid,planted=ALL.filter(k=>fact(p,k).box>0).length;
   app.innerHTML=`<main class="screen scroll">
-    <header class="bar start"><h1>Hi ${esc(p.name)}</h1><button class="pill" data-act="logout">${classDev?"I'm done":'Log out'}</button></header>
+    <header class="bar start"><h1>Hi ${esc(p.name)}</h1>${classDev?'<button class="pill" data-act="logout">I\'m done</button>':''}<button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
     ${installBanner()}
     <p class="lead">What would you like to learn?</p>
     <div class="mods">
       <button class="mod" data-act="mod-tables"><span class="emo" aria-hidden="true">✖️</span><span><b>Grow your times tables</b><small>${p.assessedAt?`${planted} of 66 trees planted`:'Start with a quick check'}</small></span></button>
-      <a class="mod" href="/trees/"><span class="emo" aria-hidden="true">🌳</span><span><b>How does a tree work?</b><small>Opens a web page</small></span></a>
+      <a class="mod" href="/app/trees/"><span class="emo" aria-hidden="true">🌳</span><span><b>How does a tree work?</b><small>121 questions and 19 diagrams to play with</small></span></a>
       <div class="mod soon" aria-disabled="true"><span class="emo" aria-hidden="true">🪱</span><span><b>What is soil?</b><small>Coming soon</small></span></div>
     </div>
   </main>`;
@@ -1005,7 +1005,7 @@ function sheet(html){
   document.body.appendChild(bg);bg.querySelector('[data-act=close]').focus();
   return bg;
 }
-/* settings: the forest screen's cog. Add new settings here as sections or menu rows. */
+/* settings: the cog on the module screen and the forest screen. They apply to the whole app. Add new settings here as sections or menu rows. */
 const cogIcon='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 function settingsSheet(){
   const t=kid.theme||'auto';
@@ -1015,7 +1015,7 @@ function settingsSheet(){
         `<button data-act="season" data-s="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>
       <p class="hint small">Auto follows the time of year.</p></section>
     <section class="set"><h3>Daily reminder</h3>${reminderHtml()}</section>
-    <nav class="menu"><button class="menu-row" data-act="how"><span>How the method works</span><span class="chev" aria-hidden="true">›</span></button>
+    <nav class="menu"><button class="menu-row" data-act="how"><span>How the times tables method works</span><span class="chev" aria-hidden="true">›</span></button>
       <button class="menu-row" data-act="logout"><span>Log out</span><span class="pmeta">${esc(kid.username)}</span></button></nav>`);
 }
 /* daily reminder: a push subscription for this device, sent by the reminders Worker */
