@@ -111,7 +111,7 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 Pages Functions can't run on a schedule, so a small separate Worker sends the reminders (`workers/reminders/`, every 15 minutes). It's on the Workers Free plan.
 
 1. **D1 database.** Set in `workers/reminders/wrangler.toml`: binding `DATA` and the database ID, the same database the Pages project binds as `DATA`. If the database changes, copy the new ID from Storage & Databases → D1.
-2. **Create the Worker.** Workers & Pages → Create → **Import a repository** → `si4star/tree-tables`. Set **Root directory** to `workers/reminders`. Leave the build command empty. Deploy.
+2. **Create the Worker.** Workers & Pages → Create → **Import a repository** → `si4star/learning-forest`. Set **Root directory** to `workers/reminders`. Leave the build command empty. Deploy.
 3. **Secret.** In the new Worker → Settings → Variables and Secrets → add a **Secret** named `VAPID_PRIVATE_JWK` with the private key (supplied separately, never committed). Redeploy.
 4. If the site isn't at `https://tree-tables.pages.dev`, change `SITE_URL` in `wrangler.toml`.
 
@@ -134,10 +134,10 @@ Progress is saved after every answer. If the connection drops, answers queue on 
 
 ## Deploying to Cloudflare Pages
 
-1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git** → pick `si4star/tree-tables`.
+1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git** → pick `si4star/learning-forest`.
    - Production branch: `main`
    - Framework preset: None. Build command: `npm run build`. Build output directory: `dist`
-2. **Storage & Databases** → **D1** → **Create database**, name it `tree-tables`.
+2. **Storage & Databases** → **D1** → **Create database**, name it (for example `learning-forest`).
 3. Back in the Pages project → **Settings** → **Bindings** → **Add** → **D1 database**: variable name `DATA`, and the database. Add it for both Production and Preview.
 4. **Deployments** → retry the latest deployment so it picks up the binding.
 
