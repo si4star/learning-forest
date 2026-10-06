@@ -110,3 +110,4 @@ a.card:hover h3{text-decoration:underline}
 .module-body .card{background:var(--bg)}
 .module-body .intro{margin-bottom:16px}
 .module.soon{opacity:.6}
+.module-body .cards{margin-bottom:22px}
