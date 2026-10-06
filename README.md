@@ -13,12 +13,24 @@ Runs on Cloudflare Pages, with Pages Functions for the API and D1 for storage. I
   - recovery code: `1234-5678`
 - The grown-up has to tick "We've written it down or printed it" before continuing.
 - Login is forgiving: case, spaces and dashes don't matter.
+- **Opening the installed app from a link:** Android passes links for the site to the installed app. iPhone and iPad can't (Apple doesn't let links open home-screen apps), so the installed app has its own scanner.
 - **QR login.** Each Forest Pass also carries a QR code: a link to the site with a 256-bit login key after `#qr=` (the part after `#` never reaches the server or its logs). Scanning it with the device's camera app opens the site logged in. Inside the installed app, **Scan my Forest Pass** on the login screen uses the camera directly (needed on iPhone/iPad, where the camera app opens Safari rather than the installed app). Only a hash of the key is stored. Grown-ups can make a **New QR card** (the password stays the same; the old QR stops working); a new Forest Pass or recovery also replaces it. Bad scans are limited to 30 per internet address in 15 minutes (higher than passwords, because a school shares one address). Children added before QR login get a code by making a New QR card.
 - A forgotten password is replaced with the recovery code (the child gets a new card) or by the grown-up ("New Forest Pass"). Both sign out the old sessions.
 - Passwords and recovery codes are stored as PBKDF2-SHA256 hashes (10,000 iterations for now; see **Upgrade later**). Sessions are random tokens in HttpOnly, Secure, SameSite=Lax cookies (30 days for grown-ups, 180 days for children).
 - 10 failed logins per account, or 50 per IP address, in 15 minutes locks out further attempts for 15 minutes.
 
 Data held: grown-up email; child first name or nickname; facts progress; settings (season, read aloud); forest friends; practice check scores; for reminders, the device's push address, time and time zone; every answer (fact, answer given, right/wrong, time taken, kind). Failed login records are deleted after a day. The font is self-hosted, so the page makes no third-party requests.
+
+## Classes (schools)
+
+A grown-up account can run classes (up to 10, up to 40 pupils each), alongside its own children.
+
+- **Add pupils** by pasting first names or initials, one per line. Each pupil gets a username, password and recovery code (for home), a QR code, and **three pictures** from a set of 12 (🦊 🐸 🦉 🍎 🍓 🚂 🚀 ⭐ 🌈 ⚽ 🎈 🐝). The teacher can always see a pupil's pictures and make new ones.
+- **Login cards:** a printable sheet with each pupil's name, pictures, username and QR code. Printing from the class page makes new QR codes for everyone (the old ones stop working). Print from a computer browser; installed apps on iPhone and iPad can't print.
+- **Class devices:** on a shared iPad or Chromebook, the teacher logs in and taps **Use this device for [class]**. The teacher is logged out, and the device shows the class's name tiles whenever nobody is logged in. A pupil taps their name, then their three pictures in order. **I'm done** logs them out and returns to the tiles. Pupil sessions on class devices last 8 hours. The device stays set up for a year, until a grown-up taps **Stop** (on the grown-up screen on that device) or **Sign out all class devices**.
+- **Picture login only works on class devices.** Three pictures from 12 is about 1,300 combinations, too few for the open internet. 5 wrong tries lock that pupil for 15 minutes; others carry on.
+- **Shared school address:** failed logins from class devices don't count towards the 50-per-address limit, so a class's typing mistakes can't lock the school out.
+- Removing a class keeps its pupils (and their forests) on the account, without pictures.
 
 ## Starting check
 
@@ -186,6 +198,8 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `tests/tts.mjs` | Read-aloud route: caching, fallback model, limits (runs the API on SQLite) |
 | `tests/qr.mjs` | QR login on the server: keys, new QR card, old keys, rate limit |
 | `tests/qr-login.mjs` | QR login in the browser: card QR decodes, link login, camera scan, bad and replaced codes |
+| `tests/classes.mjs` | Classes on the server: class devices, picture login, lockouts, ownership |
+| `tests/classes-e2e.mjs` | Classes in the browser: add pupils, login cards, class device, picture login, I'm done |
 | `tests/d1-shim.mjs` | D1 stand-in over node:sqlite for the Node tests |
 
 ## Not built yet

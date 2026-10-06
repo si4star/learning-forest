@@ -4,7 +4,9 @@ import { synth, normText, TEXT_OK, ttsConfig } from './tts.js';
 import { newUsername, newPassword, newRecoveryCode, normUsername, normPassword, normRecovery } from './words.js';
 
 const DAY = 864e5;
-const PARENT_TTL = 30 * DAY, CHILD_TTL = 180 * DAY;
+const PARENT_TTL = 30 * DAY, CHILD_TTL = 180 * DAY, CLASS_CHILD_TTL = 8 * 3600e3, DEVICE_TTL = 365 * DAY;
+const DEVICE_COOKIE = 'tf_class';
+const PIC_COUNT = 12, PIC_FAIL_LIMIT = 5, MAX_CLASSES = 10, MAX_PUPILS = 40;
 const FAIL_WINDOW = 15 * 60e3, FAIL_LIMIT = 10, IP_FAIL_LIMIT = 50;
 const MAX_CHILDREN = 10;
 const COOKIE = 'tf_session';
@@ -74,8 +76,8 @@ async function need(ctx, role) {
   return s.user_id;
 }
 
-async function startSession(ctx, role, id) {
-  const tok = newToken(), ttl = role === 'parent' ? PARENT_TTL : CHILD_TTL, now = Date.now();
+async function startSession(ctx, role, id, ttl = role === 'parent' ? PARENT_TTL : CHILD_TTL) {
+  const tok = newToken(), now = Date.now();
   await ctx.db.batch([
     ctx.db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now),
     ctx.db.prepare('INSERT INTO sessions(token_hash, role, user_id, expires_at) VALUES (?, ?, ?, ?)')
@@ -84,15 +86,25 @@ async function startSession(ctx, role, id) {
   return { 'set-cookie': `${COOKIE}=${tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${ttl / 1000}` };
 }
 
+// A device a teacher has signed in to a class (long-lived cookie). Looked up once per request.
+async function classDevice(ctx) {
+  if (ctx.device !== undefined) return ctx.device;
+  const tok = cookie(ctx.request, DEVICE_COOKIE);
+  ctx.device = tok ? await ctx.db.prepare(`SELECT d.token_hash, c.id, c.name, c.owner_id FROM class_devices d JOIN classes c ON c.id = d.class_id
+    WHERE d.token_hash = ? AND d.created_at > ?`).bind(await sha256(tok), Date.now() - DEVICE_TTL).first() : null;
+  return ctx.device;
+}
+
 // Blocks guessing: 10 failures per account, or 50 per IP address, in 15 minutes.
+// Class devices are trusted, so their failures don't count towards the shared school address.
 async function guard(ctx, k, limit = FAIL_LIMIT) {
-  const since = Date.now() - FAIL_WINDOW;
+  const since = Date.now() - FAIL_WINDOW, trusted = !!(await classDevice(ctx));
   const q = 'SELECT COUNT(*) AS n FROM login_failures WHERE k = ? AND at > ?';
   const [a, b] = await ctx.db.batch([
     ctx.db.prepare(q).bind(k, since),
     ctx.db.prepare(q).bind('ip:' + ctx.ip, since),
   ]);
-  if (a.results[0].n >= limit || b.results[0].n >= IP_FAIL_LIMIT)
+  if (a.results[0].n >= limit || (!trusted && b.results[0].n >= IP_FAIL_LIMIT))
     throw new HttpError(429, 'Too many tries. Wait 15 minutes, then try again.');
 }
 
@@ -100,7 +112,7 @@ async function fail(ctx, k, message) {
   const now = Date.now(), ins = 'INSERT INTO login_failures(k, at) VALUES (?, ?)';
   await ctx.db.batch([
     ctx.db.prepare(ins).bind(k, now),
-    ctx.db.prepare(ins).bind('ip:' + ctx.ip, now),
+    ...((await classDevice(ctx)) ? [] : [ctx.db.prepare(ins).bind('ip:' + ctx.ip, now)]),
     ctx.db.prepare('DELETE FROM login_failures WHERE at < ?').bind(now - DAY),
   ]);
   throw new HttpError(401, message);
@@ -184,29 +196,32 @@ async function logout(ctx) {
 
 async function me(ctx) {
   const s = await currentSession(ctx);
-  if (!s) return json({ role: null });
+  if (!s) { const dev = await classDevice(ctx); return json({ role: null, device: dev ? { classId: dev.id, className: dev.name } : null }); }
+  const dev = await classDevice(ctx), device = dev ? { classId: dev.id, className: dev.name } : null;
   if (s.role === 'parent') {
     const p = await ctx.db.prepare('SELECT email FROM parents WHERE id = ?').bind(s.user_id).first();
-    return p ? json({ role: 'parent', email: p.email }) : json({ role: null });
+    return p ? json({ role: 'parent', email: p.email, device }) : json({ role: null, device });
   }
   const c = await ctx.db.prepare('SELECT name FROM children WHERE id = ?').bind(s.user_id).first();
-  return c ? json({ role: 'child', name: c.name }) : json({ role: null });
+  return c ? json({ role: 'child', name: c.name, device }) : json({ role: null, device });
 }
 
 async function listChildren(ctx) {
   const pid = await need(ctx, 'parent');
   const { results } = await ctx.db.prepare(`
     SELECT c.id, c.name, c.display_username AS username, c.last_played AS lastPlayed, c.assessed_at AS assessedAt,
-      (SELECT COUNT(*) FROM facts f WHERE f.child_id = c.id AND f.box > 0) AS planted
-    FROM children c WHERE c.parent_id = ? ORDER BY c.created_at`).bind(pid).all();
-  return json({ children: results });
+      (SELECT COUNT(*) FROM facts f WHERE f.child_id = c.id AND f.box > 0) AS planted, c.class_id AS classId, c.pics
+    FROM children c WHERE c.parent_id = ? ORDER BY c.name COLLATE NOCASE`).bind(pid).all();
+  const classes = (await ctx.db.prepare(`SELECT k.id, k.name, (SELECT COUNT(*) FROM class_devices d WHERE d.class_id = k.id) AS devices
+    FROM classes k WHERE k.owner_id = ? ORDER BY k.created_at`).bind(pid).all()).results;
+  return json({ children: results.map(c => ({ ...c, pics: c.pics ? c.pics.split(',').map(Number) : null })), classes });
 }
 
 async function addChild(ctx) {
   const pid = await need(ctx, 'parent');
   const name = String((await body(ctx)).name || '').trim().replace(/\s+/g, ' ');
   if (!name || name.length > 20) throw new HttpError(400, 'Enter a first name or nickname (up to 20 letters).');
-  const { n } = await ctx.db.prepare('SELECT COUNT(*) AS n FROM children WHERE parent_id = ?').bind(pid).first();
+  const { n } = await ctx.db.prepare('SELECT COUNT(*) AS n FROM children WHERE parent_id = ? AND class_id IS NULL').bind(pid).first();
   if (n >= MAX_CHILDREN) throw new HttpError(400, `You can add up to ${MAX_CHILDREN} children.`);
   let username;
   for (let i = 0; i < 20 && !username; i++) {
@@ -448,6 +463,128 @@ async function tts(ctx) {
   return audio(out.mime, out.bytes);
 }
 
+/* classes */
+
+const newPics = () => {
+  const out = [];
+  while (out.length < 3) { const n = crypto.getRandomValues(new Uint32Array(1))[0] % PIC_COUNT; if (!out.includes(n)) out.push(n); }
+  return out;
+};
+const cleanName = x => String(x || '').trim().replace(/\s+/g, ' ');
+
+async function ownedClass(ctx, pid, id) {
+  const row = await ctx.db.prepare('SELECT id, name FROM classes WHERE id = ? AND owner_id = ?').bind(Number(id), pid).first();
+  if (!row) throw new HttpError(404, 'Class not found.');
+  return row;
+}
+
+async function addClass(ctx) {
+  const pid = await need(ctx, 'parent');
+  const name = cleanName((await body(ctx)).name);
+  if (!name || name.length > 30) throw new HttpError(400, 'Enter a class name (up to 30 letters).');
+  const { n } = await ctx.db.prepare('SELECT COUNT(*) AS n FROM classes WHERE owner_id = ?').bind(pid).first();
+  if (n >= MAX_CLASSES) throw new HttpError(400, `You can have up to ${MAX_CLASSES} classes.`);
+  const row = await ctx.db.prepare('INSERT INTO classes(owner_id, name, created_at) VALUES (?, ?, ?) RETURNING id').bind(pid, name, Date.now()).first();
+  return json({ id: row.id, name });
+}
+
+// Adds pupils from a list of first names (or initials). Each gets a username, password and
+// recovery code (for home), a QR code, and three pictures for class devices.
+async function addPupils(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const k = await ownedClass(ctx, pid, id);
+  const b = await body(ctx);
+  const names = (Array.isArray(b.names) ? b.names : []).map(cleanName).filter(Boolean);
+  if (!names.length || names.some(x => x.length > 20)) throw new HttpError(400, 'Enter one first name or nickname per line (up to 20 letters each).');
+  const { n } = await ctx.db.prepare('SELECT COUNT(*) AS n FROM children WHERE class_id = ?').bind(k.id).first();
+  if (n + names.length > MAX_PUPILS) throw new HttpError(400, `A class can have up to ${MAX_PUPILS} pupils.`);
+  const cards = [];
+  for (const name of names) {
+    let username;
+    for (let i = 0; i < 20 && !username; i++) {
+      const u = newUsername();
+      if (!(await ctx.db.prepare('SELECT 1 FROM children WHERE username = ?').bind(normUsername(u)).first())) username = u;
+    }
+    if (!username) throw new HttpError(500, 'Could not make a username. Try again.');
+    const c = await newCredentials(), pics = newPics();
+    const row = await ctx.db.prepare(`INSERT INTO children(parent_id, class_id, name, username, display_username, pw_hash, recovery_hash, qr_hash, pics, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
+      .bind(pid, k.id, name, normUsername(username), username, c.pw_hash, c.recovery_hash, c.qr_hash, pics.join(','), Date.now()).first();
+    cards.push({ id: row.id, ...card(name, username, c), pics });
+  }
+  return json({ cards });
+}
+
+async function newPupilPics(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const child = await ownedChild(ctx, pid, id);
+  const pics = newPics();
+  await ctx.db.prepare('UPDATE children SET pics = ? WHERE id = ?').bind(pics.join(','), child.id).run();
+  return json({ pics });
+}
+
+async function removeClass(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const k = await ownedClass(ctx, pid, id);
+  await ctx.db.batch([   // pupils stay on the account, without a class or pictures
+    ctx.db.prepare('UPDATE children SET class_id = NULL, pics = NULL WHERE class_id = ?').bind(k.id),
+    ctx.db.prepare('DELETE FROM classes WHERE id = ?').bind(k.id),
+  ]);
+  return json({ ok: true });
+}
+
+// Sets this device up for the class and signs the grown-up out of it, so pupils can't reach
+// the grown-up screens.
+async function useDeviceForClass(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const k = await ownedClass(ctx, pid, id);
+  const tok = newToken(), sess = cookie(ctx.request, COOKIE);
+  await ctx.db.batch([
+    ctx.db.prepare('INSERT INTO class_devices(token_hash, class_id, created_at) VALUES (?, ?, ?)').bind(await sha256(tok), k.id, Date.now()),
+    ctx.db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256(sess)),
+  ]);
+  const res = json({ device: { classId: k.id, className: k.name } });
+  res.headers.append('set-cookie', `${DEVICE_COOKIE}=${tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${DEVICE_TTL / 1000}`);
+  res.headers.append('set-cookie', `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
+  return res;
+}
+
+async function signOutClassDevices(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const k = await ownedClass(ctx, pid, id);
+  await ctx.db.prepare('DELETE FROM class_devices WHERE class_id = ?').bind(k.id).run();
+  return json({ ok: true });
+}
+
+// A grown-up stops using this device for its class (they must own the class).
+async function leaveDevice(ctx) {
+  const pid = await need(ctx, 'parent');
+  const dev = await classDevice(ctx);
+  if (dev && dev.owner_id === pid) await ctx.db.prepare('DELETE FROM class_devices WHERE token_hash = ?').bind(dev.token_hash).run();
+  if (dev && dev.owner_id !== pid) throw new HttpError(403, 'Only the class\'s grown-up can do that.');
+  return json({ ok: true }, 200, { 'set-cookie': `${DEVICE_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
+}
+
+async function deviceClass(ctx) {
+  const dev = await classDevice(ctx);
+  if (!dev) return json({ device: null });
+  await ctx.db.prepare('UPDATE class_devices SET last_used = ? WHERE token_hash = ?').bind(Date.now(), dev.token_hash).run();
+  const { results } = await ctx.db.prepare('SELECT id, name FROM children WHERE class_id = ? AND pics IS NOT NULL ORDER BY name COLLATE NOCASE').bind(dev.id).all();
+  return json({ device: { classId: dev.id, className: dev.name }, pupils: results });
+}
+
+async function pictureLogin(ctx) {
+  const dev = await classDevice(ctx);
+  if (!dev) throw new HttpError(403, 'This device isn\'t set up for a class.');
+  const b = await body(ctx);
+  const id = Number(b.child), pics = Array.isArray(b.pics) ? b.pics : [];
+  if (pics.length !== 3 || !pics.every(p => isInt(p, 0, PIC_COUNT - 1))) throw new HttpError(400, 'Pick three pictures.');
+  await guard(ctx, 'pic:' + id, PIC_FAIL_LIMIT);
+  const row = await ctx.db.prepare('SELECT id, pics FROM children WHERE id = ? AND class_id = ?').bind(id, dev.id).first();
+  if (!row || row.pics !== pics.join(',')) await fail(ctx, 'pic:' + id, 'Not quite. Try your pictures again.');
+  return json({ role: 'child' }, 200, await startSession(ctx, 'child', row.id, CLASS_CHILD_TTL));
+}
+
 const ROUTES = [
   ['GET', /^\/me$/, me],
   ['POST', /^\/logout$/, logout],
@@ -469,4 +606,13 @@ const ROUTES = [
   ['POST', /^\/child\/reminder$/, reminderOn],
   ['POST', /^\/child\/reminder\/off$/, reminderOff],
   ['GET', /^\/tts$/, tts],
+  ['POST', /^\/parent\/classes$/, addClass],
+  ['POST', /^\/parent\/classes\/(\d+)\/pupils$/, addPupils],
+  ['POST', /^\/parent\/classes\/(\d+)\/device$/, useDeviceForClass],
+  ['POST', /^\/parent\/classes\/(\d+)\/devices\/signout$/, signOutClassDevices],
+  ['DELETE', /^\/parent\/classes\/(\d+)$/, removeClass],
+  ['POST', /^\/parent\/children\/(\d+)\/pics$/, newPupilPics],
+  ['POST', /^\/parent\/device\/leave$/, leaveDevice],
+  ['GET', /^\/class$/, deviceClass],
+  ['POST', /^\/class\/login$/, pictureLogin],
 ];

@@ -77,6 +77,23 @@ const MIGRATIONS = [
     `ALTER TABLE children ADD COLUMN qr_hash TEXT`,
     `CREATE UNIQUE INDEX IF NOT EXISTS children_qr ON children(qr_hash)`,
   ],
+  [
+    // classes for schools: a grown-up account owns classes; pupils log in on class devices
+    // with three pictures (pics, e.g. "3,7,1"), shown to the teacher so lost ones can be looked up
+    `CREATE TABLE IF NOT EXISTS classes(
+      id INTEGER PRIMARY KEY,
+      owner_id INTEGER NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      created_at INTEGER NOT NULL)`,
+    `ALTER TABLE children ADD COLUMN class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL`,
+    `ALTER TABLE children ADD COLUMN pics TEXT`,
+    `CREATE INDEX IF NOT EXISTS children_class ON children(class_id)`,
+    `CREATE TABLE IF NOT EXISTS class_devices(
+      token_hash TEXT PRIMARY KEY,
+      class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL,
+      last_used INTEGER)`,
+  ],
 ];
 
 let ready = null;

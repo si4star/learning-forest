@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs && wrangler pages dev dist --d1 DB --port 8788",
-    "test": "node tests/reminders.mjs && node tests/tts.mjs && node tests/qr.mjs && node tests/e2e.mjs && node tests/features.mjs && node tests/qr-login.mjs"
+    "test": "node tests/reminders.mjs && node tests/tts.mjs && node tests/qr.mjs && node tests/classes.mjs && node tests/e2e.mjs && node tests/features.mjs && node tests/qr-login.mjs && node tests/classes-e2e.mjs"
   },
   "devDependencies": {
     "playwright": "^1.56.0",

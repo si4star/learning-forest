@@ -314,13 +314,19 @@ function speak(text,then){
 
 /* views */
 const app=document.getElementById('app');
-let view='loading', me={role:null}, kid=null, kids=[], card=null, cardFor='parent';
+let view='loading', me={role:null}, kid=null, kids=[], classes=[], card=null, cardFor='parent';
+// classDev: this device is set up for a class (pupils log in with name + pictures)
+let classDev=null, classInfo=null, pupil=null, picks=[], picMsg='', openClass=null, classCards=[];
+const PICS=[['🦊','fox'],['🐸','frog'],['🦉','owl'],['🍎','apple'],['🍓','strawberry'],['🚂','train'],
+  ['🚀','rocket'],['⭐','star'],['🌈','rainbow'],['⚽','ball'],['🎈','balloon'],['🐝','bee']];
+const picsHtml=ps=>ps?ps.map(i=>`<span class="pic" role="img" aria-label="${PICS[i][1]}">${PICS[i][0]}</span>`).join(''):'';
 let round=null, summary=null, assessResult=null, mockResult=null, picked=[], plan=[], armed=null, flash='', busy=false;
 
 function render(){
   applySeason();
   ({loading:renderLoading,welcome:renderWelcome,childLogin:renderChildLogin,recover:renderRecover,
     grownup:renderGrownup,parent:renderParent,card:renderCard,scan:renderScan,
+    classPick:renderClassPick,classPics:renderClassPics,classAdmin:renderClassAdmin,classCards:renderClassCards,
     assessPick:renderAssessPick,assessResult:renderAssessResult,
     home:renderHome,play:renderPlay,summary:renderSummary,mockIntro:renderMockIntro,mockResult:renderMockResult})[view]();
   syncWakeLock();
@@ -405,32 +411,142 @@ function renderGrownup(){
   </main>`;
 }
 
+function kidActions(c,a){
+  return `<button class="link" data-act="tricky" data-id="${c.id}">Tricky facts</button>
+        ${c.classId?`<button class="link" data-act="kid-pics" data-id="${c.id}">${a==='kid-pics'?'Tap again: new pictures':'New pictures'}</button>`:''}
+        <button class="link" data-act="kid-qr" data-id="${c.id}">${a==='kid-qr'?'Tap again: new QR card (the old one stops working)':'New QR card'}</button>
+        ${c.classId?'':`<button class="link" data-act="kid-reset" data-id="${c.id}">${a==='kid-reset'?'Tap again: new password and card':'New Forest Pass'}</button>`}
+        <button class="link" data-act="kid-reassess" data-id="${c.id}">${a==='kid-reassess'?'Tap again: wipe progress and redo the check':'Redo starting check'}</button>
+        <button class="link danger ${a==='kid-remove'?'armed':''}" data-act="kid-remove" data-id="${c.id}">${a==='kid-remove'?`Tap again to remove ${esc(c.name)} and their forest`:'Remove'}</button>`;
+}
+const kidMeta=c=>`${c.assessedAt?`${c.planted} of 66 planted`:'Starting check not done yet'}${c.lastPlayed?` · last played ${ago(c.lastPlayed)}`:''}`;
+const deviceBanner=()=>classDev?`<div class="install"><p><b>This device is set up for ${esc(classDev.className)}.</b> When nobody is logged in, it shows the class's name tiles.</p>
+  <button class="go" data-act="leave-device">Stop</button></div>`:'';
 function renderParent(){
-  const rows=kids.map(c=>{
+  const family=kids.filter(c=>!c.classId);
+  const rows=family.map(c=>{
     const a=armed&&armed.id===c.id?armed.act:null;
     return `<li class="kid">
       <div class="kid-hd"><span class="pname">${esc(c.name)}</span><span class="pmeta">${esc(c.username)}</span></div>
       <p class="pmeta">${c.assessedAt?`${c.planted} of 66 planted`:'Starting check not done yet'}${c.lastPlayed?` · last played ${ago(c.lastPlayed)}`:''}</p>
-      <div class="kid-acts">
-        <button class="link" data-act="tricky" data-id="${c.id}">Tricky facts</button>
-        <button class="link" data-act="kid-qr" data-id="${c.id}">${a==='kid-qr'?'Tap again: new QR card (the old one stops working)':'New QR card'}</button>
-        <button class="link" data-act="kid-reset" data-id="${c.id}">${a==='kid-reset'?'Tap again: new password and card':'New Forest Pass'}</button>
-        <button class="link" data-act="kid-reassess" data-id="${c.id}">${a==='kid-reassess'?'Tap again: wipe progress and redo the check':'Redo starting check'}</button>
-        <button class="link danger ${a==='kid-remove'?'armed':''}" data-act="kid-remove" data-id="${c.id}">${a==='kid-remove'?`Tap again to remove ${esc(c.name)} and their forest`:'Remove'}</button>
-      </div></li>`;
+      <div class="kid-acts">${kidActions(c,a)}</div></li>`;
   }).join('');
+  const classRows=classes.map(k=>{const n=kids.filter(c=>c.classId===k.id).length;
+    return `<li><button class="menu-row" data-act="open-class" data-id="${k.id}"><span>${esc(k.name)}</span>
+      <span class="pmeta">${n} ${n===1?'pupil':'pupils'}${k.devices?` · ${k.devices} ${k.devices===1?'device':'devices'}`:''} ›</span></button></li>`}).join('');
   app.innerHTML=`<main class="screen scroll">
     <header class="bar"><span class="pill-gap"></span><h1>Your children</h1><button class="pill" data-act="logout">Log out</button></header>
-    <p class="hint">Children log in at <b>${esc(location.host)}</b> with the username and password on their Forest Pass.</p>
+    ${deviceBanner()}
+    <p class="hint">Children log in at <b>${esc(location.host)}</b> with the username and password on their Forest Pass, or by scanning its QR code.</p>
     ${err()}
-    ${kids.length?`<ul class="kids">${rows}</ul>`:'<p class="lead">Add a child to make their Forest Pass.</p>'}
+    ${family.length?`<ul class="kids">${rows}</ul>`:'<p class="lead">Add a child to make their Forest Pass.</p>'}
     <form class="add" data-form="addChild" novalidate><label for="nm" class="vh">Child's first name or nickname</label>
       <input id="nm" name="name" maxlength="20" placeholder="First name or nickname" autocomplete="off" enterkeyhint="done">
+      <button ${busy?'disabled':''}>Add</button></form>
+    <h2>Classes</h2>
+    <p class="hint small">For schools: pupils log in on class devices by tapping their name and three pictures.</p>
+    ${classRows?`<ul class="menu class-list">${classRows}</ul>`:''}
+    <form class="add" data-form="addClass" novalidate><label for="cn" class="vh">Class name</label>
+      <input id="cn" name="name" maxlength="30" placeholder="Class name, e.g. Oak class" autocomplete="off" enterkeyhint="done">
       <button ${busy?'disabled':''}>Add</button></form>
     <p class="hint small">Signed in as ${esc(me.email||'')}</p>
     <p class="ver">Version ${esc(VERSION)}</p>
   </main>`;
 }
+function renderClassAdmin(){
+  const k=classes.find(x=>x.id===openClass);if(!k)return go('parent');
+  const pupils=kids.filter(c=>c.classId===k.id);
+  const armedFor=(id,act)=>armed&&armed.id===id&&armed.act===act;
+  const rows=pupils.map(c=>{const a=armed&&armed.id===c.id?armed.act:null;
+    return `<li class="kid"><div class="kid-hd"><span class="pname">${esc(c.name)}</span><span class="pics-row">${picsHtml(c.pics)}</span></div>
+      <p class="pmeta">${esc(c.username)} · ${kidMeta(c)}</p><div class="kid-acts">${kidActions(c,a)}</div></li>`}).join('');
+  app.innerHTML=`<main class="screen scroll">
+    <header class="bar">${back('parent')}<h1>${esc(k.name)}</h1><span class="icon-gap"></span></header>
+    ${err()}
+    <div class="stack">
+      ${pupils.length?`<button class="cta" data-act="class-cards" data-id="${k.id}">${armedFor(k.id,'class-cards')?'Tap again: new cards for everyone (old QR codes stop working)':'Print login cards'}</button>`:''}
+      <button class="cta quiet" data-act="class-device" data-id="${k.id}">${armedFor(k.id,'class-device')?'Tap again: this device becomes a class device and you\'ll be logged out':'Use this device for '+esc(k.name)}</button>
+    </div>
+    <p class="hint small">${k.devices?`${k.devices} ${k.devices===1?'device is':'devices are'} set up for this class. <button class="link inline" data-act="class-signout" data-id="${k.id}">${armedFor(k.id,'class-signout')?'Tap again to sign them all out':'Sign out all class devices'}</button>`:'No devices are set up for this class yet.'}</p>
+    <h2>Pupils</h2>
+    ${pupils.length?`<ul class="kids">${rows}</ul>`:'<p class="lead">Add the class\'s first names below.</p>'}
+    <form class="form" data-form="addPupils" data-id="${k.id}" novalidate>
+      <label>Add pupils<textarea name="names" rows="5" placeholder="One first name or nickname per line"></textarea>
+        <span class="field-hint">Use first names or initials only. Each pupil gets three pictures and a QR code.</span></label>
+      <button class="cta" ${busy?'disabled':''}>Add pupils</button>
+    </form>
+    <button class="link danger ${armedFor(k.id,'class-remove')?'armed':''}" data-act="class-remove" data-id="${k.id}">${armedFor(k.id,'class-remove')?'Tap again to remove the class (pupils and their forests stay on your account)':'Remove this class'}</button>
+  </main>`;
+}
+function renderClassCards(){
+  const k=classes.find(x=>x.id===openClass);
+  app.innerHTML=`<main class="screen scroll cards-page">
+    <header class="bar no-print">${back('classAdmin')}<h1>Login cards</h1><span class="icon-gap"></span></header>
+    <p class="hint no-print">Print these and cut them out. In class: tap your name, then your three pictures in order. At home: scan the QR code. ${standalone()?'To print, open the site in a browser on a computer.':''}</p>
+    <div class="stack no-print"><button class="cta" data-act="print-cards">Print</button></div>
+    <div class="class-cards">${classCards.map(c=>`<article class="lcard">
+      <div class="lcard-hd">${tree(5)}<div><p class="pass-label">${esc(k?k.name:'')}</p><p class="pass-name">${esc(c.name)}</p></div></div>
+      <div class="lcard-body"><div><p class="pmeta">My pictures</p><p class="pics-row big">${picsHtml(c.pics)}</p>
+        <p class="pmeta">Username: <b>${esc(c.username)}</b></p></div>
+        <figure class="lcard-qr"><div data-qr="${esc(c.qr)}"></div><figcaption>Scan to log in</figcaption></figure></div>
+    </article>`).join('')}</div>
+  </main>`;
+  for(const el of app.querySelectorAll('[data-qr]'))makeQr(el.dataset.qr).then(q=>{el.innerHTML=q.createSvgTag({cellSize:3,margin:2,scalable:true})}).catch(()=>{});
+}
+function renderClassPick(){
+  const c={className:classInfo?.device?.className||classDev?.className||'',pupils:classInfo?.pupils||[]};
+  app.innerHTML=`<main class="screen scroll">
+    <header class="brand">${tree(5)}<h1>${esc(c.className)}</h1></header>
+    <p class="lead">Tap your name.</p>
+    ${err()}
+    <div class="name-grid">${c.pupils.map((p,i)=>`<button class="name-tile" data-act="pick-pupil" data-id="${p.id}" style="--tile:var(--t${i%6})">${esc(p.name)}</button>`).join('')}</div>
+    ${c.pupils.length?'':'<p class="hint">No pupils in this class yet. A grown-up can add them.</p>'}
+    <div class="class-foot">${canScan()?'<button class="link" data-act="scan">📷 Scan a card</button>':''}<button class="link" data-act="go" data-to="grownup">Grown-ups</button></div>
+  </main>`;
+}
+function renderClassPics(){
+  app.innerHTML=`<main class="screen scroll">
+    <header class="bar">${back('classPick','Not me')}<h1>Hi ${esc(pupil.name)}!</h1><span class="icon-gap"></span></header>
+    <p class="lead center">Tap your 3 pictures in order.</p>
+    <div class="pic-slots" id="slots" aria-live="polite">${[0,1,2].map(i=>`<span class="slot">${picks[i]!==undefined?PICS[picks[i]][0]:''}</span>`).join('')}</div>
+    <p class="err center" role="alert">${esc(picMsg)}</p>
+    <div class="pic-grid">${PICS.map(([e,n],i)=>`<button class="pic-key" data-act="pic" data-i="${i}" aria-label="${n}">${e}</button>`).join('')}</div>
+    <div class="stack"><button class="cta quiet" data-act="pic-undo" ${picks.length?'':'disabled'}>⌫ Undo</button></div>
+  </main>`;
+}
+async function pickPic(i){
+  if(picks.length>=3||busy)return;
+  picks.push(i);picMsg='';render();
+  if(picks.length<3)return;
+  busy=true;
+  try{await api('/class/login',{child:pupil.id,pics:picks});busy=false;me={role:'child'};picks=[];return enterChild()}
+  catch(e){
+    busy=false;picks=[];
+    picMsg=e.status===429?'Too many tries. Ask your teacher for help.':e.status===401?'Not quite. Try again.':e.message;
+    render();document.getElementById('slots')?.classList.add('shake');
+  }
+}
+async function enterClass(){
+  try{classInfo=await api('/class')}catch(e){classInfo=null}
+  if(!classInfo?.device){classDev=null;return go('welcome')}
+  classDev=classInfo.device;picks=[];pupil=null;go('classPick');
+}
+async function classAction(act,id){
+  if(!armed||armed.id!==id||armed.act!==act){armed={id,act};return render()}
+  armed=null;
+  try{
+    if(act==='class-device'){const r=await api(`/parent/classes/${id}/device`,{});classDev=r.device;me={role:null};kids=[];classes=[];return enterClass()}
+    if(act==='class-signout'){await api(`/parent/classes/${id}/devices/signout`,{});await loadParent();if(classDev?.classId===id)classDev=null;return render()}
+    if(act==='class-remove'){await api(`/parent/classes/${id}`,{},'DELETE');await loadParent();return go('parent')}
+    if(act==='class-cards'){
+      const pupils=kids.filter(c=>c.classId===id);
+      classCards=[];
+      for(const c of pupils){const r=await api(`/parent/children/${c.id}/qr`,{});classCards.push({...r.card,pics:c.pics})}
+      return go('classCards');
+    }
+  }catch(e){flash=e.message;render()}
+}
+
 function ago(t){const d=Math.round((today()-new Date(t).setHours(0,0,0,0))/864e5);return d<=0?'today':d===1?'yesterday':`${d} days ago`}
 
 /* QR login: the Forest Pass carries a QR code of a link with the child's login key.
@@ -627,7 +743,7 @@ function renderHome(){
   const mock=mockReady(p)?'<button class="cta quiet" data-act="mock-intro">📝 Practice check</button>'
     :!next?`<p class="hint small center">The practice check opens when ${MOCK_TREES} trees have grown. You have ${trees}.</p>`:'';
   app.innerHTML=`<main class="screen scroll">
-    <header class="bar start"><h1>${esc(p.name)}'s forest</h1><button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
+    <header class="bar start"><h1>${esc(p.name)}'s forest</h1>${classDev?'<button class="pill" data-act="logout">I\'m done</button>':''}<button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
     ${installBanner()}
     ${needLogin?'<p class="warn">Your login has run out. <button class="link inline" data-act="logout">Log in again</button> to save your answers.</p>'
       :offline?'<p class="warn">You\'re offline. You can still play, and your answers will save when you\'re back online.</p>'
@@ -1021,8 +1137,10 @@ async function boot(){
     if(e.status===0&&readSnap()){me={role:'child'};return enterChild()}   // offline: open the last forest on this device
     me={role:null};flash=e.message;
   }
+  classDev=me.device||null;
   if(me.role==='child')await enterChild();
   else if(me.role==='parent')await enterParent();
+  else if(classDev)await enterClass();
   else{const f=flash;go('welcome');if(f){flash=f;render()}}
 }
 async function enterChild(){
@@ -1041,11 +1159,17 @@ async function enterChild(){
   if(hasPending()&&!offline)flush();
   picked=[];plan=[];go(kid.assessedAt?'home':'assessPick');
 }
+async function loadParent(){const r=await api('/parent/children');kids=r.children;classes=r.classes||[]}
 async function enterParent(){
-  try{kids=(await api('/parent/children')).children}catch(e){return signedOut(e)}
-  go('parent');
+  if(me.device!==undefined)classDev=me.device;
+  try{await loadParent()}catch(e){return signedOut(e)}
+  go(view==='classAdmin'&&classes.some(k=>k.id===openClass)?'classAdmin':'parent');
 }
-function signedOut(e){me={role:null};kid=null;offline=false;needLogin=false;go('welcome');if(e){flash=e.status===401?'':e.message;render()}}
+function signedOut(e){
+  me={role:null};kid=null;offline=false;needLogin=false;
+  if(classDev&&!e)return enterClass();   // shared class device: back to the name tiles
+  go('welcome');if(e){flash=e.status===401?'':e.message;render()}
+}
 
 async function submitForm(name,f){
   const v=n=>(f.elements[n]?f.elements[n].value:'').trim();
@@ -1064,6 +1188,16 @@ async function submitForm(name,f){
         await api('/parent/login',{email:v('email'),password:f.elements.password.value});me=await api('/me');busy=false;return enterParent();
       case 'signup':
         await api('/parent/signup',{email:v('email'),password:f.elements.password.value,consent:f.elements.consent.checked});me=await api('/me');busy=false;return enterParent();
+      case 'addClass':{
+        if(!v('name'))return document.getElementById('cn').focus();
+        const k=await api('/parent/classes',{name:v('name')});await loadParent();busy=false;openClass=k.id;return go('classAdmin');
+      }
+      case 'addPupils':{
+        const names=(f.elements.names.value||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
+        if(!names.length)throw new Error('Type one first name per line.');
+        const r=await api(`/parent/classes/${f.dataset.id}/pupils`,{names});await loadParent();busy=false;
+        classCards=r.cards;return go('classCards');
+      }
       case 'addChild':{
         if(!v('name'))return document.getElementById('nm').focus();
         const r=await api('/parent/children',{name:v('name')});card=r.card;cardFor='parent';busy=false;return go('card');
@@ -1085,9 +1219,10 @@ async function parentAction(act,id){
   try{
     if(act==='kid-reset'){const r=await api(`/parent/children/${id}/reset`,{});card=r.card;cardFor='parent';return go('card')}
     if(act==='kid-qr'){const r=await api(`/parent/children/${id}/qr`,{});card=r.card;cardFor='parent';return go('card')}
+    if(act==='kid-pics'){await api(`/parent/children/${id}/pics`,{});await loadParent();return render()}
     if(act==='kid-reassess')await api(`/parent/children/${id}/reassess`,{});
     if(act==='kid-remove')await api(`/parent/children/${id}`,{},'DELETE');
-    await enterParent();
+    await loadParent();render();
   }catch(e){flash=e.message;render()}
 }
 
@@ -1105,7 +1240,7 @@ app.addEventListener('click',e=>{
   const kb=e.target.closest('[data-key]');if(kb)return press(kb.dataset.key);
   const b=e.target.closest('[data-act]');if(!b)return;
   const act=b.dataset.act;
-  if(!act.startsWith('kid-'))armed=null;
+  if(!act.startsWith('kid-')&&!act.startsWith('class-'))armed=null;
   switch(act){
     case 'go':go(b.dataset.to);break;
     case 'mode':grownupMode=b.dataset.mode;flash='';render();break;
@@ -1130,7 +1265,14 @@ app.addEventListener('click',e=>{
     case 'install':installSheet();break;
     case 'install-hide':LS.set('ttf-install-hide',String(Date.now()+14*864e5));render();break;
     case 'card-done':card=null;cardFile=null;if(cardFor==='child')enterChild();else enterParent();break;
-    case 'kid-reset':case 'kid-reassess':case 'kid-remove':case 'kid-qr':parentAction(act,+b.dataset.id);break;
+    case 'kid-reset':case 'kid-reassess':case 'kid-remove':case 'kid-qr':case 'kid-pics':parentAction(act,+b.dataset.id);break;
+    case 'open-class':openClass=+b.dataset.id;go('classAdmin');break;
+    case 'class-device':case 'class-signout':case 'class-remove':case 'class-cards':classAction(act,+b.dataset.id);break;
+    case 'print-cards':window.print();break;
+    case 'pick-pupil':pupil=classInfo.pupils.find(p=>p.id===+b.dataset.id);picks=[];picMsg='';go('classPics');break;
+    case 'pic':pickPic(+b.dataset.i);break;
+    case 'pic-undo':picks.pop();picMsg='';render();break;
+    case 'leave-device':api('/parent/device/leave',{}).then(()=>{classDev=null;render()},e=>{flash=e.message;render()});break;
     case 'scan':startScan();break;
   }
 });
