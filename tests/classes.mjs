@@ -68,6 +68,16 @@ await ok(await call('teacher', 'POST', `/parent/classes/${k.id}/devices/signout`
 assert.deepEqual(await ok(await call('ipad', 'GET', '/class')), { device: null });
 await ok(await call('teacher', 'POST', `/parent/classes/${k.id}/pupils`, { names: Array.from({ length: 12 }, (_, i) => 'P' + i) }));
 
+// same names: refused in the pasted list and against the class; rename to tell them apart
+const dup = await call('teacher', 'POST', `/parent/classes/${k.id}/pupils`, { names: ['ben'] });
+assert.equal(dup.status, 400);
+assert.match((await dup.json()).error, /already a "ben".*"ben A" and "ben B"/);
+assert.equal((await call('teacher', 'POST', `/parent/classes/${k.id}/pupils`, { names: ['Zac', 'zac'] })).status, 400, 'twice in one list');
+await ok(await call('teacher', 'POST', `/parent/children/${cards[1].id}/name`, { name: 'Ben A' }));
+await ok(await call('teacher', 'POST', `/parent/classes/${k.id}/pupils`, { names: ['Ben B'] }));
+assert.equal((await call('teacher', 'POST', `/parent/children/${cards[0].id}/name`, { name: 'ben b' })).status, 400, 'rename clash');
+assert.ok((await ok(await call('teacher', 'GET', '/parent/children'))).children.some(c => c.name === 'Ben A'));
+
 // another teacher can't touch the class
 await call('other', 'POST', '/parent/signup', { email: 'o@school.test', password: 'a-long-enough-pass', consent: true });
 assert.equal((await call('other', 'POST', `/parent/classes/${k.id}/pupils`, { names: ['X'] })).status, 404);

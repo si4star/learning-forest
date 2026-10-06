@@ -36,17 +36,31 @@ await p.waitForSelector('.kid');
 const ben = await p.evaluate(() => kids.find(k => k.name === 'Ben'));
 assert.equal(ben.pics.length, 3);
 
+step('two pupils with the same name: refused, then told apart by renaming');
+await p.fill('textarea[name=names]', 'Ben');
+await p.click('form[data-form=addPupils] .cta');
+await p.waitForSelector('text=Add the first letter of a surname');
+await p.click(`[data-act=rename][data-id="${ben.id}"]`);
+await p.fill('#renameName', 'Ben A');
+await p.click('#renameForm .cta');
+await p.waitForSelector('.kid .pname >> text=Ben A');
+await p.fill('textarea[name=names]', 'Ben B');
+await p.click('form[data-form=addPupils] .cta');
+await p.waitForSelector('.lcard >> text=Ben B');
+await p.click('[data-act=go][data-to=classAdmin]');
+await p.waitForSelector('.kid');
+
 step('teacher sets this device up for the class: signed out, name tiles shown');
 await p.click('[data-act=class-device]');
 await p.click('[data-act=class-device]');
 await p.waitForSelector('.name-tile');
-assert.deepEqual(await p.$$eval('.name-tile', els => els.map(e => e.textContent)), ['Ava', 'Ben', 'Cara']);
+assert.deepEqual(await p.$$eval('.name-tile', els => els.map(e => e.textContent)), ['Ava', 'Ben A', 'Ben B', 'Cara']);
 assert.match(await p.textContent('.brand h1'), /Oak class/);
 await p.reload();
 await p.waitForSelector('.name-tile');   // still a class device after a reload
 
 step('a pupil taps their name and pictures; wrong order says try again');
-await p.click('.name-tile >> text=Ben');
+await p.click('.name-tile >> text=Ben A');
 await p.waitForSelector('.pic-grid');
 const tap = async i => p.click(`.pic-key[data-i="${i}"]`);
 for (const i of [ben.pics[1], ben.pics[0], ben.pics[2]]) await tap(i);

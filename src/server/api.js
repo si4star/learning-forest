@@ -496,8 +496,11 @@ async function addPupils(ctx, id) {
   const b = await body(ctx);
   const names = (Array.isArray(b.names) ? b.names : []).map(cleanName).filter(Boolean);
   if (!names.length || names.some(x => x.length > 20)) throw new HttpError(400, 'Enter one first name or nickname per line (up to 20 letters each).');
-  const { n } = await ctx.db.prepare('SELECT COUNT(*) AS n FROM children WHERE class_id = ?').bind(k.id).first();
-  if (n + names.length > MAX_PUPILS) throw new HttpError(400, `A class can have up to ${MAX_PUPILS} pupils.`);
+  const existing = (await ctx.db.prepare('SELECT name FROM children WHERE class_id = ?').bind(k.id).all()).results.map(x => x.name);
+  if (existing.length + names.length > MAX_PUPILS) throw new HttpError(400, `A class can have up to ${MAX_PUPILS} pupils.`);
+  const seen = new Set(existing.map(x => x.toLowerCase())), clash = [];
+  for (const x of names) { if (seen.has(x.toLowerCase())) clash.push(x); seen.add(x.toLowerCase()); }
+  if (clash.length) throw new HttpError(400, sameName(clash[0]));
   const cards = [];
   for (const name of names) {
     let username;
@@ -513,6 +516,22 @@ async function addPupils(ctx, id) {
     cards.push({ id: row.id, ...card(name, username, c), pics });
   }
   return json({ cards });
+}
+
+// Two pupils with the same name would get identical name tiles on class devices.
+const sameName = n => `There's already a "${n}" in this class. Add the first letter of a surname, like "${n} A" and "${n} B". You can rename the pupil who's already there.`;
+
+// Rename a child (any of the grown-up's children). In a class, names must stay different.
+async function renameChild(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const child = await ownedChild(ctx, pid, id);
+  const name = cleanName((await body(ctx)).name);
+  if (!name || name.length > 20) throw new HttpError(400, 'Enter a first name or nickname (up to 20 letters).');
+  const row = await ctx.db.prepare('SELECT class_id FROM children WHERE id = ?').bind(child.id).first();
+  if (row.class_id && await ctx.db.prepare('SELECT 1 FROM children WHERE class_id = ? AND id != ? AND lower(name) = lower(?)').bind(row.class_id, child.id, name).first())
+    throw new HttpError(400, sameName(name));
+  await ctx.db.prepare('UPDATE children SET name = ? WHERE id = ?').bind(name, child.id).run();
+  return json({ name });
 }
 
 async function newPupilPics(ctx, id) {
@@ -612,6 +631,7 @@ const ROUTES = [
   ['POST', /^\/parent\/classes\/(\d+)\/devices\/signout$/, signOutClassDevices],
   ['DELETE', /^\/parent\/classes\/(\d+)$/, removeClass],
   ['POST', /^\/parent\/children\/(\d+)\/pics$/, newPupilPics],
+  ['POST', /^\/parent\/children\/(\d+)\/name$/, renameChild],
   ['POST', /^\/parent\/device\/leave$/, leaveDevice],
   ['GET', /^\/class$/, deviceClass],
   ['POST', /^\/class\/login$/, pictureLogin],

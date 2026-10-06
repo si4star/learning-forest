@@ -413,6 +413,7 @@ function renderGrownup(){
 
 function kidActions(c,a){
   return `<button class="link" data-act="tricky" data-id="${c.id}">Tricky facts</button>
+        <button class="link" data-act="rename" data-id="${c.id}">Rename</button>
         ${c.classId?`<button class="link" data-act="kid-pics" data-id="${c.id}">${a==='kid-pics'?'Tap again: new pictures':'New pictures'}</button>`:''}
         <button class="link" data-act="kid-qr" data-id="${c.id}">${a==='kid-qr'?'Tap again: new QR card (the old one stops working)':'New QR card'}</button>
         ${c.classId?'':`<button class="link" data-act="kid-reset" data-id="${c.id}">${a==='kid-reset'?'Tap again: new password and card':'New Forest Pass'}</button>`}
@@ -472,7 +473,7 @@ function renderClassAdmin(){
     ${pupils.length?`<ul class="kids">${rows}</ul>`:'<p class="lead">Add the class\'s first names below.</p>'}
     <form class="form" data-form="addPupils" data-id="${k.id}" novalidate>
       <label>Add pupils<textarea name="names" rows="5" placeholder="One first name or nickname per line"></textarea>
-        <span class="field-hint">Use first names or initials only. Each pupil gets three pictures and a QR code.</span></label>
+        <span class="field-hint">Use first names or initials only. If two pupils share a name, add a surname initial, like "Bob A" and "Bob B". Each pupil gets three pictures and a QR code.</span></label>
       <button class="cta" ${busy?'disabled':''}>Add pupils</button>
     </form>
     <button class="link danger ${armedFor(k.id,'class-remove')?'armed':''}" data-act="class-remove" data-id="${k.id}">${armedFor(k.id,'class-remove')?'Tap again to remove the class (pupils and their forests stay on your account)':'Remove this class'}</button>
@@ -530,6 +531,18 @@ async function enterClass(){
   try{classInfo=await api('/class')}catch(e){classInfo=null}
   if(!classInfo?.device){classDev=null;return go('welcome')}
   classDev=classInfo.device;picks=[];pupil=null;go('classPick');
+}
+function renameSheet(id){
+  const c=kids.find(k=>k.id===id);if(!c)return;
+  const bg=sheet(`<h2>Rename ${esc(c.name)}</h2>
+    <form class="form" id="renameForm" novalidate><label>Name<input id="renameName" name="name" maxlength="20" value="${esc(c.name)}" autocomplete="off"></label>
+      <span class="field-hint">${c.classId?'Names in a class must be different, e.g. "Bob A" and "Bob B". ':''}Progress, pictures and QR code stay the same.</span>
+      <p class="err" id="renameErr" role="alert"></p><button class="cta">Save</button></form>`);
+  bg.querySelector('#renameForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    try{await api(`/parent/children/${id}/name`,{name:bg.querySelector('#renameName').value});bg.remove();await loadParent();render()}
+    catch(err){bg.querySelector('#renameErr').textContent=err.message}
+  });
 }
 async function classAction(act,id){
   if(!armed||armed.id!==id||armed.act!==act){armed={id,act};return render()}
@@ -1267,6 +1280,7 @@ app.addEventListener('click',e=>{
     case 'card-done':card=null;cardFile=null;if(cardFor==='child')enterChild();else enterParent();break;
     case 'kid-reset':case 'kid-reassess':case 'kid-remove':case 'kid-qr':case 'kid-pics':parentAction(act,+b.dataset.id);break;
     case 'open-class':openClass=+b.dataset.id;go('classAdmin');break;
+    case 'rename':renameSheet(+b.dataset.id);break;
     case 'class-device':case 'class-signout':case 'class-remove':case 'class-cards':classAction(act,+b.dataset.id);break;
     case 'print-cards':window.print();break;
     case 'pick-pupil':pupil=classInfo.pupils.find(p=>p.id===+b.dataset.id);picks=[];picMsg='';go('classPics');break;
