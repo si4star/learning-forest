@@ -57,7 +57,7 @@ p{line-height:1.45}
 .brand{display:flex;align-items:center;gap:12px;margin-top:12px}
 .brand svg{width:56px;height:56px}
 .brand h1{font-size:32px;font-weight:700;letter-spacing:-.01em}
-.brand-kicker{margin:0;font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--leaf)}
+.brand-by{margin:2px 0 0;font-size:17px;font-weight:500;color:var(--leaf)}
 .lead{color:var(--muted);font-size:18px;margin:12px 0 0}
 .pname{font-size:22px;font-weight:600}
 .pmeta{color:var(--muted);font-size:15px}

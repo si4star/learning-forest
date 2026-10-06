@@ -3,11 +3,11 @@ const HINT_ORDER=[10,2,5,11,4,3,9,8,6,12,7];    // which factor gives the easies
 const ROUND=20, SLOW=6000, QUICK=3000;
 const ASSESS_MIN=5, PASS=0.8;                    // starting check: at least 5 facts per table, 80% to pass
 const INTERVAL_DAYS={2:1,3:3,4:7,5:21};
-const STAGES=['Not planted','Seed','Sprout','Sapling','Young','Mature'];
+const STAGES=['Not planted','Seed','Sprout','Sapling','Young tree','Mature tree'];
 // Practice check: the same shape as the Year 4 Multiplication Tables Check
 const MOCK_N=25, MOCK_MS=6000, MOCK_PAUSE=3000, MOCK_TREES=34;
 const HEAVY=[6,7,8,9,12];   // weighted more heavily in the real check
-// A forest friend moves in when every fact in a table is Young or Mature
+// A forest friend moves in when every fact in a table is a Young tree or Mature tree
 const FRIENDS={10:['🦉','an owl'],2:['🐿️','a squirrel'],5:['🦔','a hedgehog'],11:['🐇','a rabbit'],3:['🦊','a fox'],
   4:['🐦','a robin'],9:['🦌','a deer'],6:['🦡','a badger'],8:['🦋','a butterfly'],12:['🐸','a frog'],7:['🐞','a ladybird']};
 const friendName=t=>FRIENDS[t][1].split(' ')[1];
@@ -298,7 +298,7 @@ function renderLoading(){app.innerHTML=`<main class="screen"><div class="done">$
 
 function renderWelcome(){
   app.innerHTML=`<main class="screen scroll">
-    <header class="brand">${tree(5)}<div><p class="brand-kicker">by The Tree Fella</p><h1>The Learning Forest</h1></div></header>
+    <header class="brand">${tree(5)}<div><h1>The Learning Forest</h1><p class="brand-by">by The Tree Fella</p></div></header>
     <p class="lead">Log in with your Forest Pass to explore the forest.</p>
     ${installBanner()}
     ${err()}
