@@ -141,16 +141,6 @@ Progress is saved after every answer. If the connection drops, answers queue on 
 3. Back in the Pages project → **Settings** → **Bindings** → **Add** → **D1 database**: variable name `DATA`, and the database. Add it for both Production and Preview.
 4. **Deployments** → retry the latest deployment so it picks up the binding.
 
-### Moving to a new database
-
-The app's database is the `DATA` binding. To move to a new database (another region, say), bind the new one as `DATA` and the current one as `DB`, then deploy. The first request copies every account, class, pupil, answer, login and reminder from `DB` into `DATA` (failed-login records aren't copied; they only last a day), records that it's done in a `moved` table, and from then on only `DATA` is used. If `DATA` already has data, or both point at the same database, nothing is copied. Once the site works on `DATA`, change the reminders Worker to the new database (below), then remove the `DB` binding. The copy is in `copyFrom()` in `src/server/schema.js` and tested by `tests/move.mjs`.
-
-The database tables create themselves on the first request (see `src/server/schema.js`). There is no SQL to run.
-
-Other branches get preview URLs automatically.
-
-Pages runs on the Workers Free plan. See **Upgrade later** below.
-
 ## Upgrade later
 
 > **Flagged:** move to Workers Paid ($5/month) and strengthen password hashing.
@@ -208,7 +198,6 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `tests/e2e.mjs` | End-to-end test: accounts, starting check, rounds, sync, PWA |
 | `tests/features.mjs` | End-to-end test: shapes, friends, streak, bests, practice check, tricky facts, reminders, offline |
 | `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
-| `tests/move.mjs` | Moving to a new database: `DB` copied into an empty `DATA` once; same database left alone |
 | `tests/qr.mjs` | QR login on the server: keys, new QR card, old keys, rate limit |
 | `tests/qr-login.mjs` | QR login in the browser: card QR decodes, link login, camera scan, bad and replaced codes |
 | `tests/classes.mjs` | Classes on the server: class devices, picture login, lockouts, ownership |

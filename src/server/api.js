@@ -24,11 +24,10 @@ const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(d
 
 export async function handle(request, env) {
   try {
-    // DATA is the database. DB is the old binding: while both are bound, DB's data is copied into DATA once.
     const db = env.DATA;
     if (!db) throw new HttpError(500, 'The database is not connected.');
     configure(env);
-    await migrate(db, env.DB);
+    await migrate(db);
     const url = new URL(request.url);
     if (request.method !== 'GET') {
       // Cross-site requests can't send JSON without a preflight; together with
