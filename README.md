@@ -96,8 +96,8 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 ## Features
 
 - **Table introductions.** When a table is newly planted, the next round opens with its strategy in one sentence and three worked examples (×2, ×3, ×4) using that table's strategy. Tables passed in the starting check skip this.
-- **Question shapes.** Trees (and Great trees) are sometimes asked as `6 × ? = 42` or `42 ÷ 6` (a third each), so the whole fact family is practised. A wrong answer walks through the multiplication.
-- **Forest friends.** When every fact in a table is a Tree or Great tree, an animal moves in (10s owl, 2s squirrel, 5s hedgehog, 11s rabbit, 3s fox, 4s robin, 9s deer, 6s badger, 8s butterfly, 12s frog, 7s ladybird). Friends stay once earned.
+- **Question shapes.** Young and Mature trees are sometimes asked as `6 × ? = 42` or `42 ÷ 6` (a third each), so the whole fact family is practised. A wrong answer walks through the multiplication.
+- **Forest friends.** When every fact in a table is Young or Mature, an animal moves in (10s owl, 2s squirrel, 5s hedgehog, 11s rabbit, 3s fox, 4s robin, 9s deer, 6s badger, 8s butterfly, 12s frog, 7s ladybird). Friends stay once earned.
 - **Gentler streak.** One missed day in any 7 doesn't break a run of days.
 - **Personal bests.** Quickest facts in the last 7 days, and facts whose best time beat the week before by 0.3 s or more.
 - **Practice check.** Opens when every table is planted and at least 34 of 66 facts are Trees. 25 questions, 6 seconds each, a 3-second pause between them, no feedback until the end. The 6, 7, 8, 9 and 12 tables are weighted twice as heavily. It doesn't change any trees. The last 10 scores are kept.

@@ -136,7 +136,9 @@ await pp.waitForSelector('.kid');
 await pp.click('[data-act=tricky]');
 await pp.waitForSelector('.sheet .tricky li');
 const tricky = await pp.textContent('.sheet');
-assert.match(tricky, /wrong 1 of/);
+// two wrong answers: one missed on purpose in a round, one left to time out in the practice check.
+// They can land on the same fact ("wrong 2 of"), so count them up rather than expect "wrong 1 of".
+assert.equal([...tricky.matchAll(/wrong (\d+) of/g)].reduce((n, m) => n + Number(m[1]), 0), 2);
 assert.match(tricky, /24 \/ 25/);
 console.log('  ', tricky.replace(/\s+/g, ' ').slice(0, 160), '…');
 
