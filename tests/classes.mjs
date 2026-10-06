@@ -83,16 +83,16 @@ await call('other', 'POST', '/parent/signup', { email: 'o@school.test', password
 assert.equal((await call('other', 'POST', `/parent/classes/${k.id}/pupils`, { names: ['X'] })).status, 404);
 assert.equal((await call('other', 'POST', `/parent/classes/${k.id}/device`, {})).status, 404);
 
-// removing a class keeps the pupils on the account, without pictures
+// deleting a class deletes its pupils too
 await ok(await call('teacher', 'DELETE', `/parent/classes/${k2.id}`, {}));
 const after = await ok(await call('teacher', 'GET', '/parent/children'));
-assert.equal(after.children.find(c => c.name === 'Dev').classId, null);
+assert.ok(!after.children.some(c => c.name === 'Dev'), 'pupils go with the class');
 // end of year: delete a class and every pupil's data
 const k3 = await ok(await call('teacher', 'POST', '/parent/classes', { name: 'Elm class' }));
 const [gone] = (await ok(await call('teacher', 'POST', `/parent/classes/${k3.id}/pupils`, { names: ['Gus'] }))).cards;
 await ok(await call('gus', 'POST', '/child/qr', { key: gone.qr }));
 await ok(await call('gus', 'POST', '/child/sync', { facts: { '2x3': { box: 2, due: 0 } }, answers: [{ fact: '2x3', a: 2, b: 3, given: 6, correct: true, ms: 900, kind: 'new', at: Date.now() }] }));
-await ok(await call('teacher', 'DELETE', `/parent/classes/${k3.id}`, { deletePupils: true }));
+await ok(await call('teacher', 'DELETE', `/parent/classes/${k3.id}`, {}));
 assert.ok(!(await ok(await call('teacher', 'GET', '/parent/children'))).children.some(c => c.name === 'Gus'));
 assert.equal((await call('gus', 'GET', '/child/state')).status, 401, 'pupil logged out');
 const leftovers = await Promise.all(['facts', 'answers'].map(t => env.DATA.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE child_id = ?`).bind(gone.id).first()));

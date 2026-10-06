@@ -515,18 +515,11 @@ async function newPupilPics(ctx, id) {
 async function removeClass(ctx, id) {
   const pid = await need(ctx, 'parent');
   const k = await ownedClass(ctx, pid, id);
-  const b = await body(ctx);
-  if (b.deletePupils === true) {   // end of year: the class and every pupil's data go
-    await ctx.db.batch([
-      ctx.db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id IN (SELECT id FROM children WHERE class_id = ?)").bind(k.id),
-      ctx.db.prepare('DELETE FROM children WHERE class_id = ?').bind(k.id),   // facts, answers, reminders follow (ON DELETE CASCADE)
-      ctx.db.prepare('DELETE FROM classes WHERE id = ?').bind(k.id),
-    ]);
-    return json({ ok: true });
-  }
-  await ctx.db.batch([   // pupils stay on the account, without a class or pictures
-    ctx.db.prepare('UPDATE children SET class_id = NULL, pics = NULL WHERE class_id = ?').bind(k.id),
-    ctx.db.prepare('DELETE FROM classes WHERE id = ?').bind(k.id),
+  // The class and every pupil's data go (there's no way yet to put pupils into another class, so none are kept)
+  await ctx.db.batch([
+    ctx.db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id IN (SELECT id FROM children WHERE class_id = ?)").bind(k.id),
+    ctx.db.prepare('DELETE FROM children WHERE class_id = ?').bind(k.id),   // facts, answers, reminders follow (ON DELETE CASCADE)
+    ctx.db.prepare('DELETE FROM classes WHERE id = ?').bind(k.id),   // class devices follow
   ]);
   return json({ ok: true });
 }

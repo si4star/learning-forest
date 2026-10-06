@@ -435,8 +435,7 @@ function renderClassAdmin(){
         <span class="field-hint">Use first names or initials only. If two pupils share a name, add a surname initial, like "Bob A" and "Bob B". Each pupil gets three pictures and a QR code.</span></label>
       <button class="cta" ${busy?'disabled':''}>Add pupils</button>
     </form>
-    <button class="link danger ${armedFor(k.id,'class-remove')?'armed':''}" data-act="class-remove" data-id="${k.id}">${armedFor(k.id,'class-remove')?'Tap again to remove the class (pupils and their forests stay on your account)':'Remove this class, keep the pupils'}</button>
-    <button class="link danger ${armedFor(k.id,'class-delete')?'armed':''}" data-act="class-delete" data-id="${k.id}">${armedFor(k.id,'class-delete')?`Tap again to delete ${esc(k.name)} and all ${pupils.length} pupils' data. This can't be undone.`:'Delete this class and all its pupils (end of year)'}</button>
+    <button class="link danger ${armedFor(k.id,'class-delete')?'armed':''}" data-act="class-delete" data-id="${k.id}">${armedFor(k.id,'class-delete')?`Tap again to delete ${esc(k.name)} and all ${pupils.length} pupils' data. This can't be undone.`:'Delete this class and all its pupils'}</button>
   </main>`;
 }
 function renderClassCards(){
@@ -510,8 +509,7 @@ async function classAction(act,id){
   try{
     if(act==='class-device'){const r=await api(`/parent/classes/${id}/device`,{});classDev=r.device;me={role:null};kids=[];classes=[];return enterClass()}
     if(act==='class-signout'){await api(`/parent/classes/${id}/devices/signout`,{});await loadParent();if(classDev?.classId===id)classDev=null;return render()}
-    if(act==='class-remove'){await api(`/parent/classes/${id}`,{},'DELETE');await loadParent();return go('parent')}
-    if(act==='class-delete'){await api(`/parent/classes/${id}`,{deletePupils:true},'DELETE');await loadParent();return go('parent')}
+    if(act==='class-delete'){await api(`/parent/classes/${id}`,{},'DELETE');await loadParent();return go('parent')}
     if(act==='class-cards'){
       const pupils=kids.filter(c=>c.classId===id);
       classCards=[];
@@ -1005,6 +1003,9 @@ function sheet(html){
   document.body.appendChild(bg);bg.querySelector('[data-act=close]').focus();
   return bg;
 }
+// Daily reminders are hidden for now: setting them up is a grown-up's job, and where that lives is being rethought.
+// The code and the reminders Worker stay; turn this on to show the setting again.
+const SHOW_REMINDERS=false;
 /* settings: the cog on the module screen and the forest screen. They apply to the whole app. Add new settings here as sections or menu rows. */
 const cogIcon='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 function settingsSheet(){
@@ -1014,7 +1015,7 @@ function settingsSheet(){
       <div class="seasons" role="group" aria-label="Forest season">${SEASONS.map(([k,l])=>
         `<button data-act="season" data-s="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>
       <p class="hint small">Auto follows the time of year.</p></section>
-    <section class="set"><h3>Daily reminder</h3>${reminderHtml()}</section>
+    ${SHOW_REMINDERS?`<section class="set"><h3>Daily reminder</h3>${reminderHtml()}</section>`:''}
     <nav class="menu"><button class="menu-row" data-act="how"><span>How the times tables method works</span><span class="chev" aria-hidden="true">›</span></button>
       <button class="menu-row" data-act="logout"><span>Log out</span><span class="pmeta">${esc(kid.username)}</span></button></nav>`);
 }
@@ -1088,18 +1089,33 @@ function cellSheet(a,b){
   const s=fact(kid,key(a,b)).box;
   sheet(`<p class="eq">${a} × ${b} = ${a*b}</p><p>${b} × ${a} is the same tree.</p><p class="hint">${hint(a,b)}</p><p>Stage: ${STAGES[s]}.</p>`);
 }
+// How the method works: one short card per idea, swiped through (or Back / Next), closable at any point
+const HOW=[
+  ['🌱','A starting check','Pick the tables you think you know, then answer a few questions on each. Only the ones you really know are planted.'],
+  ['🧠','From memory','Every answer comes from memory. Pulling a fact out of memory is what makes it stick.'],
+  ['📅','Spaced out','A right answer sends a fact away for longer: 1 day, 3 days, 7 days, then 21 days. Each check grows the tree. A wrong answer sends it back to a seed.'],
+  ['🧩','Easy facts first','Tables open in this order: 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. New facts are worked out from ones you know, like "×9 is ×10 take away one".'],
+  ['🔁','One tree, both ways','6 × 7 and 7 × 6 are the same tree. That turns 121 facts into 66.'],
+  ['🛠️','Mistakes fixed straight away','Work it out step by step. It comes back three questions later.'],
+  ['⏱️','Right first, then quick','No countdown. But a tree only grows past a sprout once you can answer in 6 seconds, like the Year 4 check.'],
+  ['☀️','Little and often','About 20 questions, a few minutes a day. Missing one day a week doesn\'t break your run.'],
+  ['➗','Every way round','Grown trees are also asked as 6 × ? = 42 or 42 ÷ 6.'],
+  ['🦊','Friends and the practice check','Grow a whole table and a forest friend moves in. Grow most of the forest and a practice check opens.'],
+];
 function howSheet(){
-  sheet(`<h2>How the method works</h2><ol>
-  <li>A starting check. Children pick the tables they think they know and answer a few questions on each. Only the tables they really know are planted.</li>
-  <li>Recall, not reading. Every question is answered from memory. Pulling a fact out of memory is what makes it stick.</li>
-  <li>Spaced repetition. A right answer sends the fact away for longer each time: same round, 1 day, 3 days, 7 days, then 21 days. Each check grows the tree a stage. A wrong answer sends it back to a seed.</li>
-  <li>Easy facts first, hard facts built from them. Tables unlock in this order: 10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7. Each new seed is worked out step by step with a strategy, like "×9 is ×10 take away one".</li>
-  <li>6 × 7 and 7 × 6 are one tree. That turns 121 facts into 66.</li>
-  <li>Mistakes are fixed straight away. The child works the fact out step by step with its strategy, and it comes back three questions later.</li>
-  <li>Accuracy first, then speed. There's no countdown. An answer slower than 6 seconds (the limit in the Year 4 Multiplication Tables Check) still counts, but the tree can't grow past a sprout until it comes quickly.</li>
-  <li>Little and often. About 20 questions, a few minutes a day. A table unlocks when most planted trees have sprouted. Missing one day a week doesn't break a run of days.</li>
-  <li>Grown trees are sometimes asked the other ways round, like 6 × ? = 42 or 42 ÷ 6, so the whole fact family sticks.</li>
-  <li>When every tree in a table is grown, a forest friend moves in. Once most of the forest is grown, a practice check like the Year 4 check opens up.</li></ol>`);
+  const bg=sheet(`<h2>How the method works</h2>
+    <div class="how" tabindex="0" aria-label="How the method works, ${HOW.length} cards. Swipe or use the arrow keys.">${HOW.map(([e,t,x],i)=>
+      `<section class="how-card" aria-label="${i+1} of ${HOW.length}"><span class="how-emo" aria-hidden="true">${e}</span><h3>${t}</h3><p>${x}</p></section>`).join('')}</div>
+    <div class="how-nav"><button class="pill" data-how="-1">‹ Back</button><span class="how-dots" aria-hidden="true">${HOW.map(()=>'<i></i>').join('')}</span><button class="pill" data-how="1">Next ›</button></div>`);
+  const track=bg.querySelector('.how'),dots=[...bg.querySelectorAll('.how-dots i')],[prev,next]=bg.querySelectorAll('[data-how]');
+  const at=()=>Math.round(track.scrollLeft/track.clientWidth);
+  const go=i=>track.scrollTo({left:i*track.clientWidth,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  const show=()=>{const i=at();dots.forEach((d,k)=>d.classList.toggle('on',k===i));prev.disabled=i===0;next.textContent=i===HOW.length-1?'Done':'Next ›'};
+  track.addEventListener('scroll',show,{passive:true});
+  prev.addEventListener('click',()=>go(at()-1));
+  next.addEventListener('click',()=>{if(at()===HOW.length-1){bg.remove();maybeUpdate()}else go(at()+1)});
+  track.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();go(at()+1)}else if(e.key==='ArrowLeft'){e.preventDefault();go(at()-1)}});
+  show();
 }
 
 /* flows */
@@ -1243,7 +1259,7 @@ app.addEventListener('click',e=>{
     case 'kid-reset':case 'kid-reassess':case 'kid-remove':case 'kid-qr':case 'kid-pics':parentAction(act,+b.dataset.id);break;
     case 'open-class':openClass=+b.dataset.id;go('classAdmin');break;
     case 'rename':renameSheet(+b.dataset.id);break;
-    case 'class-device':case 'class-signout':case 'class-remove':case 'class-delete':case 'class-cards':classAction(act,+b.dataset.id);break;
+    case 'class-device':case 'class-signout':case 'class-delete':case 'class-cards':classAction(act,+b.dataset.id);break;
     case 'print-cards':window.print();break;
     case 'pick-pupil':pupil=classInfo.pupils.find(p=>p.id===+b.dataset.id);picks=[];picMsg='';go('classPics');break;
     case 'pic':pickPic(+b.dataset.i);break;

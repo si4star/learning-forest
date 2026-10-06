@@ -243,7 +243,19 @@ assert.equal(await kp.evaluate(() => document.documentElement.dataset.season), '
 assert.equal(await kp.getAttribute('.sheet [data-s=winter]', 'aria-pressed'), 'true');
 await kp.click('.sheet .menu-row');                       // How the method works
 await kp.waitForSelector('.sheet h2:text("How the method works")');
-await kp.click('.sheet [data-act=close]');
+step('the method is short cards: Next moves one at a time, Done on the last one closes');
+const cards = await kp.locator('.how-card').count();
+assert.ok(cards >= 8, 'several cards');
+const visibleCard = () => kp.evaluate(() => { const t = document.querySelector('.how'); return Math.round(t.scrollLeft / t.clientWidth); });
+assert.equal(await visibleCard(), 0);
+assert.ok(await kp.isDisabled('[data-how="-1"]'), 'no Back on the first card');
+await kp.click('[data-how="1"]');
+await kp.waitForFunction(() => { const t = document.querySelector('.how'); return Math.round(t.scrollLeft / t.clientWidth) === 1; });
+for (let i = 1; i < cards - 1; i++) { await kp.click('[data-how="1"]'); await kp.waitForTimeout(450); }
+assert.equal(await visibleCard(), cards - 1);
+assert.equal((await kp.textContent('[data-how="1"]')).trim(), 'Done');
+await kp.click('[data-how="1"]');
+await kp.waitForSelector('.sheet', { state: 'detached' });
 await kp.waitForTimeout(800);
 await kp.reload();
 await kp.click('[data-act=mod-tables]');   // module picker after login

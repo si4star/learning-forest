@@ -1,5 +1,5 @@
 // End-to-end tests for: question shapes, forest friends, streak rest day,
-// personal bests, practice check, tricky facts, reminder settings and offline play.
+// personal bests, practice check, tricky facts, hidden reminder setting and offline play.
 // Usage (dev server running): BASE=http://localhost:8788 node tests/features.mjs
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
@@ -123,15 +123,9 @@ await kp.waitForSelector('text=24 out of 25', { timeout: 10000 });
 assert.match(await kp.textContent('.missed'), /no answer/);
 await kp.click('[data-act=home]');
 
-step('reminder: turned on and off in settings (stand-in push service)');
+step('daily reminders are hidden from the pupil\'s settings for now');
 await kp.click('[data-act=settings]');
-await kp.fill('#remTime', '07:30');
-await kp.click('.sheet [data-act=reminder-on]');
-await kp.waitForSelector('.sheet .rem-on');
-assert.match(await kp.textContent('.sheet .rem-on'), /07:30/);
-await kp.evaluate(() => { window.__unsub = false; });
-await kp.click('.sheet [data-act=reminder-off]');
-await kp.waitForSelector('.sheet #remTime');
+assert.equal(await kp.locator('.sheet #remTime, .sheet [data-act=reminder-on]').count(), 0);
 await kp.click('.sheet [data-act=close]');
 
 step('grown-up sees tricky facts and the practice check score');

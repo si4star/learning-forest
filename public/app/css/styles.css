@@ -138,6 +138,17 @@ p{line-height:1.45}
 .sheet ol{padding-left:22px;margin:0 0 12px}
 .sheet li{margin-bottom:10px;line-height:1.45;font-size:16px}
 .sheet .cta{margin-top:8px}
+.how{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;border-radius:16px}
+.how::-webkit-scrollbar{display:none}
+.how-card{flex:0 0 100%;scroll-snap-align:start;padding:16px 10px 4px;text-align:center;min-height:210px}
+.how-emo{display:block;font-size:52px;line-height:1.1}
+.sheet .how-card h3{font-size:21px;margin:10px 0 6px}
+.how-card p{max-width:30em;margin:0 auto}
+.how-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 4px}
+.how-nav .pill:disabled{opacity:.35}
+.how-dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.how-dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.how-dots i.on{background:var(--leaf)}
 /* drifting snow, petals or leaves behind the app; each layer moves exactly one tile so the loop is seamless */
 .sky{position:fixed;inset:0;z-index:0;pointer-events:none;
   background-image:

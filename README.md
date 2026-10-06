@@ -41,8 +41,7 @@ A grown-up account can run classes (up to 10, up to 40 pupils each), alongside i
 - **Class devices:** on a shared iPad or Chromebook, the teacher logs in and taps **Use this device for [class]**. The teacher is logged out, and the device shows the class's name tiles whenever nobody is logged in. A pupil taps their name, then their three pictures in order. **I'm done** logs them out and returns to the tiles. Pupil sessions on class devices last 8 hours. The device stays set up for a year, until a grown-up taps **Stop** (on the grown-up screen on that device) or **Sign out all class devices**.
 - **Picture login only works on class devices.** Three pictures from 12 is about 1,300 combinations, too few for the open internet. 5 wrong tries lock that pupil for 15 minutes; others carry on.
 - **Shared school address:** failed logins from class devices don't count towards the 50-per-address limit, so a class's typing mistakes can't lock the school out.
-- **Remove this class, keep the pupils** keeps its pupils (and their forests) on the account, without pictures.
-- **Delete this class and all its pupils** (end of year) deletes every pupil's progress, answers, reminders and logins straight away, and signs out the class devices.
+- **Delete this class and all its pupils** (the only way to remove a class, since pupils can't yet be moved to another class) deletes every pupil's progress, answers, reminders and logins straight away, and signs out the class devices.
 - **Same first names:** names in a class must be different (capitals ignored), because each pupil has a name tile. Adding a second "Bob" is refused with a suggestion to add a surname initial ("Bob A", "Bob B"). **Rename** changes a pupil's name without touching their progress, pictures or QR code.
 
 ## Starting check
