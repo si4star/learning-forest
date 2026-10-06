@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { handle } from '../src/server/api.js';
 import { d1 } from './d1-shim.mjs';
 
-const env = { DB: d1() };
+const env = { DATA: d1() };
 const jar = {};
 async function call(who, method, path, body) {
   const headers = { cookie: jar[who] || '' };

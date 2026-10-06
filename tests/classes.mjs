@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { handle } from '../src/server/api.js';
 import { d1 } from './d1-shim.mjs';
 
-const env = { DB: d1() };
+const env = { DATA: d1() };
 const jars = {};
 async function call(who, method, path, body, ip = '10.0.0.1') {
   const jar = (jars[who] ??= {});
@@ -95,7 +95,7 @@ await ok(await call('gus', 'POST', '/child/sync', { facts: { '2x3': { box: 2, du
 await ok(await call('teacher', 'DELETE', `/parent/classes/${k3.id}`, { deletePupils: true }));
 assert.ok(!(await ok(await call('teacher', 'GET', '/parent/children'))).children.some(c => c.name === 'Gus'));
 assert.equal((await call('gus', 'GET', '/child/state')).status, 401, 'pupil logged out');
-const leftovers = await Promise.all(['facts', 'answers'].map(t => env.DB.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE child_id = ?`).bind(gone.id).first()));
+const leftovers = await Promise.all(['facts', 'answers'].map(t => env.DATA.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE child_id = ?`).bind(gone.id).first()));
 assert.deepEqual(leftovers.map(x => x.n), [0, 0], 'progress and answers deleted');
 
 console.log('PASS classes: class devices, picture login, lockouts, school address, ownership');

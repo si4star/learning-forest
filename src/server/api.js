@@ -24,9 +24,11 @@ const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(d
 
 export async function handle(request, env) {
   try {
-    if (!env.DB) throw new HttpError(500, 'The database is not connected.');
+    // DATA is the database. DB is the old binding: while both are bound, DB's data is copied into DATA once.
+    const db = env.DATA;
+    if (!db) throw new HttpError(500, 'The database is not connected.');
     configure(env);
-    await migrate(env.DB);
+    await migrate(db, env.DB);
     const url = new URL(request.url);
     if (request.method !== 'GET') {
       // Cross-site requests can't send JSON without a preflight; together with
@@ -36,7 +38,7 @@ export async function handle(request, env) {
       if (!(request.headers.get('content-type') || '').startsWith('application/json')) throw new HttpError(415, 'Send JSON');
     }
     const path = url.pathname.replace(/^\/api/, '').replace(/\/$/, '');
-    const ctx = { request, env, db: env.DB, ip: request.headers.get('cf-connecting-ip') || 'local' };
+    const ctx = { request, env, db, ip: request.headers.get('cf-connecting-ip') || 'local' };
     for (const [method, re, fn] of ROUTES) {
       if (method !== request.method) continue;
       const m = path.match(re);

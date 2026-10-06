@@ -44,7 +44,7 @@ const rows = [
 ];
 
 // run() signs with the real public key constant; give it ours by swapping the module's key via env
-const sent = await run({ DB: fakeDb(rows), VAPID_PRIVATE_JWK: JSON.stringify(jwk), SITE_URL: 'https://tree-tables.pages.dev', VAPID_PUBLIC_KEY: publicRaw }, now);
+const sent = await run({ DATA: fakeDb(rows), VAPID_PRIVATE_JWK: JSON.stringify(jwk), SITE_URL: 'https://tree-tables.pages.dev', VAPID_PUBLIC_KEY: publicRaw }, now);
 server.close();
 
 assert.deepEqual(hits.map(h => h.path).sort(), ['/due', '/gone', '/ny']);

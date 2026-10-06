@@ -1,8 +1,8 @@
 // A minimal Cloudflare D1 stand-in over node:sqlite, for running the API code in Node tests.
 import { DatabaseSync } from 'node:sqlite';
 
-export function d1() {
-  const db = new DatabaseSync(':memory:');
+export function d1(file = ':memory:') {
+  const db = new DatabaseSync(file);
   db.exec('PRAGMA foreign_keys = ON');
   const conv = a => a.map(v => (v === undefined ? null : typeof v === 'boolean' ? Number(v) : v));
   const reads = sql => /^\s*(SELECT|WITH)\b|\bRETURNING\b/i.test(sql);

@@ -110,7 +110,7 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 
 Pages Functions can't run on a schedule, so a small separate Worker sends the reminders (`workers/reminders/`, every 15 minutes). It's on the Workers Free plan.
 
-1. **D1 database ID.** Already set in `workers/reminders/wrangler.toml`. If the database is ever recreated, copy the new ID from Storage & Databases → D1 → `tree-tables`.
+1. **D1 database.** Set in `workers/reminders/wrangler.toml` (binding, name and ID). The Worker reads `DATA` if it's bound, otherwise `DB`. If the database changes, copy the new ID from Storage & Databases → D1.
 2. **Create the Worker.** Workers & Pages → Create → **Import a repository** → `si4star/tree-tables`. Set **Root directory** to `workers/reminders`. Leave the build command empty. Deploy.
 3. **Secret.** In the new Worker → Settings → Variables and Secrets → add a **Secret** named `VAPID_PRIVATE_JWK` with the private key (supplied separately, never committed). Redeploy.
 4. If the site isn't at `https://tree-tables.pages.dev`, change `SITE_URL` in `wrangler.toml`.
@@ -138,8 +138,12 @@ Progress is saved after every answer. If the connection drops, answers queue on 
    - Production branch: `main`
    - Framework preset: None. Build command: `npm run build`. Build output directory: `dist`
 2. **Storage & Databases** → **D1** → **Create database**, name it `tree-tables`.
-3. Back in the Pages project → **Settings** → **Bindings** → **Add** → **D1 database**: variable name `DB`, database `tree-tables`. Add it for both Production and Preview.
+3. Back in the Pages project → **Settings** → **Bindings** → **Add** → **D1 database**: variable name `DATA`, and the database. Add it for both Production and Preview.
 4. **Deployments** → retry the latest deployment so it picks up the binding.
+
+### Moving to a new database
+
+The app's database is the `DATA` binding. To move to a new database (another region, say), bind the new one as `DATA` and the current one as `DB`, then deploy. The first request copies every account, class, pupil, answer, login and reminder from `DB` into `DATA` (failed-login records aren't copied; they only last a day), records that it's done in a `moved` table, and from then on only `DATA` is used. If `DATA` already has data, or both point at the same database, nothing is copied. Once the site works on `DATA`, change the reminders Worker to the new database (below), then remove the `DB` binding. The copy is in `copyFrom()` in `src/server/schema.js` and tested by `tests/move.mjs`.
 
 The database tables create themselves on the first request (see `src/server/schema.js`). There is no SQL to run.
 
@@ -204,6 +208,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `tests/e2e.mjs` | End-to-end test: accounts, starting check, rounds, sync, PWA |
 | `tests/features.mjs` | End-to-end test: shapes, friends, streak, bests, practice check, tricky facts, reminders, offline |
 | `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
+| `tests/move.mjs` | Moving to a new database: `DB` copied into an empty `DATA` once; same database left alone |
 | `tests/qr.mjs` | QR login on the server: keys, new QR card, old keys, rate limit |
 | `tests/qr-login.mjs` | QR login in the browser: card QR decodes, link login, camera scan, bad and replaced codes |
 | `tests/classes.mjs` | Classes on the server: class devices, picture login, lockouts, ownership |

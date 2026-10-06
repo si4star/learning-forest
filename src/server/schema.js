@@ -103,8 +103,38 @@ const MIGRATIONS = [
 
 let ready = null;
 
-export function migrate(db) {
-  return (ready ??= run(db).catch(e => { ready = null; throw e; }));
+// from: the old database while it's still bound. Its data is copied into db once (see copyFrom).
+export function migrate(db, from) {
+  return (ready ??= run(db).then(() => from && copyFrom(from, db)).catch(e => { ready = null; throw e; }));
+}
+
+// Moving to a new database (the DB binding to DATA): the first request after the switch copies
+// every table across, oldest first so each row's parent is already there. Rows keep their ids;
+// INSERT OR IGNORE makes a repeat harmless, so a copy cut off half way is simply run again.
+// moved(done) records the outcome: 0 while copying, 1 when finished or when there was nothing to
+// copy (db already had data, or both bindings point at the same database).
+// Failed logins aren't copied: they only last a day.
+const COPY = ['parents', 'classes', 'children', 'facts', 'answers', 'sessions', 'class_devices', 'push_subs'];
+async function copyFrom(from, db) {
+  await db.prepare('CREATE TABLE IF NOT EXISTS moved(done INTEGER NOT NULL)').run();
+  const state = await db.prepare('SELECT done FROM moved').first();
+  if (state?.done === 1) return;
+  if (!state) {
+    const has = await db.prepare('SELECT (SELECT COUNT(*) FROM parents) + (SELECT COUNT(*) FROM children) AS n').first();
+    if (has.n > 0) { await db.prepare('INSERT INTO moved(done) VALUES (1)').run(); return; }
+    await db.prepare('INSERT INTO moved(done) VALUES (0)').run();
+  }
+  await run(from);   // bring the old database to the same columns first
+  for (const t of COPY) {
+    const { results } = await from.prepare(`SELECT * FROM ${t}`).all();
+    for (let i = 0; i < results.length; i += 50) {
+      await db.batch(results.slice(i, i + 50).map(row => {
+        const cols = Object.keys(row);
+        return db.prepare(`INSERT OR IGNORE INTO ${t} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).bind(...cols.map(c => row[c]));
+      }));
+    }
+  }
+  await db.prepare('UPDATE moved SET done = 1').run();
 }
 
 const version = async db => (await db.prepare('SELECT MAX(v) AS v FROM schema_version').first())?.v ?? 0;
