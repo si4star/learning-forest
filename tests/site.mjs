@@ -16,7 +16,7 @@ const watch = p => {
 step('home page and school pack load without errors, with no sideways scrolling on a phone');
 for (const [w, h] of [[390, 844], [1280, 900]]) {
   const p = watch(await (await browser.newContext({ viewport: { width: w, height: h } })).newPage());
-  for (const path of ['/', '/trees/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/404.html']) {
+  for (const path of ['/', '/trees/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/school-pack/terms.html', '/404.html']) {
     await p.goto(BASE + path);
     await p.evaluate(() => document.fonts.ready);
     assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${path} scrolls sideways at ${w}px`);
@@ -62,6 +62,30 @@ step('How does a tree work?: works, loads nothing from other websites, stores no
   }
   assert.deepEqual(outside, []);
   assert.deepEqual(await tp.evaluate(() => Object.keys(localStorage)), []);
+}
+
+step('sitemap: every page in it loads and can be indexed; robots.txt points to it; the app is kept out of search');
+{
+  const rq = (await browser.newContext()).request;
+  const robots = await (await rq.get(BASE + '/robots.txt')).text();
+  assert.match(robots, /^Sitemap: https:\/\/learn\.thetreefella\.co\.uk\/sitemap\.xml$/m);
+  assert.doesNotMatch(robots, /Disallow: \/app/, "the app isn't blocked, or its noindex couldn't be seen");
+  const urls = [...(await (await rq.get(BASE + '/sitemap.xml')).text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+  assert.ok(urls.length >= 6);
+  for (const u of urls) {
+    const res = await rq.get(u.replace('https://learn.thetreefella.co.uk', BASE));
+    assert.equal(res.status(), 200, u);
+    assert.doesNotMatch(await res.text(), /<meta name="robots" content="[^"]*noindex/, `${u} is indexable`);
+    assert.ok(!(res.headers()['x-robots-tag'] || '').includes('noindex'), `${u} has no noindex header`);
+  }
+  assert.ok(!urls.some(u => /\/app\/|\/admin\//.test(u)), 'no app or admin pages in the sitemap');
+  const app = await rq.get(BASE + '/app/');
+  assert.match(app.headers()['x-robots-tag'] || '', /noindex/);
+  assert.match(await app.text(), /<meta name="robots" content="noindex">/);
+  const home = watch(await (await browser.newContext()).newPage());
+  await home.goto(BASE + '/');
+  assert.equal(await home.getAttribute('.lf-foot a:text("The Tree Fella")', 'href'), 'https://thetreefella.co.uk/');
+  assert.equal(await home.locator('a[href$=".html"]').count(), 0, 'internal links use the final addresses');
 }
 
 step('an unknown address shows the not-found page');

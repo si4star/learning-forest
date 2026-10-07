@@ -25,3 +25,11 @@
 /admin/*
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow
+
+# The app (logins and pupils' screens) and the old /tables/ redirect stay out of search results.
+# Not blocked in robots.txt: a blocked page can't be crawled, so its noindex would never be seen.
+/app/*
+  X-Robots-Tag: noindex
+
+/tables/*
+  X-Robots-Tag: noindex

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The public pages. The app (/app/), admin and redirect pages are left out on purpose. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://learn.thetreefella.co.uk/</loc><lastmod>2026-10-07</lastmod></url>
+  <url><loc>https://learn.thetreefella.co.uk/trees/</loc><lastmod>2026-10-06</lastmod></url>
+  <url><loc>https://learn.thetreefella.co.uk/school-pack/data</loc><lastmod>2026-10-06</lastmod></url>
+  <url><loc>https://learn.thetreefella.co.uk/school-pack/privacy</loc><lastmod>2026-10-06</lastmod></url>
+  <url><loc>https://learn.thetreefella.co.uk/school-pack/dpa</loc><lastmod>2026-10-06</lastmod></url>
+  <url><loc>https://learn.thetreefella.co.uk/school-pack/terms</loc><lastmod>2026-10-07</lastmod></url>
+</urlset>

@@ -362,7 +362,7 @@ function renderGrownup(){
       <label>Password<span class="pw"><input name="password" type="password" autocomplete="${up?'new-password':'current-password'}" minlength="10" required>${pwToggle}</span>
         ${up?'<span class="field-hint">At least 10 characters.</span>':''}</label>
       ${up?`<label class="check"><input type="checkbox" name="consent"> I'm the parent or carer of the children I'll add, or their teacher.</label>
-      <p class="hint small">We store your email, each child's first name or nickname, and their times table answers. If a daily reminder is turned on, we also store that device's notification address and chosen time. Failed logins are kept for a day to stop guessing. No ads, no tracking. <a href="/school-pack/privacy.html" target="_blank" rel="noopener">Privacy notice</a></p>`:''}
+      <p class="hint small">We store your email, each child's first name or nickname, and their times table answers. If a daily reminder is turned on, we also store that device's notification address and chosen time. Failed logins are kept for a day to stop guessing. No ads, no tracking. By creating an account you agree to the <a href="/school-pack/terms" target="_blank" rel="noopener">terms of use</a>. <a href="/school-pack/privacy" target="_blank" rel="noopener">Privacy notice</a></p>`:''}
       ${err()}
       <button class="cta" ${busy?'disabled':''}>${up?'Create account':'Log in'}</button>
     </form>
