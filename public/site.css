@@ -111,3 +111,6 @@ a.card:hover h3{text-decoration:underline}
 .module-body .intro{margin-bottom:16px}
 .module.soon{opacity:.6}
 .module-body .cards{margin-bottom:22px}
+/* school pack: four cards as a 2 × 2 grid, one column on phones */
+.cards.pack-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:640px){.cards.pack-cards{grid-template-columns:1fr}}
