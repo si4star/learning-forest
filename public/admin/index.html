@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin · The Learning Forest</title>
+<link rel="icon" href="/app/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/admin/admin.css">
+<script src="/admin/admin.js" defer></script>
+</head>
+<body>
+<header class="ad-top"><div class="wrap">
+  <b>The Learning Forest · Admin</b>
+  <span id="who" class="muted"></span>
+  <a href="/app/">Open the app</a>
+</div></header>
+
+<main class="wrap ad">
+  <section id="gate" hidden>
+    <h1>Admin</h1>
+    <p id="gate-msg"></p>
+  </section>
+
+  <div id="dash" hidden>
+    <h1>Overview</h1>
+    <p class="muted">Counts only, no names. "Active" means played (pupils) or opened the app (grown-ups).</p>
+    <div class="tiles" id="tiles"></div>
+
+    <h2>Last 8 weeks</h2>
+    <div class="tablewrap"><table id="weeks">
+      <thead><tr><th>Week ending</th><th>New grown-up accounts</th><th>New pupils</th><th>Pupils who played</th><th>Answers</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+
+    <h2>Privacy requests</h2>
+    <p class="muted">What the school pack promises: show someone their data, delete it within 30 days, and tell every account about a breach or a new sub-processor. Every action here is logged.</p>
+
+    <div class="panel">
+      <h3>Find a grown-up account</h3>
+      <form id="acc-form" class="row"><input id="acc-q" type="search" placeholder="Email, or part of it" autocomplete="off"><button class="btn small">Search</button></form>
+      <div class="tablewrap"><table id="acc-table" hidden>
+        <thead><tr><th>Email</th><th>Pupils</th><th>Classes</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p id="acc-msg" class="muted"></p>
+    </div>
+
+    <div class="panel">
+      <h3>Find a pupil</h3>
+      <p class="muted">By the username on their Forest Pass. Pupils' names aren't searchable.</p>
+      <form id="pupil-form" class="row"><input id="pupil-u" placeholder="e.g. MightyOak42" autocomplete="off"><button class="btn small">Find</button></form>
+      <div id="pupil-out"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Notices to every account</h3>
+      <p class="muted">For a data breach (within 48 hours) or 30 days before adding a sub-processor. Paste into BCC.</p>
+      <button class="btn small quiet" id="emails">Copy all grown-up emails</button>
+      <textarea id="emails-out" readonly hidden rows="4"></textarea>
+      <p id="emails-msg" class="muted"></p>
+    </div>
+
+    <h2>Admin log</h2>
+    <div class="tablewrap"><table id="log">
+      <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+</main>
+</body>
+</html>

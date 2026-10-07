@@ -224,13 +224,18 @@ async function deleteAccount(ctx) {
   const row = await ctx.db.prepare('SELECT email, pw_hash FROM parents WHERE id = ?').bind(pid).first();
   await guard(ctx, 'p:' + row.email);
   if (!(await verifySecret(String((await body(ctx)).password || ''), row.pw_hash))) await fail(ctx, 'p:' + row.email, 'That password isn\'t right.');
-  await ctx.db.batch([
-    ctx.db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id IN (SELECT id FROM children WHERE parent_id = ?)").bind(pid),
-    ctx.db.prepare("DELETE FROM sessions WHERE role = 'parent' AND user_id = ?").bind(pid),
-    ctx.db.prepare('DELETE FROM parents WHERE id = ?').bind(pid),   // children, classes, class devices and progress follow (ON DELETE CASCADE)
-  ]);
+  await deleteParent(ctx.db, pid);
   return json({ ok: true }, 200, { 'set-cookie': `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
 }
+const deleteParent = (db, pid) => db.batch([
+  db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id IN (SELECT id FROM children WHERE parent_id = ?)").bind(pid),
+  db.prepare("DELETE FROM sessions WHERE role = 'parent' AND user_id = ?").bind(pid),
+  db.prepare('DELETE FROM parents WHERE id = ?').bind(pid),   // children, classes, class devices and progress follow (ON DELETE CASCADE)
+]);
+const deletePupil = (db, id) => db.batch([
+  db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id = ?").bind(id),
+  db.prepare('DELETE FROM children WHERE id = ?').bind(id),   // facts, answers, reminders follow
+]);
 
 async function addChild(ctx) {
   const pid = await need(ctx, 'parent');
@@ -284,10 +289,7 @@ async function reassessChild(ctx, id) {
 async function removeChild(ctx, id) {
   const pid = await need(ctx, 'parent');
   const child = await ownedChild(ctx, pid, id);
-  await ctx.db.batch([
-    ctx.db.prepare("DELETE FROM sessions WHERE role = 'child' AND user_id = ?").bind(child.id),
-    ctx.db.prepare('DELETE FROM children WHERE id = ?').bind(child.id),
-  ]);
+  await deletePupil(ctx.db, child.id);
   return json({ ok: true });
 }
 
@@ -592,7 +594,157 @@ async function pictureLogin(ctx) {
   return json({ role: 'child' }, 200, await startSession(ctx, 'child', row.id, CLASS_CHILD_TTL));
 }
 
+/* admin: usage numbers and the privacy requests the school pack promises (see "Admin dashboard" in the README).
+   An admin is a grown-up account whose email is in the ADMIN_EMAILS setting. Every action is logged. */
+async function needAdmin(ctx) {
+  const pid = await need(ctx, 'parent');
+  const admins = String(ctx.env.ADMIN_EMAILS || '').toLowerCase().split(/[\s,]+/).filter(Boolean);
+  const row = await ctx.db.prepare('SELECT email FROM parents WHERE id = ?').bind(pid).first();
+  if (!row || !admins.includes(row.email)) throw new HttpError(403, 'This account is not an admin.');
+  return row.email;
+}
+const count = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+const adminLog = (ctx, admin, action, detail) =>
+  ctx.db.prepare('INSERT INTO admin_log(at, admin, action, detail) VALUES (?, ?, ?, ?)').bind(Date.now(), admin, action, detail).run();
+
+async function adminStats(ctx) {
+  await needAdmin(ctx);
+  const now = Date.now(), D = 864e5, db = ctx.db;
+  const one = (sql, ...a) => db.prepare(sql).bind(...a);
+  const idlePupil = 'COALESCE(last_played, created_at)', idleParent = 'COALESCE(p.last_seen, p.created_at)';
+  const counts = await db.batch([
+    one('SELECT COUNT(*) AS n FROM parents'),
+    one('SELECT COUNT(*) AS n FROM parents WHERE last_seen > ?', now - 30 * D),
+    one('SELECT COUNT(*) AS n FROM children'),
+    one('SELECT COUNT(*) AS n FROM children WHERE class_id IS NOT NULL'),
+    one('SELECT COUNT(*) AS n FROM children WHERE last_played > ?', now - 7 * D),
+    one('SELECT COUNT(*) AS n FROM children WHERE last_played > ?', now - 30 * D),
+    one('SELECT COUNT(*) AS n FROM classes'),
+    one('SELECT COUNT(*) AS n FROM class_devices'),
+    one('SELECT COUNT(*) AS n FROM answers WHERE at > ?', now - 7 * D),
+    one('SELECT COUNT(*) AS n FROM answers WHERE at > ?', now - 30 * D),
+    one('SELECT COUNT(*) AS n FROM push_subs'),
+    one(`SELECT COUNT(*) AS n FROM children WHERE ${idlePupil} < ?`, now - 335 * D),
+    one(`SELECT COUNT(*) AS n FROM parents p WHERE ${idleParent} < ? AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id = p.id)`, now - 335 * D),
+  ]);
+  const n = counts.map(r => r.results[0].n);
+  const weeks = [];
+  for (let i = 7; i >= 0; i--) {
+    const to = now - i * 7 * D, from = to - 7 * D;
+    const [a, b, c, d] = (await db.batch([
+      one('SELECT COUNT(*) AS n FROM parents WHERE created_at > ? AND created_at <= ?', from, to),
+      one('SELECT COUNT(*) AS n FROM children WHERE created_at > ? AND created_at <= ?', from, to),
+      one('SELECT COUNT(DISTINCT child_id) AS n FROM answers WHERE at > ? AND at <= ?', from, to),
+      one('SELECT COUNT(*) AS n FROM answers WHERE at > ? AND at <= ?', from, to),
+    ])).map(r => r.results[0].n);
+    weeks.push({ from, accounts: a, pupils: b, activePupils: c, answers: d });
+  }
+  return json({
+    accounts: n[0], accountsActive30: n[1], pupils: n[2], pupilsInClasses: n[3], pupilsActive7: n[4], pupilsActive30: n[5],
+    classes: n[6], classDevices: n[7], answers7: n[8], answers30: n[9], reminders: n[10],
+    pupilsDeletedWithin30: n[11], accountsDeletedWithin30: n[12], weeks,
+  });
+}
+
+async function adminAccounts(ctx) {
+  await needAdmin(ctx);
+  const q = (new URL(ctx.request.url).searchParams.get('q') || '').trim().toLowerCase();
+  const { results } = await ctx.db.prepare(`SELECT p.id, p.email, p.created_at AS createdAt, p.last_seen AS lastSeen,
+      (SELECT COUNT(*) FROM children c WHERE c.parent_id = p.id) AS pupils, (SELECT COUNT(*) FROM classes k WHERE k.owner_id = p.id) AS classes
+    FROM parents p WHERE p.email LIKE ? ORDER BY COALESCE(p.last_seen, p.created_at) DESC LIMIT 50`).bind(`%${q}%`).all();
+  return json({ accounts: results });
+}
+
+async function adminFindPupil(ctx) {
+  await needAdmin(ctx);
+  const u = normUsername(new URL(ctx.request.url).searchParams.get('username') || '');
+  const row = u && await ctx.db.prepare(`SELECT c.id, c.name, c.display_username AS username, c.created_at AS createdAt, c.last_played AS lastPlayed,
+      p.id AS accountId, p.email AS accountEmail, k.name AS className
+    FROM children c JOIN parents p ON p.id = c.parent_id LEFT JOIN classes k ON k.id = c.class_id WHERE c.username = ?`).bind(u).first();
+  if (!row) throw new HttpError(404, 'No pupil with that username.');
+  return json(row);
+}
+
+// Everything held about an account, for a request to see the data (subject access). Login secrets are
+// held only as hashes and aren't included; the export says so.
+async function exportPupil(db, id) {
+  const c = await db.prepare(`SELECT c.id, c.name, c.display_username AS username, c.created_at AS createdAt, c.last_played AS lastPlayed,
+      c.assessed_at AS startingCheckAt, c.tables, c.streak, c.last_day AS lastDay, c.theme, c.extra, k.name AS className, c.pics IS NOT NULL AS hasPictures
+    FROM children c LEFT JOIN classes k ON k.id = c.class_id WHERE c.id = ?`).bind(id).first();
+  const [facts, answers, reminders] = await db.batch([
+    db.prepare('SELECT fact, box AS stage, due FROM facts WHERE child_id = ? ORDER BY fact').bind(id),
+    db.prepare('SELECT fact, a, b, given, correct, ms, kind, shape, at FROM answers WHERE child_id = ? ORDER BY at').bind(id),
+    db.prepare('SELECT time, tz, created_at AS createdAt, last_sent AS lastSent FROM push_subs WHERE child_id = ?').bind(id),
+  ]);
+  return { ...c, tables: JSON.parse(c.tables || '[]'), extra: parseExtra(c.extra), hasPictures: !!c.hasPictures,
+    progress: facts.results, answers: answers.results.map(a => ({ ...a, correct: !!a.correct })), dailyReminders: reminders.results };
+}
+const EXPORT_NOTE = 'Passwords, recovery codes, QR codes and login tokens are held only as one-way hashes, so they are not included. A pupil\'s picture password is held but not included, as it is a login detail. Failed login attempts are kept for 24 hours and are not included.';
+
+async function adminExportAccount(ctx, id) {
+  const admin = await needAdmin(ctx);
+  const p = await ctx.db.prepare('SELECT id, email, created_at AS createdAt, last_seen AS lastSeen FROM parents WHERE id = ?').bind(Number(id)).first();
+  if (!p) throw new HttpError(404, 'No such account.');
+  const classes = (await ctx.db.prepare(`SELECT k.name, k.created_at AS createdAt, (SELECT COUNT(*) FROM class_devices d WHERE d.class_id = k.id) AS classDevices
+    FROM classes k WHERE k.owner_id = ?`).bind(p.id).all()).results;
+  const ids = (await ctx.db.prepare('SELECT id FROM children WHERE parent_id = ? ORDER BY name').bind(p.id).all()).results.map(r => r.id);
+  const pupils = [];
+  for (const cid of ids) pupils.push(await exportPupil(ctx.db, cid));
+  await adminLog(ctx, admin, 'export account', `account #${p.id}: ${count(pupils.length, 'pupil')}`);
+  return json({ exportedAt: new Date().toISOString(), service: 'The Learning Forest (learn.thetreefella.co.uk)', note: EXPORT_NOTE, account: p, classes, pupils });
+}
+
+async function adminExportPupil(ctx, id) {
+  const admin = await needAdmin(ctx);
+  if (!(await ctx.db.prepare('SELECT 1 FROM children WHERE id = ?').bind(Number(id)).first())) throw new HttpError(404, 'No such pupil.');
+  await adminLog(ctx, admin, 'export pupil', `pupil #${Number(id)}`);
+  return json({ exportedAt: new Date().toISOString(), service: 'The Learning Forest (learn.thetreefella.co.uk)', note: EXPORT_NOTE, pupil: await exportPupil(ctx.db, Number(id)) });
+}
+
+async function adminDeleteAccount(ctx, id) {
+  const admin = await needAdmin(ctx);
+  const p = await ctx.db.prepare(`SELECT p.id, p.email, (SELECT COUNT(*) FROM children c WHERE c.parent_id = p.id) AS pupils,
+      (SELECT COUNT(*) FROM classes k WHERE k.owner_id = p.id) AS classes FROM parents p WHERE p.id = ?`).bind(Number(id)).first();
+  if (!p) throw new HttpError(404, 'No such account.');
+  if ((await body(ctx)).confirm !== p.email) throw new HttpError(400, 'Type the account\'s email to confirm.');
+  await deleteParent(ctx.db, p.id);
+  await adminLog(ctx, admin, 'delete account', `account #${p.id}: ${count(p.pupils, 'pupil')}, ${count(p.classes, 'class', 'classes')}`);
+  return json({ ok: true, pupils: p.pupils, classes: p.classes });
+}
+
+async function adminDeletePupil(ctx, id) {
+  const admin = await needAdmin(ctx);
+  const c = await ctx.db.prepare('SELECT id, parent_id AS accountId FROM children WHERE id = ?').bind(Number(id)).first();
+  if (!c) throw new HttpError(404, 'No such pupil.');
+  await deletePupil(ctx.db, c.id);
+  await adminLog(ctx, admin, 'delete pupil', `pupil #${c.id} on account #${c.accountId}`);
+  return json({ ok: true });
+}
+
+// Every grown-up's email, for the notices the school pack promises (a data breach, a new sub-processor).
+async function adminEmails(ctx) {
+  const admin = await needAdmin(ctx);
+  const { results } = await ctx.db.prepare('SELECT email FROM parents ORDER BY email').all();
+  await adminLog(ctx, admin, 'copy all emails', count(results.length, 'address', 'addresses'));
+  return json({ emails: results.map(r => r.email) });
+}
+
+async function adminLogList(ctx) {
+  await needAdmin(ctx);
+  const { results } = await ctx.db.prepare('SELECT at, admin, action, detail FROM admin_log ORDER BY at DESC LIMIT 100').all();
+  return json({ log: results });
+}
+
 const ROUTES = [
+  ['GET', /^\/admin\/stats$/, adminStats],
+  ['GET', /^\/admin\/accounts$/, adminAccounts],
+  ['GET', /^\/admin\/accounts\/(\d+)\/export$/, adminExportAccount],
+  ['DELETE', /^\/admin\/accounts\/(\d+)$/, adminDeleteAccount],
+  ['GET', /^\/admin\/pupil$/, adminFindPupil],
+  ['GET', /^\/admin\/pupils\/(\d+)\/export$/, adminExportPupil],
+  ['DELETE', /^\/admin\/pupils\/(\d+)$/, adminDeletePupil],
+  ['GET', /^\/admin\/emails$/, adminEmails],
+  ['GET', /^\/admin\/log$/, adminLogList],
   ['GET', /^\/me$/, me],
   ['POST', /^\/logout$/, logout],
   ['POST', /^\/parent\/signup$/, parentSignup],

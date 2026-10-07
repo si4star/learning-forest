@@ -107,6 +107,10 @@ const MIGRATIONS = [
     // when a grown-up last used the app: accounts unused for 12 months (with no pupils left) are deleted
     `ALTER TABLE parents ADD COLUMN last_seen INTEGER`,
   ],
+  [
+    // admin dashboard: a record of every admin action (no pupil or grown-up details, just ids and counts)
+    `CREATE TABLE IF NOT EXISTS admin_log(id INTEGER PRIMARY KEY, at INTEGER NOT NULL, admin TEXT NOT NULL, action TEXT NOT NULL, detail TEXT NOT NULL)`,
+  ],
 ];
 
 let ready = null;

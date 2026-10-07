@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "dev": "node scripts/build.mjs && wrangler pages dev dist --d1 DATA --port 8788",
-    "test": "node tests/reminders.mjs && node --no-warnings tests/retention.mjs && node tests/qr.mjs && node tests/classes.mjs && node tests/e2e.mjs && node tests/features.mjs && node tests/qr-login.mjs && node tests/classes-e2e.mjs && node tests/site.mjs"
+    "dev": "node scripts/build.mjs && wrangler pages dev dist --d1 DATA --binding ADMIN_EMAILS=admin@example.com --port 8788",
+    "test": "node tests/reminders.mjs && node --no-warnings tests/retention.mjs && node --no-warnings tests/admin.mjs && node tests/qr.mjs && node tests/classes.mjs && node tests/e2e.mjs && node tests/features.mjs && node tests/qr-login.mjs && node tests/classes-e2e.mjs && node tests/site.mjs && node tests/admin-e2e.mjs"
   },
   "devDependencies": {
     "playwright": "^1.56.0",

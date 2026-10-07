@@ -197,6 +197,8 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `tests/e2e.mjs` | End-to-end test: accounts, starting check, rounds, sync, PWA |
 | `tests/features.mjs` | End-to-end test: shapes, friends, streak, bests, practice check, tricky facts, reminders, offline |
 | `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
+| `public/admin/` | Admin dashboard page (see **Admin dashboard**) |
+| `tests/admin.mjs`, `tests/admin-e2e.mjs` | Admin dashboard: access, stats, export without secrets, deletion, log |
 | `tests/retention.mjs` | Deleting idle pupils and unused accounts; deleting your own account |
 | `tests/qr.mjs` | QR login on the server: keys, new QR card, old keys, rate limit |
 | `tests/qr-login.mjs` | QR login in the browser: card QR decodes, link login, camera scan, bad and replaced codes |
@@ -221,6 +223,17 @@ node scripts/import-trees.mjs path/to/index.html
 ```
 
 The import adapts it to this site: the inline script moves to `public/trees/trees.js` (the security policy runs no inline scripts), Google Analytics and its cookie banner come out (the school pack promises no tracking), Google Fonts become self-hosted copies, addresses move from `/` to `/trees/`, the sharing image and logo come out, and The Learning Forest's header and footer replace the page's own. Its section links and progress bar stay as a sticky bar under the site header, and the book credits move into its closing section. Each change must match exactly once, so if the page's structure changes the import stops with the step that failed rather than publishing a half-converted page.
+
+## Admin dashboard (`/admin/`)
+
+Usage numbers and the privacy requests the school pack promises. **Setup:** Pages project → **Settings → Variables and Secrets** → add `ADMIN_EMAILS` (plain text) with the grown-up account email(s) allowed in, comma-separated, for Production. Redeploy. Then log in at `/app/` as that grown-up and open `/admin/`. Anyone else gets "not an admin". Optional second lock: Cloudflare Zero Trust → Access → protect `learn.thetreefella.co.uk/admin*` with a one-time email code.
+
+- **Overview:** grown-up accounts, pupils, classes, class devices, who played in 7 and 30 days, answers, reminders set, and how many pupils and accounts the 12-month rule will delete in the next 30 days. A weekly table for the last 8 weeks. Counts only; no names.
+- **Find a grown-up account** by email: **Export data** downloads everything held about the account and its pupils as JSON (for a request to see data; login secrets are held only as hashes and aren't included). **Delete…** removes the account and everything on it after the admin types the account's email back.
+- **Find a pupil** by the username on their Forest Pass: export or delete (two taps).
+- **Copy all grown-up emails:** for a breach notice or 30 days' notice of a new sub-processor.
+- **Admin log:** every export, deletion and email copy, with the admin's email, time, and ids and counts only (`admin_log` table).
+- API: `/api/admin/*` in `src/server/api.js`; page: `public/admin/`. Tests: `tests/admin.mjs` (server), `tests/admin-e2e.mjs` (browser). `npm run dev` sets `ADMIN_EMAILS=admin@example.com` locally.
 
 ## Keeping data (retention)
 
