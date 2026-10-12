@@ -1,5 +1,5 @@
 const ORDER=[10,2,5,11,3,4,9,6,8,12,7];         // unlock order: anchors first, 7s last
-const HINT_ORDER=[10,2,5,11,4,3,9,8,6,12,7];    // which factor gives the easiest strategy
+const HINT_ORDER=[10,2,12,5,11,4,3,9,8,6,7];    // which factor gives the easiest strategy: 12 × anything is 10 × it plus 2 × it
 const ROUND=20, SLOW=6000, QUICK=3000;
 const ASSESS_MIN=5, PASS=0.8;                    // starting check: at least 5 facts per table, 80% to pass
 const INTERVAL_DAYS={2:1,3:3,4:7,5:21};

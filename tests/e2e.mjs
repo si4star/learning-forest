@@ -19,6 +19,18 @@ await pp.goto(BASE + '/app/');
 await pp.waitForSelector('.brand');
 assert.match(await pp.textContent('.lead'), /explore the forest/);
 assert.equal(await pp.locator('[data-act=how]').count(), 0, 'no times tables method link on the welcome page');
+step('strategies: any fact with 12 (except ×10 and ×2) is worked out as 10 × it plus 2 × it');
+for (let n = 3; n <= 12; n++) {
+  if (n === 10) continue;
+  const steps = await pp.evaluate(n => walkSteps(12, n), n);
+  assert.deepEqual(steps.map(s => s.q), [`10 × ${n}`, `2 × ${n}`, `${10 * n} + ${2 * n}`], `12 × ${n}`);
+  assert.equal(steps.at(-1).ans, 12 * n);
+  assert.equal(await pp.evaluate(n => walkSteps(n, 12)[0].q, n), `10 × ${n}`, `${n} × 12, either way round`);
+}
+assert.match(await pp.evaluate(() => hint(8, 12)), /^10 × 8 = 80, add 2 × 8 = 16: 96\.$/);
+assert.equal((await pp.evaluate(() => walkSteps(12, 10)))[0].q, '12 tens', '12 × 10 still counts in tens');
+assert.equal((await pp.evaluate(() => walkSteps(12, 2)))[0].q, 'double 12', '12 × 2 still doubles');
+assert.equal((await pp.evaluate(() => walkSteps(8, 7)))[0].q, 'double 7', 'other 8s still double three times');
 step('parent sign-up');
 await pp.click('text=I\'m a grown-up');
 await pp.click('[data-mode=signup]');

@@ -731,7 +731,7 @@ async function adminEmails(ctx) {
 
 async function adminLogList(ctx) {
   await needAdmin(ctx);
-  const { results } = await ctx.db.prepare('SELECT at, admin, action, detail FROM admin_log ORDER BY at DESC LIMIT 100').all();
+  const { results } = await ctx.db.prepare('SELECT at, admin, action, detail FROM admin_log ORDER BY at DESC, id DESC LIMIT 100').all();
   return json({ log: results });
 }
 
