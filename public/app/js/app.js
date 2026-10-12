@@ -746,7 +746,7 @@ function renderHome(){
     <div class="legend">${[1,2,3,4,5].map(s=>`<span>${tree(s)}${STAGES[s]}</span>`).join('')}</div>
     <section class="friends" aria-labelledby="ff"><h2 id="ff">Forest friends</h2>
       ${friends.length?`<ul>${friends.map(t=>`<li><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span>${friendName(t)}<small>${t}s</small></li>`).join('')}</ul>`
-        :'<p class="hint small">Grow every tree in a times table into a Tree and a forest friend moves in.</p>'}</section>
+        :'<p class="hint small">Grow every tree in a times table into a Young tree and a forest friend moves in.</p>'}</section>
     <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:' Every table is planted.'}</p>
     <button class="link" data-act="bests">⏱ Personal bests</button>
   </main>`;
