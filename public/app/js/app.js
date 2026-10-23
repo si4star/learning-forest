@@ -183,11 +183,19 @@ function applyAssessment(p,picked,results){
   return {graded,passed,unlocked,tables:p.tables.slice()};
 }
 
-/* seasons: by date (UK meteorological seasons) unless the child picks one */
-const SEASONS=[['auto','Auto'],['spring','🌸 Spring'],['summer','☀️ Summer'],['autumn','🍂 Autumn'],['winter','❄️ Winter']];
+/* seasons: by date (UK meteorological seasons) unless the child picks one.
+   Christmas (1 December to 6 January) is on for everyone, unless the child picks another season during it;
+   that opt-out is kept in extra.xmasOff as the year the Christmas began, so it lasts only that Christmas. */
+const SEASONS=[['auto','Auto'],['spring','🌸 Spring'],['summer','☀️ Summer'],['autumn','🍂 Autumn'],['winter','❄️ Winter'],['christmas','🎄 Christmas']];
 function seasonByDate(d=new Date()){const m=d.getMonth();return m===11||m<2?'winter':m<5?'spring':m<8?'summer':'autumn'}
+function christmasYear(d=new Date()){const m=d.getMonth();return m===11?d.getFullYear():m===0&&d.getDate()<=6?d.getFullYear()-1:null}
+// The season button that shows as picked
+function seasonChoice(){
+  const t=kid&&kid.theme||'auto',y=christmasYear();
+  return y!==null&&!(kid&&kid.extra&&kid.extra.xmasOff===y)?'christmas':t;
+}
 function applySeason(){
-  const s=kid&&kid.theme&&kid.theme!=='auto'?kid.theme:seasonByDate();
+  const c=seasonChoice(),s=c==='auto'?seasonByDate():c;
   if(document.documentElement.dataset.season===s)return;
   document.documentElement.dataset.season=s;
   document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
@@ -1012,12 +1020,12 @@ const SHOW_REMINDERS=false;
 /* settings: the cog on the module screen and the forest screen. They apply to the whole app. Add new settings here as sections or menu rows. */
 const cogIcon='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 function settingsSheet(){
-  const t=kid.theme||'auto';
+  const t=seasonChoice(),y=christmasYear();
   sheet(`<h2>Settings</h2>
     <section class="set"><h3>Forest season</h3>
       <div class="seasons" role="group" aria-label="Forest season">${SEASONS.map(([k,l])=>
         `<button data-act="season" data-s="${k}" aria-pressed="${t===k}">${l}</button>`).join('')}</div>
-      <p class="hint small">Auto follows the time of year.</p></section>
+      <p class="hint small">Auto follows the time of year.${y!==null?' Christmas is on for everyone until 6 January: pick another season to turn it off.':''}</p></section>
     ${SHOW_REMINDERS?`<section class="set"><h3>Daily reminder</h3>${reminderHtml()}</section>`:''}
     <nav class="menu"><button class="menu-row" data-act="how"><span>How the times tables method works</span><span class="chev" aria-hidden="true">›</span></button>
       <button class="menu-row" data-act="logout"><span>Log out</span><span class="pmeta">${esc(kid.username)}</span></button></nav>`);
@@ -1084,7 +1092,11 @@ async function trickySheet(id){
 }
 
 function pickSeason(s,bg){
-  kid.theme=s;saveMeta();render();
+  const y=christmasYear(),{xmasOff,...rest}=kid.extra||{};
+  if(y===null)kid.theme=s;
+  else if(s==='christmas')kid.extra=rest;                     // back on; their usual season returns on 7 January
+  else{kid.theme=s;kid.extra={...rest,xmasOff:y}}
+  saveMeta();render();
   bg.querySelectorAll('[data-act=season]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===s)));
 }
 

@@ -79,7 +79,7 @@ On first login the child taps the tables they think they know.
 
 ## Seasons
 
-There are four forest themes: spring, summer, autumn and winter. Each changes the colours, the trees and what drifts down the screen.
+There are four forest seasons, spring, summer, autumn and winter, plus Christmas. Each changes the colours, the trees and what drifts down the screen.
 
 | Season | Look |
 | --- | --- |
@@ -87,11 +87,13 @@ There are four forest themes: spring, summer, autumn and winter. Each changes th
 | Summer | Strawberry Meadow: lush greens, strawberries and wild strawberries, floating dandelion seeds |
 | Autumn | Warm cream, orange and gold trees, red apples, falling leaves |
 | Winter | Darkest: night blue with dark pine trees, snow on the treetops and ground, red berries, dim falling snow |
+| Christmas | Winter's night with decorated trees: twinkling red, gold and blue baubles on mature trees, gold stars on young and mature trees, holly-red buttons |
 
 - The season follows the date by default (UK meteorological seasons: winter is December to February).
 - A child can pick a season in Settings (the cog on the forest screen). The choice is saved to their account.
-- Screens before login follow the date.
-- Drifting stops if the device is set to reduce motion.
+- Christmas is on for everyone from 1 December to 6 January, over the date and over a child's own pick. Picking another season in that time turns it off for the rest of that Christmas (`extra.xmasOff`, the year it began); it comes back the next December. Picking Christmas again in that time keeps their own season for after 6 January. Outside that time Christmas is an ordinary choice.
+- Screens before login follow the date (Christmas included).
+- Drifting and twinkling stop if the device is set to reduce motion.
 
 ## Features
 
@@ -183,7 +185,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `public/app/manifest.webmanifest`, `public/app/icons/` | PWA manifest and icons |
 | `public/_headers` | Cache and security headers (Cloudflare Pages) |
 | `scripts/build.mjs` | Copies `public/` to `dist/` and stamps the version |
-| `public/app/css/styles.css` | Styles, the four seasons, print layout for the Forest Pass |
+| `public/app/css/styles.css` | Styles, the seasons and Christmas, print layout for the Forest Pass |
 | `public/app/js/app.js` | Client: screens, scheduling, rounds, starting check, sync queue |
 | `public/app/fonts/` | Fredoka (SIL Open Font License) |
 | `public/app/js/vendor/` | QR code drawing (qrcode-generator, MIT) and reading (jsQR, Apache-2.0), loaded only when needed |

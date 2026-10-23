@@ -12,7 +12,7 @@ const COOKIE = 'tf_session';
 const ORDER = [10, 2, 5, 11, 3, 4, 9, 6, 8, 12, 7];
 const KINDS = new Set(['assess', 'new', 'reask', 'review', 'retry', 'practice', 'mock']);
 const SHAPES = new Set(['mul', 'missing', 'div']);
-const THEMES = ['auto', 'spring', 'summer', 'autumn', 'winter'];
+const THEMES = ['auto', 'spring', 'summer', 'autumn', 'winter', 'christmas'];
 
 class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -151,6 +151,7 @@ function cleanExtra(x) {
   const out = {};
   for (const k of ['friends', 'intros']) if (k in x) { if (!tableList(x[k])) throw new HttpError(400, 'Bad progress.'); out[k] = x[k]; }
   if ('restDay' in x) { if (x.restDay !== null && !Number.isFinite(x.restDay)) throw new HttpError(400, 'Bad progress.'); out.restDay = x.restDay; }
+  if ('xmasOff' in x) { if (!isInt(x.xmasOff, 2000, 3000)) throw new HttpError(400, 'Bad progress.'); out.xmasOff = x.xmasOff; }   // Christmas season turned off, that year
   if ('mocks' in x) {
     if (!Array.isArray(x.mocks) || x.mocks.length > 10 || !x.mocks.every(m => m && Number.isFinite(m.at) && isInt(m.score, 0, 25)))
       throw new HttpError(400, 'Bad progress.');

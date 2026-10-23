@@ -8,13 +8,14 @@
 }
 /* Four forest seasons. The season is set on <html data-season>: by date, or the child's pick.
    --leaf is the UI accent; --canopy colours the trees; --fruit is blossom, fruit or berries;
-   --snow caps the trees (winter only); --particle is what drifts down the screen. */
+   --snow caps the trees (winter and Christmas); --particle is what drifts down the screen;
+   --star tops the young and mature trees (Christmas only); --holly is the Christmas buttons. */
 :root,[data-season=summer]{   /* Strawberry Meadow */
   color-scheme:light;
   --bg:#F1F6E6; --surface:#FCFEF6; --ink:#1D2A17; --muted:#5A6A50; --line:#D5E3C3; --key-shadow:#BCCFA6;
   --leaf:#2F8F46; --leaf-2:#7CCB6A; --canopy:#3E9A3E; --canopy-2:#7CC35A; --sprout:#3F9A4D; --sprout-2:#8FD07C;
   --bark:#7A4E2D; --soil:#C9B48E; --fruit:#E0303A; --fruit-2:#FF8A7A; --sun:#D9871C; --berry:#C0392B;
-  --snow:transparent; --particle:#FFFFFF;
+  --snow:transparent; --particle:#FFFFFF; --star:transparent;
 }
 [data-season=spring]{   /* Cherry Blossom */
   color-scheme:light;
@@ -37,6 +38,18 @@
   --bark:#7D6150; --soil:#8E9FB1; --fruit:#D6455C; --fruit-2:#D6455C; --sun:#F2C25B; --berry:#EF7A94;
   --snow:#C3D0DD; --particle:rgba(214,226,238,.5);
 }
+[data-season=christmas]{   /* Christmas lights: winter's night, decorated trees, holly-red buttons */
+  color-scheme:dark;
+  --bg:#0B121C; --surface:#152030; --ink:#E3ECF4; --muted:#8FA2B6; --line:#22303F; --key-shadow:#05080D;
+  --leaf:#2F8A6B; --leaf-2:#6DB596; --canopy:#2E6E58; --canopy-2:#4F937A; --sprout:#4F9B74; --sprout-2:#86C6A2;
+  --bark:#7D6150; --soil:#8E9FB1; --fruit:#E5484D; --fruit-2:#F2C25B; --fruit-3:#5BA4F0; --sun:#F2C25B; --berry:#EF7A94;
+  --snow:#C3D0DD; --particle:rgba(214,226,238,.5); --star:#F2C25B; --holly:#B3263A;
+}
+[data-season=christmas] :is(.cta:not(.quiet,.danger-cta),.key.go,.add button,.install .go){background:var(--holly);box-shadow:0 4px 0 #6E1622}
+[data-season=christmas] .bauble{animation:twinkle 2.6s ease-in-out infinite}
+[data-season=christmas] .bauble:nth-of-type(2n){animation-delay:-1.3s}
+[data-season=christmas] .bauble:nth-of-type(3n){animation-duration:3.4s}
+@keyframes twinkle{50%{opacity:.6}}
 *,*::before,*::after{box-sizing:border-box}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{height:100%;margin:0;background:var(--bg);color:var(--ink);

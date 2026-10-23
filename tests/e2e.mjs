@@ -288,6 +288,44 @@ await kp.click('form .cta');
 await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('.forest');
 
+step('Christmas: on for everyone 1 December to 6 January, even over a picked season; picking another season turns it off for that Christmas only');
+{
+  const at = async (when, fn) => {
+    const xp = await kp.context().newPage(); watch(xp);
+    await xp.clock.setFixedTime(new Date(when));
+    await xp.goto(BASE + '/app/');
+    await xp.click('[data-act=mod-tables]');
+    await xp.waitForSelector('.forest');
+    const season = await xp.evaluate(() => document.documentElement.dataset.season);
+    const out = fn && await fn(xp);
+    await xp.close();
+    return fn ? [season, out] : [season];
+  };
+  const star = xp => xp.evaluate(() => getComputedStyle(document.querySelector('#t5 path:last-of-type')).fill);
+  assert.deepEqual(await at('2026-11-30T12:00'), ['winter'], 'not yet');
+  const [s1, st] = await at('2026-12-01T09:00', star);
+  assert.equal(s1, 'christmas', 'on for a child who picked winter');
+  assert.equal(st, 'rgb(242, 194, 91)', 'mature trees get a gold star');
+  await at('2027-01-06T18:00', async xp => {
+    assert.equal(await xp.evaluate(() => document.documentElement.dataset.season), 'christmas', 'still on on 6 January');
+    await xp.click('[data-act=settings]');
+    assert.equal(await xp.getAttribute('.sheet [data-s=christmas]', 'aria-pressed'), 'true');
+    assert.match(await xp.textContent('.sheet .set .hint'), /until 6 January/);
+    await xp.click('.sheet [data-s=summer]');              // opts out
+    assert.equal(await xp.evaluate(() => document.documentElement.dataset.season), 'summer');
+    await xp.waitForTimeout(800);                           // saved to the server
+  });
+  assert.deepEqual(await at('2027-01-02T12:00'), ['summer'], 'opt-out lasts the rest of that Christmas');
+  assert.deepEqual(await at('2027-01-07T12:00'), ['summer'], 'after 6 January their own pick');
+  assert.deepEqual(await at('2027-12-01T12:00'), ['christmas'], 'back on next Christmas');
+  await at('2027-12-02T12:00', async xp => {                // turning it back on keeps their own season for afterwards
+    await xp.click('[data-act=settings]'); await xp.click('.sheet [data-s=winter]'); await xp.click('.sheet [data-s=christmas]');
+    await xp.waitForTimeout(800);
+  });
+  assert.deepEqual(await at('2027-12-20T12:00'), ['christmas']);
+  assert.deepEqual(await at('2028-01-07T12:00'), ['winter']);
+}
+
 step('install banner shows when the browser offers install, and hides for 14 days');
 await kp.evaluate(() => { const e = new Event('beforeinstallprompt'); e.prompt = () => {}; e.userChoice = Promise.resolve({}); window.dispatchEvent(e); });
 await kp.waitForSelector('.install');
