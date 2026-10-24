@@ -94,6 +94,12 @@ p{line-height:1.45}
 .cta.progress::before{content:'';position:absolute;inset:0 auto 0 0;width:var(--p,0%);background:rgba(0,0,0,.24);transition:width .5s}
 .cta.progress > *{position:relative}
 .cta.progress small{font-size:14px;font-weight:500;opacity:.92}
+/* play and the practice check side by side, both progress bars */
+.play-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.play-row .cta{font-size:19px;padding:12px 8px;line-height:1.2;justify-content:center;min-width:0;text-wrap:balance}
+.cta.locked{cursor:default}
+.cta.locked::before{background:color-mix(in srgb,var(--leaf) 22%,transparent)}
+.cta.locked small{color:var(--muted);opacity:1}
 .streak{color:var(--muted);margin:0 0 14px;font-size:16px}
 .cta{width:100%;padding:18px;border:0;border-radius:20px;background:var(--leaf);color:#fff;
   font-size:22px;font-weight:600;box-shadow:0 4px 0 color-mix(in srgb,var(--leaf) 60%,#000)}
@@ -296,10 +302,6 @@ ul.friends{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-wrap:wrap;
 .friend-new{text-align:center;font-size:19px;font-weight:500;margin:0 0 6px}
 /* milestones: every seed planted, practice check open */
 .milestone{text-align:center;font-size:19px;font-weight:500;margin:0 0 6px}
-.goal{text-align:center;color:var(--muted);font-size:15px}
-.goal p{margin:4px 0}
-.goal .track{height:10px;background:var(--line)}
-.goal .count{min-width:0;text-align:center}
 .confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:5}
 .confetti i{position:absolute;top:-20px;width:10px;height:14px;border-radius:2px;background:var(--fruit);opacity:0;animation:confetti 2.8s ease-in 1 forwards}
 .confetti i:nth-child(3n){background:var(--sun)}

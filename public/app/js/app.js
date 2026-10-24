@@ -741,9 +741,9 @@ function renderHome(){
   // The play button is today's progress bar: trees checked out of those due today.
   // A round checks up to ROUND trees, so a big backlog takes a few rounds.
   const pct=due?Math.round(100*(1-due/dueAtStart(p,due))):100;
-  const play=due?`<button class="cta progress" data-act="play" style="--p:${pct}%"><span>Play a round</span><small>${due} ${due===1?'tree':'trees'} to check${due>ROUND?` · up to ${ROUND} a round`:''}</small></button>`
+  const play=due?`<button class="cta progress" data-act="play" style="--p:${pct}%"><span>Play a round</span><small>${due} to check</small></button>`
     :fresh?'<button class="cta progress" data-act="play" style="--p:100%"><span>Play a round</span><small>New seeds to plant</small></button>'
-    :'<button class="cta progress" data-act="play"><span>Extra practice</span><small>Every tree is checked today</small></button>';
+    :'<button class="cta progress" data-act="play"><span>Extra practice</span><small>All checked today</small></button>';
   const on=tablesOn(p);
   let g='<div class="hd">×</div>'+[...Array(11)].map((_,i)=>`<div class="hd ${on.includes(i+2)?'on':''}">${i+2}</div>`).join('');
   for(let a=2;a<=12;a++){
@@ -756,10 +756,10 @@ function renderHome(){
   }
   const next=nextTable(p),trees=ALL.filter(k=>fact(p,k).box>=4).length,friends=p.extra.friends||[];
   const restRecent=p.extra.restDay&&today()-p.extra.restDay<7*864e5;
-  const mock=mockReady(p)?'<button class="cta quiet" data-act="mock-intro">📝 Practice check</button>'
-    :!next?`<div class="goal"><p>🔒 Grow ${MOCK_TREES} trees to open the practice check</p>
-      <div class="track" role="progressbar" aria-label="Trees grown" aria-valuemin="0" aria-valuemax="${MOCK_TREES}" aria-valuenow="${trees}"><div class="fill" style="width:${Math.round(100*trees/MOCK_TREES)}%"></div></div>
-      <p class="count">${trees} of ${MOCK_TREES}</p></div>`:'';
+  const mock=mockReady(p)?'<button class="cta progress" data-act="mock-intro"><span>📝 Practice check</span><small>Open</small></button>'
+    :`<div class="cta quiet progress locked" style="--p:${Math.min(100,Math.round(100*trees/MOCK_TREES))}%" role="img"
+      aria-label="Practice check: opens ${next?'when every table is planted and ':'when '}${MOCK_TREES} trees have grown. ${trees} grown so far.">
+      <span>📝 Practice check</span><small>🔒 ${next?'After every table':`${trees} of ${MOCK_TREES} trees`}</small></div>`;
   const seedsLeft=ALL.length-planted(p);
   app.innerHTML=`<main class="screen scroll">
     <header class="bar start">${back('hub','All modules')}<h1>${esc(p.name)}'s forest</h1>${classDev?'<button class="pill" data-act="logout">I\'m done</button>':''}<button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
@@ -768,7 +768,7 @@ function renderHome(){
       :offline?'<p class="warn">You\'re offline. You can still play, and your answers will save when you\'re back online.</p>'
       :unsaved?'<p class="warn">Some answers haven\'t saved yet. They\'ll save when the internet is back.</p>':''}
     <section class="today">${streakHtml(p,restRecent)}
-      <div class="stack tight">${play}${mock}</div></section>
+      <div class="play-row">${play}${mock}</div></section>
     <section class="forest" aria-label="Times table forest">${g}</section>
     ${next?`<p class="tables">Next up: the ${next} times table.</p>`:seedsLeft?`<p class="tables">Only ${seedsLeft} ${seedsLeft===1?'seed':'seeds'} left to plant. Plant them all to finish your forest!</p>`:''}
   </main>

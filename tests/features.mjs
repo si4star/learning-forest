@@ -56,7 +56,8 @@ await kp.click('.cell[data-a="7"][data-b="8"]');
 assert.equal(await kp.textContent('.sheet .legend .here'), 'Young tree', 'the key highlights this fact\'s stage');
 assert.match(await kp.textContent('.sheet .stage-now'), /This tree is a Young tree\. Next: Mature tree\./);
 await kp.click('.sheet [data-act=close]');
-assert.equal(await kp.textContent('[data-act=play]'), 'Play a round66 trees to check · up to 20 a round', 'a big backlog takes a few rounds');
+assert.equal(await kp.textContent('[data-act=play]'), 'Play a round66 to check');
+assert.equal(await kp.evaluate(() => { const [a, b] = [...document.querySelector('.play-row').children].map(e => e.getBoundingClientRect()); return a.top === b.top && Math.abs(a.width - b.width) < 1; }), true, 'play and the practice check side by side, the same size');
 assert.equal(await kp.evaluate(() => document.querySelector('[data-act=play]').style.getPropertyValue('--p')), '0%', 'nothing checked yet today');
 
 step('settings has no read aloud');
@@ -208,7 +209,8 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   await bp.click('[data-act=mod-tables]');
   await bp.waitForSelector('.forest');
   assert.match(await bp.textContent('.tables'), /Only 1 seed left to plant/);
-  assert.match(await bp.textContent('.goal'), /33 of 34/);
+  assert.match(await bp.textContent('.play-row .locked'), /33 of 34 trees/);
+  assert.equal(await bp.evaluate(() => document.querySelector('.play-row .locked').style.getPropertyValue('--p')), '97%');
   assert.equal(await bp.locator('[data-act=mock-intro]').count(), 0);
   assert.match(await bp.textContent('.dock [data-act=grove]'), /6 of 7/);
   await bp.click('.dock [data-act=grove]');
@@ -237,14 +239,14 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   await bp.click('[data-act=mod-tables]');
   await bp.waitForSelector('.forest');
   assert.equal(await bp.locator('.tables').count(), 0, 'nothing to say once every seed is planted');
-  assert.equal(await bp.locator('.goal').count(), 0);
+  assert.equal(await bp.locator('.play-row .locked').count(), 0);
   assert.equal(await bp.locator('[data-act=mock-intro]').count(), 1);
   await bp.click('.dock [data-act=grove]');
   assert.deepEqual(await bp.locator('.sheet .grove li').allTextContents(), ['Oak']);
   assert.equal(await bp.locator('.sheet .grove .acorn.gold').count(), 0);
   assert.match(await bp.textContent('.sheet .grove'), /You've earned today's golden acorn/);
   await bp.click('.sheet [data-act=close]');
-  assert.equal(await bp.textContent('[data-act=play]'), 'Extra practiceEvery tree is checked today');
+  assert.equal(await bp.textContent('[data-act=play]'), 'Extra practiceAll checked today');
   // one acorn a day: another round today earns nothing
   await bp.click('[data-act=play]');
   for (let n = 0; n < 60 && !(await bp.$('.done')); n++) {
