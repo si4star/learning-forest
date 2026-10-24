@@ -761,7 +761,7 @@ function renderHome(){
       <span>📝 Practice check</span><small>🔒 ${next?'After every table':`${trees} of ${MOCK_TREES} grown`}</small></button>`;
   const seedsLeft=ALL.length-planted(p);
   app.innerHTML=`<main class="screen scroll">
-    <header class="bar start">${back('hub','All modules')}<h1>${esc(p.name)}'s forest</h1>${classDev?'<button class="pill" data-act="logout">I\'m done</button>':''}<button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
+    <header class="bar centred">${back('hub','All modules')}<h1>${esc(p.name)}'s Forest</h1><span class="bar-end">${classDev?'<button class="pill" data-act="logout">I\'m done</button>':''}<button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></span></header>
     ${installBanner()}
     ${needLogin?'<p class="warn">Your login has run out. <button class="link inline" data-act="logout">Log in again</button> to save your answers.</p>'
       :offline?'<p class="warn">You\'re offline. You can still play, and your answers will save when you\'re back online.</p>'

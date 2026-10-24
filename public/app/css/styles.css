@@ -406,6 +406,10 @@ label.check{flex-direction:row;align-items:flex-start;gap:10px;font-size:17px;fo
 .cta:disabled{opacity:.5;cursor:default;transform:none}
 .icon-gap{width:44px;flex:none}
 .bar.start h1{text-align:left;padding-left:2px}
+/* title centred on the screen whatever sits either side of it */
+.bar.centred{display:grid;grid-template-columns:1fr auto 1fr}
+.bar.centred h1{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar.centred .bar-end{display:flex;gap:8px;justify-self:end;align-items:center}
 .pill{height:40px;padding:0 14px;border:0;border-radius:20px;background:var(--surface);font-size:15px;font-weight:500;box-shadow:0 2px 0 var(--key-shadow);flex:none}
 .pill-gap{width:82px;flex:none}
 .mods{display:grid;gap:12px;margin-top:8px}

@@ -117,6 +117,8 @@ console.log('  checked today:', progress + '%');
 assert.ok(progress > 0 && progress < 100, 'the play button fills as trees are checked');
 assert.deepEqual(await kp.locator('.dock button').evaluateAll(bs => bs.map(b => b.dataset.act)), ['friends', 'grove', 'bests'], 'bottom bar');
 assert.equal(await kp.evaluate(() => Math.round(document.querySelector('.dock').getBoundingClientRect().bottom)), 844, 'bottom bar sits on the bottom edge');
+assert.equal(await kp.textContent('header h1'), "Ava's Forest");
+assert.ok(await kp.evaluate(() => { const r = document.querySelector('header h1').getBoundingClientRect(); return Math.abs(r.left + r.width / 2 - innerWidth / 2) < 2; }), 'title centred');
 await kp.click('.dock [data-act=friends]');
 const behind = () => kp.evaluate(() => [getComputedStyle(document.querySelector('main.scroll')).overflowY]);
 assert.equal((await behind())[0], 'hidden', 'the forest behind an open sheet is locked');
