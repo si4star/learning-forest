@@ -19,6 +19,7 @@ await pp.goto(BASE + '/app/');
 await pp.waitForSelector('.brand');
 assert.match(await pp.textContent('.lead'), /explore the forest/);
 assert.equal(await pp.locator('[data-act=how]').count(), 0, 'no times tables method link on the welcome page');
+assert.match(await pp.getAttribute('meta[name=viewport]', 'content'), /user-scalable=no/, 'no pinch zoom in the app');
 step('strategies: any fact with 12 (except ×10 and ×2) is worked out as 10 × it plus 2 × it');
 for (let n = 3; n <= 12; n++) {
   if (n === 10) continue;

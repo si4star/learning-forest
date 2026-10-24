@@ -23,6 +23,7 @@ for (const [w, h] of [[390, 844], [1280, 900]]) {
     assert.equal(await p.locator('.lf-top').count(), 1, `${path}: The Learning Forest header`);
     assert.equal(await p.locator('.lf-foot .lf-small').count(), 1, `${path}: The Learning Forest footer`);
     assert.equal(await p.locator('text=lf:header').count(), 0, `${path}: header marker replaced`);
+    assert.doesNotMatch(await p.getAttribute('meta[name=viewport]', 'content'), /user-scalable=no|maximum-scale/, `${path} can be zoomed`);
     if (SHOTS) await p.screenshot({ path: `${SHOTS}/${w}${path.replace(/\W+/g, '-')}.png`, fullPage: true });
   }
   await p.goto(BASE + '/');

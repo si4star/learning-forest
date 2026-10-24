@@ -51,7 +51,7 @@
 [data-season=christmas] .bauble:nth-of-type(3n){animation-duration:3.4s}
 @keyframes twinkle{50%{opacity:.6}}
 *,*::before,*::after{box-sizing:border-box}
-html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);touch-action:pan-x pan-y}   /* no pinch zoom in the app */
 body{height:100%;margin:0;background:var(--bg);color:var(--ink);
   font-family:'Fredoka',ui-rounded,'SF Pro Rounded','Segoe UI',system-ui,sans-serif;
   -webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}

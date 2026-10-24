@@ -201,6 +201,11 @@ function applySeason(){
   document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
 }
 
+/* no pinch zoom in the app (the website and How does a tree work? can still zoom).
+   Safari ignores user-scalable=no in the viewport tag, so stop the gesture itself. */
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+
 /* install as an app */
 let installEvt=null;
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
