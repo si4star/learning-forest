@@ -268,7 +268,9 @@ ul.friends{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-wrap:wrap;
 .friends .to-come{opacity:.55;border:2px dashed var(--line);background:none}
 .friends .to-come .emo{width:24px;text-align:center;font-weight:600;color:var(--muted)}
 /* bottom bar on the forest screen */
-.dock{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 12px 8px;background:var(--surface);border-top:1px solid var(--line);border-radius:18px 18px 0 0}
+/* the bar runs to the bottom edge, its own padding clearing the iPhone home indicator */
+:root:has(.dock){padding-bottom:0}
+.dock{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 12px calc(8px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);border-radius:18px 18px 0 0}
 .dock button{display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;color:var(--ink);font:inherit;font-size:15px;font-weight:600;padding:6px 0;border-radius:12px}
 .dock button:active{background:var(--bg)}
 .dock .emo,.dock .acorn{font-size:24px;line-height:28px;width:28px;height:28px}
