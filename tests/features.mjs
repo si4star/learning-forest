@@ -167,6 +167,50 @@ const after = await (await parent.request.get(`${BASE}/api/parent/children/${chi
 console.log(`   questions this week: ${before.week.asked} → ${after.week.asked}`);
 assert.ok(after.week.asked >= before.week.asked + 3, 'offline answers reached the server');
 
+step('milestones: the last seed planted and the practice check opening are celebrated');
+{
+  const { card: c2 } = await (await parent.request.post(BASE + '/api/parent/children', { data: { name: 'Bea' } })).json();
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  assert.equal((await ctx.request.post(BASE + '/api/child/login', { data: { username: c2.username, password: c2.password } })).status(), 200);
+  const later = Date.now() + 5 * 864e5;
+  // 33 grown trees, one sapling due now, one seed not planted, the rest saplings not due yet
+  const facts = Object.fromEntries(all.map((k, i) => [k, i < 33 ? { box: 4, due: later } : i === 33 ? { box: 3, due: Date.now() - 1000 } : { box: 3, due: later }]));
+  delete facts[all[65]];
+  assert.equal((await ctx.request.post(BASE + '/api/child/sync', { data: { facts,
+    meta: { tables: ORDER, streak: 1, lastDay: twoDaysAgo, assessedAt: Date.now(), theme: 'auto', extra: { intros: ORDER, friends: [] } } } })).status(), 200);
+  const bp = await ctx.newPage(); bp.on('pageerror', e => errors.push(e.message));
+  await bp.goto(BASE + '/app/');
+  assert.match(await bp.textContent('[data-act=mod-tables]'), /65 of 66 trees planted/);
+  await bp.click('[data-act=mod-tables]');
+  await bp.waitForSelector('.forest');
+  assert.match(await bp.textContent('.tables'), /Only 1 seed left to plant/);
+  assert.match(await bp.textContent('.goal'), /33 of 34/);
+  assert.equal(await bp.locator('[data-act=mock-intro]').count(), 0);
+  await bp.click('[data-act=play]');
+  const press = async v => { for (const d of String(v)) await bp.keyboard.press(d); await bp.keyboard.press('Enter'); };
+  for (let n = 0; n < 60 && !(await bp.$('.done')); n++) {
+    if (await bp.$('.walk')) {
+      while (!(await bp.$('[data-act=walk-next]'))) await press(solveStep((await bp.textContent('.steps .now .step-eq')).replace(/=.*$/s, '').trim()));
+      await bp.keyboard.press('Enter'); continue;
+    }
+    await press(solve((await bp.textContent('.q')).trim()));
+    await bp.waitForTimeout(650);
+  }
+  assert.equal(await bp.textContent('.done h1'), 'The practice check is open!');
+  assert.match(await bp.textContent('.done'), /All 66 trees are in your forest/);
+  assert.equal(await bp.locator('.confetti i').count(), 24);
+  await bp.click('.done [data-act=mock-intro]');
+  await bp.waitForSelector('[data-act=mock-start]');
+  await bp.goto(BASE + '/app/');
+  assert.match(await bp.textContent('[data-act=mod-tables]'), /All 66 trees planted/);
+  await bp.click('[data-act=mod-tables]');
+  await bp.waitForSelector('.forest');
+  assert.match(await bp.textContent('.tables'), /Every seed is planted/);
+  assert.equal(await bp.locator('.goal').count(), 0);
+  assert.equal(await bp.locator('[data-act=mock-intro]').count(), 1);
+  await ctx.close();
+}
+
 assert.deepEqual(errors, []);
 console.log('PASS');
 await browser.close();

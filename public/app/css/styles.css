@@ -246,6 +246,42 @@ p{line-height:1.45}
 .friends small{color:var(--muted);font-size:13px}
 .emo{font-size:24px;line-height:1}
 .friend-new{text-align:center;font-size:19px;font-weight:500;margin:0 0 6px}
+/* milestones: every seed planted, practice check open */
+.milestone{text-align:center;font-size:19px;font-weight:500;margin:0 0 6px}
+.goal{text-align:center;color:var(--muted);font-size:15px}
+.goal p{margin:4px 0}
+.goal .track{height:10px;background:var(--line)}
+.goal .count{min-width:0;text-align:center}
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:5}
+.confetti i{position:absolute;top:-20px;width:10px;height:14px;border-radius:2px;background:var(--fruit);opacity:0;animation:confetti 2.8s ease-in 1 forwards}
+.confetti i:nth-child(3n){background:var(--sun)}
+.confetti i:nth-child(3n+1){background:var(--leaf-2)}
+.confetti i:nth-child(4n){border-radius:50%;width:9px;height:9px}
+.confetti i:nth-child(1){left:5%;animation-delay:0.00s}
+.confetti i:nth-child(2){left:42%;animation-delay:0.13s}
+.confetti i:nth-child(3){left:79%;animation-delay:0.26s}
+.confetti i:nth-child(4){left:20%;animation-delay:0.39s}
+.confetti i:nth-child(5){left:57%;animation-delay:0.52s}
+.confetti i:nth-child(6){left:94%;animation-delay:0.65s}
+.confetti i:nth-child(7){left:35%;animation-delay:0.78s}
+.confetti i:nth-child(8){left:72%;animation-delay:0.91s}
+.confetti i:nth-child(9){left:13%;animation-delay:1.04s}
+.confetti i:nth-child(10){left:50%;animation-delay:1.17s}
+.confetti i:nth-child(11){left:87%;animation-delay:1.30s}
+.confetti i:nth-child(12){left:28%;animation-delay:0.03s}
+.confetti i:nth-child(13){left:65%;animation-delay:0.16s}
+.confetti i:nth-child(14){left:6%;animation-delay:0.29s}
+.confetti i:nth-child(15){left:43%;animation-delay:0.42s}
+.confetti i:nth-child(16){left:80%;animation-delay:0.55s}
+.confetti i:nth-child(17){left:21%;animation-delay:0.68s}
+.confetti i:nth-child(18){left:58%;animation-delay:0.81s}
+.confetti i:nth-child(19){left:95%;animation-delay:0.94s}
+.confetti i:nth-child(20){left:36%;animation-delay:1.07s}
+.confetti i:nth-child(21){left:73%;animation-delay:1.20s}
+.confetti i:nth-child(22){left:14%;animation-delay:1.33s}
+.confetti i:nth-child(23){left:51%;animation-delay:0.06s}
+.confetti i:nth-child(24){left:88%;animation-delay:0.19s}
+@keyframes confetti{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:1;transform:translateY(110vh) rotate(540deg)}}
 .toggle{border:2px solid var(--line);border-radius:12px;background:var(--bg);padding:8px 16px;font-size:16px;font-weight:500}
 .toggle[aria-pressed=true]{border-color:var(--leaf);color:var(--leaf);font-weight:600}
 .toggle:disabled{opacity:.5}

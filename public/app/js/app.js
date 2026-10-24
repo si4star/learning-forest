@@ -719,7 +719,7 @@ function renderHub(){
     ${installBanner()}
     <p class="lead">What would you like to learn?</p>
     <div class="mods">
-      <button class="mod" data-act="mod-tables"><span class="emo" aria-hidden="true">✖️</span><span><b>Grow your times tables</b><small>${p.assessedAt?`${planted} of 66 trees planted`:'Start with a quick check'}</small></span></button>
+      <button class="mod" data-act="mod-tables"><span class="emo" aria-hidden="true">✖️</span><span><b>Grow your times tables</b><small>${p.assessedAt?planted===ALL.length?`All ${ALL.length} trees planted 🌳`:`${planted} of ${ALL.length} trees planted`:'Start with a quick check'}</small></span></button>
       <a class="mod" href="/app/trees/"><span class="emo" aria-hidden="true">🌳</span><span><b>How does a tree work?</b><small>121 questions and 19 diagrams to play with</small></span></a>
       <div class="mod soon" aria-disabled="true"><span class="emo" aria-hidden="true">🪱</span><span><b>What is soil?</b><small>Coming soon</small></span></div>
     </div>
@@ -746,7 +746,10 @@ function renderHome(){
   const next=nextTable(p),trees=ALL.filter(k=>fact(p,k).box>=4).length,friends=p.extra.friends||[];
   const restRecent=p.extra.restDay&&today()-p.extra.restDay<7*864e5;
   const mock=mockReady(p)?'<button class="cta quiet" data-act="mock-intro">📝 Practice check</button>'
-    :!next?`<p class="hint small center">The practice check opens when ${MOCK_TREES} trees have grown. You have ${trees}.</p>`:'';
+    :!next?`<div class="goal"><p>🔒 Grow ${MOCK_TREES} trees to open the practice check</p>
+      <div class="track" role="progressbar" aria-label="Trees grown" aria-valuemin="0" aria-valuemax="${MOCK_TREES}" aria-valuenow="${trees}"><div class="fill" style="width:${Math.round(100*trees/MOCK_TREES)}%"></div></div>
+      <p class="count">${trees} of ${MOCK_TREES}</p></div>`:'';
+  const seedsLeft=ALL.length-planted(p);
   app.innerHTML=`<main class="screen scroll">
     <header class="bar start">${back('hub','All modules')}<h1>${esc(p.name)}'s forest</h1>${classDev?'<button class="pill" data-act="logout">I\'m done</button>':''}<button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
     ${installBanner()}
@@ -761,7 +764,7 @@ function renderHome(){
     <section class="friends" aria-labelledby="ff"><h2 id="ff">Forest friends</h2>
       ${friends.length?`<ul>${friends.map(t=>`<li><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span>${friendName(t)}<small>${t}s</small></li>`).join('')}</ul>`
         :'<p class="hint small">Grow every tree in a times table into a Young tree and a forest friend moves in.</p>'}</section>
-    <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:' Every table is planted.'}</p>
+    <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:seedsLeft?` Only ${seedsLeft} ${seedsLeft===1?'seed':'seeds'} left to plant. Plant them all to finish your forest!`:' Every seed is planted.'}</p>
     <button class="link" data-act="bests">⏱ Personal bests</button>
   </main>`;
 }
@@ -773,7 +776,8 @@ const pendingIntro=p=>ORDER.find(t=>p.tables.includes(t)&&!(p.extra.intros||[]).
 function startRound(){
   const t=pendingIntro(kid);if(t!==undefined)return startTableIntro(t);
   const items=buildRound(kid);
-  round={items,planned:items.length+items.filter(x=>x.isNew).length,i:0,input:'',mode:'ask',lock:false,res:{asked:0,right:0,quick:0,grown:0}};
+  round={items,planned:items.length+items.filter(x=>x.isNew).length,i:0,input:'',mode:'ask',lock:false,res:{asked:0,right:0,quick:0,grown:0},
+    before:{planted:planted(kid),mock:mockReady(kid)}};
   view='play';nextItem();
 }
 // A newly planted table starts with its strategy and three worked examples.
@@ -926,7 +930,9 @@ function finishRound(){
     else p.streak=1;
     p.lastDay=t;
   }
-  summary={...round.res,unlocked:checkUnlock(p),friends:newFriends(p)};saveMeta();round=null;view='summary';render();
+  const b=round.before;
+  summary={...round.res,unlocked:checkUnlock(p),friends:newFriends(p),
+    allPlanted:b.planted<ALL.length&&planted(p)===ALL.length,mockOpen:!b.mock&&mockReady(p)};saveMeta();round=null;view='summary';render();
   flush().then(ok=>{if(!ok&&view==='summary')render()});
 }
 const tableGrown=(p,t)=>ALL.filter(k=>parse(k).includes(t)).every(k=>fact(p,k).box>=4);
@@ -996,13 +1002,18 @@ function finishAssessment(){
 }
 function renderSummary(){
   const s=summary;
-  app.innerHTML=`<main class="screen"><div class="done">${tree(s.grown?4:2,'big')}<h1>Round done</h1>
+  const party=s.allPlanted||s.mockOpen;
+  app.innerHTML=`<main class="screen${party?' scroll':''}">${party?`<div class="confetti" aria-hidden="true">${'<i></i>'.repeat(24)}</div>`:''}<div class="done">${tree(party?5:s.grown?4:2,'big')}
+    <h1>${s.mockOpen?'The practice check is open!':s.allPlanted?'Every seed planted!':'Round done'}</h1>
+    ${s.allPlanted?`<p class="milestone">All ${ALL.length} trees are in your forest. Now grow them all!</p>`:''}
+    ${s.mockOpen?`<p class="milestone">You've grown ${MOCK_TREES} trees. Try the practice check: ${MOCK_N} questions, ${MOCK_MS/1000} seconds each, like the Year 4 check.</p>`:''}
     <div class="stats"><span><b>${s.right}</b> of ${s.asked} right</span><span><b>${s.quick}</b> quick answers</span>
       <span><b>${s.grown}</b> ${s.grown===1?'tree':'trees'} grew</span></div>
     ${s.unlocked?`<p class="unlock">The ${s.unlocked} times table is now planted.</p>`:''}
     ${(s.friends||[]).map(t=>`<p class="friend-new"><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span> ${FRIENDS[t][1][0].toUpperCase()+FRIENDS[t][1].slice(1)} has moved into your forest! Every ${t}s tree has grown.</p>`).join('')}
     ${unsaved?'<p class="warn center">Not saved yet. It will save when the internet is back.</p>':''}
-    <button class="cta" data-act="home">Back to the forest</button>
+    ${s.mockOpen?'<button class="cta" data-act="mock-intro">📝 Try the practice check</button>':''}
+    <button class="cta${s.mockOpen?' quiet':''}" data-act="home">Back to the forest</button>
     <button class="cta quiet" data-act="play">Play again</button></div></main>`;
 }
 
