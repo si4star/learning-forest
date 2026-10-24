@@ -103,7 +103,11 @@ const summary = await kp.textContent('.done');
 assert.match(summary, /has moved into your forest/);
 assert.doesNotMatch(summary, /golden acorn/, 'trees still left to check, so no acorn');
 await kp.click('[data-act=home]');
-const friendCount = (await kp.$$('.friends li')).length;
+assert.deepEqual(await kp.locator('.dock button').evaluateAll(bs => bs.map(b => b.dataset.act)), ['friends', 'grove', 'bests'], 'bottom bar');
+await kp.click('.dock [data-act=friends]');
+const friendCount = (await kp.$$('.sheet .friends li:not(.to-come)')).length;
+assert.equal(await kp.locator('.sheet .friends li').count(), 11, 'every animal shown, the ones to come as ?');
+await kp.click('.sheet [data-act=close]');
 console.log('  friends:', friendCount);
 assert.ok(friendCount >= 8 && friendCount <= 10, 'every table but the missed fact\'s');
 assert.match(await kp.textContent('.streak'), /6 days in a row · rest day used this week/);
@@ -187,8 +191,11 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   assert.match(await bp.textContent('.tables'), /Only 1 seed left to plant/);
   assert.match(await bp.textContent('.goal'), /33 of 34/);
   assert.equal(await bp.locator('[data-act=mock-intro]').count(), 0);
-  assert.equal(await bp.locator('.grove .acorn.gold').count(), 6);
-  assert.equal(await bp.locator('.grove li').count(), 0);
+  assert.match(await bp.textContent('.dock [data-act=grove]'), /6 of 7/);
+  await bp.click('.dock [data-act=grove]');
+  assert.equal(await bp.locator('.sheet .grove .acorn.gold').count(), 6);
+  assert.equal(await bp.locator('.sheet .grove li').count(), 0);
+  await bp.click('.sheet [data-act=close]');
   await bp.click('[data-act=play]');
   const press = async v => { for (const d of String(v)) await bp.keyboard.press(d); await bp.keyboard.press('Enter'); };
   for (let n = 0; n < 60 && !(await bp.$('.done')); n++) {
@@ -213,8 +220,11 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   assert.match(await bp.textContent('.tables'), /Every seed is planted/);
   assert.equal(await bp.locator('.goal').count(), 0);
   assert.equal(await bp.locator('[data-act=mock-intro]').count(), 1);
-  assert.deepEqual(await bp.locator('.grove li').allTextContents(), ['Oak']);
-  assert.equal(await bp.locator('.grove .acorn.gold').count(), 0);
+  await bp.click('.dock [data-act=grove]');
+  assert.deepEqual(await bp.locator('.sheet .grove li').allTextContents(), ['Oak']);
+  assert.equal(await bp.locator('.sheet .grove .acorn.gold').count(), 0);
+  assert.match(await bp.textContent('.sheet .grove'), /You've earned today's golden acorn/);
+  await bp.click('.sheet [data-act=close]');
   assert.match(await bp.textContent('.status'), /You've earned today's golden acorn/);
   // one acorn a day: another round today earns nothing
   await bp.click('[data-act=play]');

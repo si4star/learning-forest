@@ -766,14 +766,22 @@ function renderHome(){
       <div class="stack tight"><button class="cta" data-act="play">${label}</button>${mock}</div></section>
     <section class="forest" aria-label="Times table forest">${g}</section>
     <div class="legend">${[1,2,3,4,5].map(s=>`<span>${tree(s)}${STAGES[s]}</span>`).join('')}</div>
-    <section class="friends" aria-labelledby="ff"><h2 id="ff">Forest friends</h2>
-      ${friends.length?`<ul>${friends.map(t=>`<li><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span>${friendName(t)}<small>${t}s</small></li>`).join('')}</ul>`
-        :'<p class="hint small">Grow every tree in a times table into a Young tree and a forest friend moves in.</p>'}</section>
-    ${groveHtml(p,acornToday)}
     <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:seedsLeft?` Only ${seedsLeft} ${seedsLeft===1?'seed':'seeds'} left to plant. Plant them all to finish your forest!`:' Every seed is planted.'}</p>
-    <button class="link" data-act="bests">⏱ Personal bests</button>
-  </main>`;
+  </main>
+  <nav class="dock" aria-label="Your forest">
+    <button data-act="friends"><span class="emo" aria-hidden="true">🦉</span>Friends<small>${friends.length} of ${ORDER.length}</small></button>
+    <button data-act="grove">${acornIcon(true)}Grove<small>${(p.extra.acorns||0)%ACORNS_PER_TREE} of ${ACORNS_PER_TREE}</small></button>
+    <button data-act="bests"><span class="emo" aria-hidden="true">⏱️</span>Bests<small>this week</small></button>
+  </nav>`;
 }
+// Bottom bar sheets. Every animal is shown: the ones still to come as a ? with their table.
+function friendsSheet(){
+  const got=kid.extra.friends||[];
+  sheet(`<h2>Forest friends</h2><p class="hint small">Grow every tree in a times table into a Young tree and a forest friend moves in.</p>
+    <ul class="friends">${ORDER.map(t=>got.includes(t)?`<li><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span>${friendName(t)}<small>${t}s</small></li>`
+      :`<li class="to-come"><span class="emo" aria-hidden="true">?</span><small>${t}s</small></li>`).join('')}</ul>`);
+}
+function groveSheet(){sheet(groveHtml(kid,kid.extra.acornDay===today()))}
 
 // The total shown is fixed when the round starts. Every new fact comes back once later in the round
 // (asked again if right, corrected if wrong), so those slots are counted up front. Corrections for
@@ -1037,7 +1045,7 @@ function renderSummary(){
 const acornIcon=gold=>`<svg class="acorn${gold?' gold':''}" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 10.5C6.5 7.5 9 6 12 6C15 6 17.5 7.5 17.5 10.5Z"/><path d="M7.4 10.4C7.4 15.6 10 18.6 12 18.6C14 18.6 16.6 15.6 16.6 10.4Z"/><path d="M12 6V3.8" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 function groveHtml(p,acornToday){
   const n=p.extra.acorns||0,trees=Math.floor(n/ACORNS_PER_TREE),have=n%ACORNS_PER_TREE;
-  return `<section class="grove" aria-labelledby="sg"><h2 id="sg">Special grove</h2>
+  return `<section class="grove"><h2>Special grove</h2>
     ${trees?`<ul>${[...Array(trees)].map((_,i)=>{const [k,name]=specialName(i);return `<li><svg class="special" aria-hidden="true"><use href="#sp-${k}"/></svg>${name.replace(/^an? (.)/,(_,c)=>c.toUpperCase())}</li>`}).join('')}</ul>`:''}
     <div class="acorns" role="img" aria-label="${have} of ${ACORNS_PER_TREE} golden acorns">${[...Array(ACORNS_PER_TREE)].map((_,i)=>acornIcon(i<have)).join('')}</div>
     <p class="hint small">${acornToday?"You've earned today's golden acorn.":'Check every tree in a day to earn a golden acorn.'} ${ACORNS_PER_TREE} golden acorns plant a special tree.</p></section>`;
@@ -1324,6 +1332,8 @@ app.addEventListener('click',e=>{
     case 'mock-intro':go('mockIntro');break;
     case 'mock-start':startMock();break;
     case 'bests':bestsSheet();break;
+    case 'friends':friendsSheet();break;
+    case 'grove':groveSheet();break;
     case 'tricky':trickySheet(+b.dataset.id);break;
     case 'walk-next':walkNext();break;
     case 'cell':cellSheet(+b.dataset.a,+b.dataset.b);break;

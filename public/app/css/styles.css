@@ -241,13 +241,21 @@ p{line-height:1.45}
 .tf{font-weight:600}
 .sheet h3{font-size:17px;font-weight:600;margin:14px 0 8px}
 .missed small{color:var(--muted);font-size:14px}
-.friends ul{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}
-.friends li{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;border-radius:14px;background:var(--surface);font-size:16px}
+ul.friends{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px}
+.friends .to-come{opacity:.55;border:2px dashed var(--line);background:none}
+.friends .to-come .emo{width:24px;text-align:center;font-weight:600;color:var(--muted)}
+/* bottom bar on the forest screen */
+.dock{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 12px 8px;background:var(--surface);border-top:1px solid var(--line);border-radius:18px 18px 0 0}
+.dock button{display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;color:var(--ink);font:inherit;font-size:15px;font-weight:600;padding:6px 0;border-radius:12px}
+.dock button:active{background:var(--bg)}
+.dock .emo,.dock .acorn{font-size:24px;line-height:28px;width:28px;height:28px}
+.dock small{font-size:12px;font-weight:400;color:var(--muted)}
+.friends li{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;border-radius:14px;background:var(--bg);font-size:16px}
 .friends small{color:var(--muted);font-size:13px}
 /* special grove and golden acorns */
-.grove h2{font-size:17px;font-weight:600;margin:16px 0 8px}
+.grove h2{margin:0 0 10px}
 .grove ul{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px}
-.grove li{display:flex;align-items:center;gap:6px;padding:4px 12px 4px 6px;border-radius:14px;background:var(--surface);font-size:16px}
+.grove li{display:flex;align-items:center;gap:6px;padding:4px 12px 4px 6px;border-radius:14px;background:var(--bg);font-size:16px}
 .grove .special{width:34px;height:34px}
 .acorns{display:flex;gap:4px}
 .acorn{width:30px;height:30px;fill:none;stroke:color-mix(in srgb,var(--muted) 55%,transparent);stroke-width:1.4}
