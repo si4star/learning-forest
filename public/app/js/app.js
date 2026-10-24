@@ -725,8 +725,9 @@ function renderHome(){
   const p=kid,now=Date.now(),un=ALL.filter(k=>isUnlocked(p,k));
   const due=un.filter(k=>{const f=fact(p,k);return f.box>0&&f.due<=now}).length;
   const fresh=un.filter(k=>fact(p,k).box===0).length;
-  const status=due?`${due} ${due===1?'tree is':'trees are'} ready to check today.`:fresh?'New seeds are ready to plant.':'Everything is checked for today. Come back tomorrow to grow more.';
-  const label=(due||fresh)?"Play today's round":'Extra practice';
+  // a round checks up to ROUND trees, so a big backlog takes a few rounds
+  const status=due?`${due} ${due===1?'tree is':'trees are'} ready to check.${due>ROUND?` Each round checks up to ${ROUND}.`:''}`:fresh?'New seeds are ready to plant.':'Everything is checked for today. Come back tomorrow to grow more.';
+  const label=(due||fresh)?'Play a round':'Extra practice';
   const on=tablesOn(p);
   let g='<div class="hd">×</div>'+[...Array(11)].map((_,i)=>`<div class="hd ${on.includes(i+2)?'on':''}">${i+2}</div>`).join('');
   for(let a=2;a<=12;a++){

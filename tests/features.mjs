@@ -48,6 +48,8 @@ await kp.waitForFunction(() => navigator.serviceWorker.controller);   // service
 step('practice check is offered once the forest is grown');
 assert.ok(await kp.$('[data-act=mock-intro]'));
 assert.match(await kp.textContent('.streak'), /5 days in a row/);
+assert.equal(await kp.textContent('.status'), '66 trees are ready to check. Each round checks up to 20.', 'a big backlog takes a few rounds');
+assert.equal(await kp.textContent('[data-act=play]'), 'Play a round');
 
 step('settings has no read aloud');
 await kp.click('[data-act=settings]');
