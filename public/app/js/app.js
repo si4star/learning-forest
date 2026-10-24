@@ -751,15 +751,14 @@ function renderHome(){
     for(let b=2;b<=12;b++){
       const k=key(a,b),s=fact(p,k).box,lk=!isUnlocked(p,k);
       g+=lk?`<span class="cell locked">${tree(0)}</span>`
-           :`<button class="cell" data-act="cell" data-a="${a}" data-b="${b}" aria-label="${a} times ${b}: ${STAGES[s]}">${tree(s)}</button>`;
+           :`<button class="cell${a>b?' mirror':''}" data-act="cell" data-a="${a}" data-b="${b}" aria-label="${a} times ${b}: ${STAGES[s]}">${tree(s)}</button>`;
     }
   }
   const next=nextTable(p),trees=ALL.filter(k=>fact(p,k).box>=4).length,friends=p.extra.friends||[];
   const restRecent=p.extra.restDay&&today()-p.extra.restDay<7*864e5;
   const mock=mockReady(p)?'<button class="cta progress" data-act="mock-intro"><span>📝 Practice check</span><small>Open</small></button>'
-    :`<div class="cta quiet progress locked" style="--p:${Math.min(100,Math.round(100*trees/MOCK_TREES))}%" role="img"
-      aria-label="Practice check: opens ${next?'when every table is planted and ':'when '}${MOCK_TREES} trees have grown. ${trees} grown so far.">
-      <span>📝 Practice check</span><small>🔒 ${next?'After every table':`${trees} of ${MOCK_TREES} trees`}</small></div>`;
+    :`<button class="cta quiet progress locked" data-act="mock-locked" style="--p:${Math.min(100,Math.round(100*trees/MOCK_TREES))}%">
+      <span>📝 Practice check</span><small>🔒 ${next?'After every table':`${trees} of ${MOCK_TREES} grown`}</small></button>`;
   const seedsLeft=ALL.length-planted(p);
   app.innerHTML=`<main class="screen scroll">
     <header class="bar start">${back('hub','All modules')}<h1>${esc(p.name)}'s forest</h1>${classDev?'<button class="pill" data-act="logout">I\'m done</button>':''}<button class="icon" data-act="settings" aria-label="Settings">${cogIcon}</button></header>
@@ -802,6 +801,15 @@ function streakHtml(p,restRecent){
   return `<div class="streak-card"><p class="streak-n"><b>${n}</b> ${n===1?'day':'days'} in a row</p>
     <div class="days" aria-hidden="true">${dots}</div>
     <p class="streak-next">${played?`Come back tomorrow for ${n+1}.`:`Play today to make it ${n+1}!`}${restRecent?' Rest day used this week.':''}</p></div>`;
+}
+// Why the practice check is still locked, in terms of what the child can see in the forest
+function mockLockedSheet(){
+  const p=kid,trees=ALL.filter(k=>fact(p,k).box>=4).length,next=nextTable(p);
+  sheet(`<h2>📝 Practice check</h2>
+    <p>It opens when <b>${MOCK_TREES} trees</b> have grown into a <b>Young tree</b> or <b>Mature tree</b>${next?', and every times table is planted':''}.</p>
+    <div class="legend four">${[2,3,4,5].map(i=>`<span${i>=4?' class="here"':''}>${tree(i)}${STAGES[i]}</span>`).join('')}</div>
+    <p class="big-count"><b>${trees}</b> of ${MOCK_TREES} grown</p>
+    <p class="hint">Each tree is one fact. 3 × 10 and 10 × 3 are the same tree, so the faint half of the forest shows each tree a second time. Sprouts and saplings count once they grow into Young trees.</p>`);
 }
 // Bottom bar sheets. Every animal is shown: the ones still to come as a ? with their table.
 function friendsSheet(){
@@ -1361,6 +1369,7 @@ app.addEventListener('click',e=>{
     case 'quit':if(round)clearTimeout(round.timer);round=null;go(kid.assessedAt?'home':'assessPick');break;
     case 'pw':e.preventDefault();togglePw(b);break;
     case 'mock-intro':go('mockIntro');break;
+    case 'mock-locked':mockLockedSheet();break;
     case 'mock-start':startMock();break;
     case 'bests':bestsSheet();break;
     case 'friends':friendsSheet();break;

@@ -209,7 +209,12 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   await bp.click('[data-act=mod-tables]');
   await bp.waitForSelector('.forest');
   assert.match(await bp.textContent('.tables'), /Only 1 seed left to plant/);
-  assert.match(await bp.textContent('.play-row .locked'), /33 of 34 trees/);
+  assert.match(await bp.textContent('.play-row .locked'), /33 of 34 grown/);
+  assert.equal(await bp.locator('.forest .cell.mirror').count(), 55, 'the mirror half (10 × 3 for 3 × 10) is faint, so each tree shows once');
+  await bp.click('.play-row .locked');
+  assert.match(await bp.textContent('.sheet'), /34 trees have grown into a Young tree or Mature tree/);
+  assert.match(await bp.textContent('.sheet .big-count'), /33 of 34 grown/);
+  await bp.click('.sheet [data-act=close]');
   assert.equal(await bp.evaluate(() => document.querySelector('.play-row .locked').style.getPropertyValue('--p')), '97%');
   assert.equal(await bp.locator('[data-act=mock-intro]').count(), 0);
   assert.match(await bp.textContent('.dock [data-act=grove]'), /6 of 7/);
