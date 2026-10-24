@@ -398,7 +398,11 @@ function kidActions(c,a){
 // Pupils who haven't played for 12 months are deleted (the reminders Worker does it); warn from 11 months
 const IDLE_DELETE=365*864e5, IDLE_WARN=334*864e5;
 const idleWarning=c=>c.activeAt&&Date.now()-c.activeAt>IDLE_WARN?`<p class="warn small">Not played for 11 months. ${esc(c.name)}'s data will be deleted on ${new Date(c.activeAt+IDLE_DELETE).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} unless they play before then.</p>`:'';
-const kidMeta=c=>`${c.assessedAt?`${c.planted} of 66 planted`:'Starting check not done yet'}${c.lastPlayed?` · last played ${ago(c.lastPlayed)}`:''}`;
+const kidMeta=c=>{
+  const sp=Math.floor(c.acorns/ACORNS_PER_TREE);
+  return `${c.assessedAt?`${c.planted} of 66 planted`:'Starting check not done yet'}${c.lastPlayed?` · last played ${ago(c.lastPlayed)}`:''}${c.acorns?
+    `<span class="kid-acorns">${acornIcon(true)}${c.acorns} golden ${c.acorns===1?'acorn':'acorns'}${sp?` · ${sp} special ${sp===1?'tree':'trees'}`:''}</span>`:''}`;
+};
 const deviceBanner=()=>classDev?`<div class="install"><p><b>This device is set up for ${esc(classDev.className)}.</b> When nobody is logged in, it shows the class's name tiles.</p>
   <button class="go" data-act="leave-device">Stop</button></div>`:'';
 function renderParent(){

@@ -238,6 +238,13 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   }
   assert.doesNotMatch(await bp.textContent('.done'), /golden acorn/);
   await ctx.close();
+  // the grown-up sees them too
+  const gp = await parent.newPage(); gp.on('pageerror', e => errors.push(e.message));
+  await gp.goto(BASE + '/app/');
+  await gp.waitForSelector('.kid');
+  assert.match(await gp.locator('.kid', { hasText: 'Bea' }).textContent(), /7 golden acorns · 1 special tree/);
+  assert.equal(await gp.locator('.kid', { hasText: 'Ava' }).locator('.kid-acorns').count(), 0, 'none shown before the first');
+  await gp.close();
 }
 
 assert.deepEqual(errors, []);

@@ -213,7 +213,8 @@ async function listChildren(ctx) {
   const { results } = await ctx.db.prepare(`
     SELECT c.id, c.name, c.display_username AS username, c.last_played AS lastPlayed, c.assessed_at AS assessedAt,
       COALESCE(c.last_played, c.created_at) AS activeAt,
-      (SELECT COUNT(*) FROM facts f WHERE f.child_id = c.id AND f.box > 0) AS planted, c.class_id AS classId, c.pics
+      (SELECT COUNT(*) FROM facts f WHERE f.child_id = c.id AND f.box > 0) AS planted, c.class_id AS classId, c.pics,
+      COALESCE(json_extract(c.extra, '$.acorns'), 0) AS acorns
     FROM children c WHERE c.parent_id = ? ORDER BY c.name COLLATE NOCASE`).bind(pid).all();
   const classes = (await ctx.db.prepare(`SELECT k.id, k.name, (SELECT COUNT(*) FROM class_devices d WHERE d.class_id = k.id) AS devices
     FROM classes k WHERE k.owner_id = ? ORDER BY k.created_at`).bind(pid).all()).results;

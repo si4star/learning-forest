@@ -263,6 +263,8 @@ ul.friends{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-wrap:wrap;
 .acorn.gold path:nth-child(1){fill:#B07A1E}
 .acorn.gold path:nth-child(2){fill:#F2C25B}
 .acorn.gold path:nth-child(3){stroke:#8A5A1E}
+.kid-acorns{display:flex;align-items:center;gap:4px;margin-top:2px}
+.kid-acorns .acorn{width:20px;height:20px}
 .acorn-new{text-align:center;font-size:19px;font-weight:500;margin:0 0 6px;display:flex;flex-direction:column;align-items:center}
 .acorn-new .acorn{width:56px;height:56px}
 .emo{font-size:24px;line-height:1}
