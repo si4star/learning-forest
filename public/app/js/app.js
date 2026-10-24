@@ -15,6 +15,7 @@ const friendName=t=>FRIENDS[t][1].split(' ')[1];
 const ACORNS_PER_TREE=7;
 const SPECIAL=[['oak','an oak'],['rowan','a rowan'],['birch','a silver birch']];
 const specialName=i=>SPECIAL[i%SPECIAL.length];
+const acornCount=p=>(p.extra.acorns||0)+(p.extra.acornGift||0);   // earned, plus any gift from the server
 // Shown before a newly planted table, with three worked examples
 const TABLE_INTROS={10:'To times by 10, count in tens.',2:'To times by 2, double the number.',
   5:'To times by 5, times by 10, then halve it.',11:'To times by 11, write the digit twice.',
@@ -773,7 +774,7 @@ function renderHome(){
   </main>
   <nav class="dock" aria-label="Your forest">
     <button data-act="friends"><span class="emo" aria-hidden="true">🦉</span>Friends<small>${friends.length} of ${ORDER.length}</small></button>
-    <button data-act="grove">${acornIcon(true)}Grove<small>${(p.extra.acorns||0)%ACORNS_PER_TREE} of ${ACORNS_PER_TREE}</small></button>
+    <button data-act="grove">${acornIcon(true)}Grove<small>${acornCount(p)%ACORNS_PER_TREE} of ${ACORNS_PER_TREE}</small></button>
     <button data-act="bests"><span class="emo" aria-hidden="true">⏱️</span>Bests<small>this week</small></button>
   </nav>`;
 }
@@ -990,8 +991,8 @@ function finishRound(){
 function earnAcorn(p){
   const t=today(),now=Date.now();
   if(p.extra.acornDay===t||ALL.some(k=>{const f=fact(p,k);return f.box>0&&f.due<=now}))return null;
-  const n=(p.extra.acorns||0)+1;
-  p.extra.acorns=n;p.extra.acornDay=t;
+  p.extra.acorns=(p.extra.acorns||0)+1;p.extra.acornDay=t;
+  const n=acornCount(p);
   return {n,special:n%ACORNS_PER_TREE===0?specialName(n/ACORNS_PER_TREE-1):null};
 }
 const tableGrown=(p,t)=>ALL.filter(k=>parse(k).includes(t)).every(k=>fact(p,k).box>=4);
@@ -1081,7 +1082,7 @@ function renderSummary(){
 // Special grove: the special trees planted so far, and golden acorns towards the next one
 const acornIcon=gold=>`<svg class="acorn${gold?' gold':''}" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 10.5C6.5 7.5 9 6 12 6C15 6 17.5 7.5 17.5 10.5Z"/><path d="M7.4 10.4C7.4 15.6 10 18.6 12 18.6C14 18.6 16.6 15.6 16.6 10.4Z"/><path d="M12 6V3.8" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 function groveHtml(p,acornToday){
-  const n=p.extra.acorns||0,trees=Math.floor(n/ACORNS_PER_TREE),have=n%ACORNS_PER_TREE;
+  const n=acornCount(p),trees=Math.floor(n/ACORNS_PER_TREE),have=n%ACORNS_PER_TREE;
   return `<section class="grove"><h2>Special grove</h2>
     ${trees?`<ul>${[...Array(trees)].map((_,i)=>{const [k,name]=specialName(i);return `<li><svg class="special" aria-hidden="true"><use href="#sp-${k}"/></svg>${name.replace(/^an? (.)/,(_,c)=>c.toUpperCase())}</li>`}).join('')}</ul>`:''}
     <div class="acorns" role="img" aria-label="${have} of ${ACORNS_PER_TREE} golden acorns">${[...Array(ACORNS_PER_TREE)].map((_,i)=>acornIcon(i<have)).join('')}</div>

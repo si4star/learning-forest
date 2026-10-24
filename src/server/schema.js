@@ -1,6 +1,6 @@
 // Schema migrations, applied in order on the first request each isolate handles.
 // Append new migrations; never edit one that has shipped.
-const MIGRATIONS = [
+export const MIGRATIONS = [
   [
     `CREATE TABLE IF NOT EXISTS parents(
       id INTEGER PRIMARY KEY,
@@ -110,6 +110,11 @@ const MIGRATIONS = [
   [
     // admin dashboard: a record of every admin action (no pupil or grown-up details, just ids and counts)
     `CREATE TABLE IF NOT EXISTS admin_log(id INTEGER PRIMARY KEY, at INTEGER NOT NULL, admin TEXT NOT NULL, action TEXT NOT NULL, detail TEXT NOT NULL)`,
+  ],
+  [
+    // golden acorns arrived after some pupils had been playing for a while: two each for every pupil there at the time.
+    // Kept apart from earned acorns (extra.acornGift); the server keeps it whatever a device sends.
+    `UPDATE children SET extra = CASE WHEN json_valid(extra) THEN json_set(extra, '$.acornGift', 2) ELSE json_object('acornGift', 2) END`,
   ],
 ];
 

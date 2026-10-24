@@ -214,7 +214,7 @@ async function listChildren(ctx) {
     SELECT c.id, c.name, c.display_username AS username, c.last_played AS lastPlayed, c.assessed_at AS assessedAt,
       COALESCE(c.last_played, c.created_at) AS activeAt,
       (SELECT COUNT(*) FROM facts f WHERE f.child_id = c.id AND f.box > 0) AS planted, c.class_id AS classId, c.pics,
-      COALESCE(json_extract(c.extra, '$.acorns'), 0) AS acorns
+      COALESCE(json_extract(c.extra, '$.acorns'), 0) + COALESCE(json_extract(c.extra, '$.acornGift'), 0) AS acorns
     FROM children c WHERE c.parent_id = ? ORDER BY c.name COLLATE NOCASE`).bind(pid).all();
   const classes = (await ctx.db.prepare(`SELECT k.id, k.name, (SELECT COUNT(*) FROM class_devices d WHERE d.class_id = k.id) AS devices
     FROM classes k WHERE k.owner_id = ? ORDER BY k.created_at`).bind(pid).all()).results;
@@ -378,7 +378,9 @@ async function childSync(ctx) {
     stmts.push(db.prepare('UPDATE children SET tables = ?, streak = ?, last_day = ?, assessed_at = ?, theme = ? WHERE id = ?')
       .bind(JSON.stringify(m.tables), m.streak, m.lastDay, m.assessedAt, m.theme, cid));
     if (m.extra !== undefined)
-      stmts.push(db.prepare('UPDATE children SET extra = ? WHERE id = ?').bind(JSON.stringify(cleanExtra(m.extra)), cid));
+      // a gift of acorns is set by the server only, so it's kept whatever the device sends
+      stmts.push(db.prepare("UPDATE children SET extra = json_set(?, '$.acornGift', COALESCE(json_extract(extra, '$.acornGift'), 0)) WHERE id = ?")
+        .bind(JSON.stringify(cleanExtra(m.extra)), cid));
   }
   if (answers.length) stmts.push(db.prepare('UPDATE children SET last_played = ? WHERE id = ?').bind(Date.now(), cid));
   if (stmts.length) await db.batch(stmts);

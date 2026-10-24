@@ -107,7 +107,7 @@ There are four forest seasons, spring, summer, autumn and winter, plus Christmas
 - **Each tree shows once.** The forest is a full times-table square, so every tree appears twice (3 × 10 and 10 × 3). The half below the diagonal is faint, so the trees a child can count match the count towards the practice check. The locked practice check tile says "26 of 34 grown"; tapping it explains which trees count (Young and Mature) and why.
 - **Tapping a tree** shows the fact, its strategy and the key of stages with this tree's stage picked out (the key isn't on the forest screen).
 - **Bottom bar** (forest screen). Friends, Grove and Bests, each opening a sheet: forest friends (all 11 shown, the ones to come as ?), the special grove and golden acorns, and personal bests. Each button shows a count.
-- **Golden acorns.** A round that leaves no tree to check today earns a golden acorn (one a day; `extra.acorns`, `extra.acornDay`). Every 7 plant a special tree in the special grove (Grove in the bottom bar): an oak, a rowan, a silver birch, then round again. They're kept if a grown-up redoes the starting check. Grown-ups see each child's count, and special trees, under the child's name (family and class lists).
+- **Golden acorns.** A round that leaves no tree to check today earns a golden acorn (one a day; `extra.acorns`, `extra.acornDay`). Every 7 plant a special tree in the special grove (Grove in the bottom bar): an oak, a rowan, a silver birch, then round again. They're kept if a grown-up redoes the starting check. Pupils already playing when acorns arrived were given 2 each (migration 11, `extra.acornGift`, counted with earned ones); only the server sets it, and it's kept whatever a device sends. Grown-ups see each child's count, and special trees, under the child's name (family and class lists).
 - **Milestones.** Once every table is planted, the forest screen shows the seeds left to plant and a progress bar towards the practice check. The round that plants the last seed, and the round that opens the practice check, end with confetti and a message; the second has a button straight to the practice check.
 - **Tricky facts** (grown-up screen). For each child: this week's questions and % right; up to 8 facts, ordered by how often they're wrong, then by how slow they are, over the last 30 days; and practice check scores.
 - **Daily reminder** (Settings, on the child's device). One notification a day at the chosen time, only if the child hasn't played yet that day. Needs the reminders Worker (below). On iPhone and iPad it needs iOS 16.4 or later, and the app installed to the home screen.
@@ -203,6 +203,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `src/server/push.js` | Web Push (VAPID) signing and sending |
 | `workers/reminders/` | Scheduled Worker that sends daily reminders |
 | `tests/e2e.mjs` | End-to-end test: accounts, starting check, rounds, sync, PWA |
+| `tests/acorns.mjs` | The gift of 2 golden acorns: added to earned ones, kept through device syncs, shown to grown-ups |
 | `tests/features.mjs` | End-to-end test: shapes, friends, streak, bests, practice check, tricky facts, reminders, offline |
 | `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
 | `public/admin/` | Admin dashboard page (see **Admin dashboard**) |
