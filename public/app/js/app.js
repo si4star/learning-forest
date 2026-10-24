@@ -828,7 +828,10 @@ function renderPlay(){
    One step at a time; a wrong step shows its answer and the child types it. */
 function startWalk(kind){
   const it=round.items[round.i];round.mode='walk';round.input='';round.lock=false;
-  round.walk={kind,steps:walkSteps(it.a,it.b,kind==='example'?round.tableIntro:undefined),i:0,reveal:false};
+  const steps=walkSteps(it.a,it.b,kind==='example'?round.tableIntro:undefined);
+  // a wrong division ends by turning the times fact back into the division
+  if(kind==='fix'&&it.shape==='div')steps.push({say:`${it.a} × ${it.b} = ${it.a*it.b}. So how many ${it.a}s make ${it.a*it.b}?`,q:`${it.a*it.b} ÷ ${it.a}`,ans:it.b});
+  round.walk={kind,steps,i:0,reveal:false};
 }
 function walkHtml(it){
   const w=round.walk,cur=w.steps[w.i],done=!cur;

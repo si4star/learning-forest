@@ -98,7 +98,7 @@ There are four forest seasons, spring, summer, autumn and winter, plus Christmas
 ## Features
 
 - **Table introductions.** When a table is newly planted, the next round opens with its strategy in one sentence and three worked examples (×2, ×3, ×4) using that table's strategy. Tables passed in the starting check skip this.
-- **Question shapes.** Young and Mature trees are sometimes asked as `6 × ? = 42` or `42 ÷ 6` (a third each), so the whole fact family is practised. A wrong answer walks through the multiplication.
+- **Question shapes.** Young and Mature trees are sometimes asked as `6 × ? = 42` or `42 ÷ 6` (a third each), so the whole fact family is practised. The two numbers come in either order, so `42 ÷ 6` and `42 ÷ 7` are both asked. A wrong answer walks through the multiplication; after a wrong division the last step is the division itself ("6 × 7 = 42. So how many 6s make 42?").
 - **Forest friends.** When every fact in a table is a Young tree or Mature tree, an animal moves in (10s owl, 2s squirrel, 5s hedgehog, 11s rabbit, 3s fox, 4s robin, 9s deer, 6s badger, 8s butterfly, 12s frog, 7s ladybird). Friends stay once earned.
 - **Gentler streak.** One missed day in any 7 doesn't break a run of days.
 - **Personal bests.** Quickest facts in the last 7 days, and facts whose best time beat the week before by 0.3 s or more.

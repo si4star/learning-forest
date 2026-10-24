@@ -71,28 +71,30 @@ const solveStep = q => {
   if ((m = /^(\d+) × (\d+)$/.exec(q))) return +m[1] * +m[2];
   if ((m = /^(\d+) \+ (\d+)$/.exec(q))) return +m[1] + +m[2];
   if ((m = /^(\d+) − (\d+)$/.exec(q))) return +m[1] - +m[2];
+  if ((m = /^(\d+) ÷ (\d+)$/.exec(q))) return +m[1] / +m[2];
   throw new Error('unknown step ' + q);
 };
 
-step('grown trees are asked in different shapes; one wrong answer gets the walk-through');
+step('grown trees are asked in different shapes; a wrong division gets the walk-through, ending with the division');
 await kp.click('[data-act=play]');
 const shapes = { mul: 0, missing: 0, div: 0 };
-let missedOne = false;
+let missedOne = false, missedQ, lastStep;
 for (let n = 0; n < 60 && !(await kp.$('.done')); n++) {
   if (await kp.$('.walk')) {
-    while (!(await kp.$('[data-act=walk-next]'))) await type(solveStep((await kp.textContent('.steps .now .step-eq')).replace(/=.*$/s, '').trim()));
+    while (!(await kp.$('[data-act=walk-next]'))) await type(solveStep(lastStep = (await kp.textContent('.steps .now .step-eq')).replace(/=.*$/s, '').trim()));
+    if (missedQ) { assert.equal(lastStep, missedQ, 'the walk-through ends with the division'); missedQ = null; }
     await kp.keyboard.press('Enter'); continue;
   }
   const q = (await kp.textContent('.q')).trim();
   const shape = q.includes('÷') ? 'div' : q.includes('?') ? 'missing' : 'mul';
   shapes[shape]++;
-  if (!missedOne && shape !== 'mul') { missedOne = true; await type(solve(q) + 1); await kp.waitForSelector('.walk'); continue; }
+  if (!missedOne && shape === 'div') { missedOne = true; missedQ = q; await type(solve(q) + 1); await kp.waitForSelector('.walk'); continue; }
   await type(solve(q));
   await kp.waitForTimeout(650);
 }
 console.log('  shapes:', shapes);
 assert.ok(shapes.missing + shapes.div > 0, 'some questions asked another way round');
-assert.ok(missedOne);
+assert.ok(missedOne && !missedQ);
 
 step('forest friends move in, and the streak survives one missed day');
 const summary = await kp.textContent('.done');
