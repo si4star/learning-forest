@@ -135,16 +135,16 @@ assert.ok(rows.find(r => r.startsWith('5s')).includes('You know these'));
 assert.ok(rows.find(r => r.startsWith('7s')).includes("We'll grow these"));
 await kp.click('text=Go to my forest');
 await kp.waitForSelector('.forest');
-const tablesText = await kp.textContent('.tables');
-console.log('  ', tablesText);
-assert.match(tablesText, /Planted: the 2, 5, 10 times tables/, '2 and 5 passed, 10 unlocked next');
+const plantedTables = () => kp.evaluate(() => [...new Set([...document.querySelectorAll('.forest .hd.on')].map(h => +h.textContent))].sort((a, b) => a - b));
+assert.deepEqual(await plantedTables(), [2, 5, 10], '2 and 5 passed, 10 unlocked next');
+assert.match(await kp.textContent('.tables'), /^Next up: the 11 times table\.$/);
 await kp.waitForTimeout(800);
 
 step('progress survives a reload (stored in D1)');
 await kp.reload();
 await kp.click('[data-act=mod-tables]');   // module picker after login
 await kp.waitForSelector('.forest');
-assert.match(await kp.textContent('.tables'), /2, 5, 10/);
+assert.deepEqual(await plantedTables(), [2, 5, 10]);
 await kp.click('[aria-label="All modules"]');
 await kp.waitForSelector('text=planted');
 assert.match(await kp.textContent('[data-act=mod-tables]'), /\d+ of 66 trees planted/);

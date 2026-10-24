@@ -766,17 +766,33 @@ function renderHome(){
       :offline?'<p class="warn">You\'re offline. You can still play, and your answers will save when you\'re back online.</p>'
       :unsaved?'<p class="warn">Some answers haven\'t saved yet. They\'ll save when the internet is back.</p>':''}
     <section class="today"><p class="status">${status}</p>
-      <p class="streak">${p.streak>1?`${p.streak} days in a row${restRecent?' · rest day used this week':''}`:'Play a little every day to keep the forest growing.'}</p>
+      ${streakHtml(p,restRecent)}
       <div class="stack tight"><button class="cta" data-act="play">${label}</button>${mock}</div></section>
     <section class="forest" aria-label="Times table forest">${g}</section>
-    <div class="legend">${[1,2,3,4,5].map(s=>`<span>${tree(s)}${STAGES[s]}</span>`).join('')}</div>
-    <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:seedsLeft?` Only ${seedsLeft} ${seedsLeft===1?'seed':'seeds'} left to plant. Plant them all to finish your forest!`:' Every seed is planted.'}</p>
+    ${next?`<p class="tables">Next up: the ${next} times table.</p>`:seedsLeft?`<p class="tables">Only ${seedsLeft} ${seedsLeft===1?'seed':'seeds'} left to plant. Plant them all to finish your forest!</p>`:''}
   </main>
   <nav class="dock" aria-label="Your forest">
     <button data-act="friends"><span class="emo" aria-hidden="true">🦉</span>Friends<small>${friends.length} of ${ORDER.length}</small></button>
     <button data-act="grove">${acornIcon(true)}Grove<small>${(p.extra.acorns||0)%ACORNS_PER_TREE} of ${ACORNS_PER_TREE}</small></button>
     <button data-act="bests"><span class="emo" aria-hidden="true">⏱️</span>Bests<small>this week</small></button>
   </nav>`;
+}
+// Streak: the run of days played (one missed day a week allowed), with the last 7 days as dots
+function streakHtml(p,restRecent){
+  const t=today(),day=864e5,played=p.lastDay===t;
+  // still alive if played today or yesterday, or the day before with the week's rest day unused
+  const alive=p.streak>0&&(t-p.lastDay<=day||(t-p.lastDay===2*day&&!restRecent));
+  const n=alive?p.streak:0;
+  if(n<2&&!played)return `<p class="streak">Play a little every day to grow a streak.</p>`;
+  const rest=p.extra.restDay,span=n+(rest&&rest<p.lastDay&&rest>p.lastDay-7*day?1:0);
+  const dots=[6,5,4,3,2,1,0].map(i=>{
+    const d=addDays(t,-i),label=new Date(d).toLocaleDateString('en-GB',{weekday:'narrow'});
+    const cls=d===rest&&alive?'rest':d<=p.lastDay&&d>addDays(p.lastDay,-span)&&alive?'on':i===0?'due':'';
+    return `<span class="${cls}"><i>${cls==='on'?'✓':cls==='rest'?'z':''}</i>${label}</span>`;
+  }).join('');
+  return `<div class="streak-card"><p class="streak-n"><b>${n}</b> ${n===1?'day':'days'} in a row</p>
+    <div class="days" aria-hidden="true">${dots}</div>
+    <p class="streak-next">${played?`Come back tomorrow for ${n+1}.`:`Play today to make it ${n+1}!`}${restRecent?' Rest day used this week.':''}</p></div>`;
 }
 // Bottom bar sheets. Every animal is shown: the ones still to come as a ? with their table.
 function friendsSheet(){
@@ -1160,7 +1176,9 @@ function pickSeason(s,bg){
 
 function cellSheet(a,b){
   const s=fact(kid,key(a,b)).box;
-  sheet(`<p class="eq">${a} × ${b} = ${a*b}</p><p>${b} × ${a} is the same tree.</p><p class="hint">${hint(a,b)}</p><p>Stage: ${STAGES[s]}.</p>`);
+  sheet(`<p class="eq">${a} × ${b} = ${a*b}</p><p>${b} × ${a} is the same tree.</p><p class="hint">${hint(a,b)}</p>
+    <div class="legend" role="list" aria-label="Stages">${[0,1,2,3,4,5].map(i=>`<span role="listitem"${i===s?' class="here" aria-current="true"':''}>${tree(i)}${STAGES[i]}</span>`).join('')}</div>
+    <p class="stage-now">${s?`This tree is a <b>${STAGES[s]}</b>.${s<5?` Next: ${STAGES[s+1]}.`:''}`:'Not planted yet.'}</p>`);
 }
 // How the method works: one short card per idea, swiped through (or Back / Next), closable at any point
 const HOW=[

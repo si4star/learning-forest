@@ -47,7 +47,15 @@ await kp.waitForFunction(() => navigator.serviceWorker.controller);   // service
 
 step('practice check is offered once the forest is grown');
 assert.ok(await kp.$('[data-act=mock-intro]'));
-assert.match(await kp.textContent('.streak'), /5 days in a row/);
+assert.match(await kp.textContent('.streak-card'), /5 days in a row/);
+assert.match(await kp.textContent('.streak-card'), /Play today to make it 6!/);
+assert.equal(await kp.locator('.days .on').count(), 5, 'five days played…');
+assert.equal(await kp.locator('.days .due').count(), 1, '…and today still to play');
+assert.equal(await kp.locator('.legend').count(), 0, 'the key is in the fact sheet, not on the forest screen');
+await kp.click('.cell[data-a="7"][data-b="8"]');
+assert.equal(await kp.textContent('.sheet .legend .here'), 'Young tree', 'the key highlights this fact\'s stage');
+assert.match(await kp.textContent('.sheet .stage-now'), /This tree is a Young tree\. Next: Mature tree\./);
+await kp.click('.sheet [data-act=close]');
 assert.equal(await kp.textContent('.status'), '66 trees are ready to check. Each round checks up to 20.', 'a big backlog takes a few rounds');
 assert.equal(await kp.textContent('[data-act=play]'), 'Play a round');
 
@@ -110,11 +118,15 @@ assert.equal(await kp.locator('.sheet .friends li').count(), 11, 'every animal s
 await kp.click('.sheet [data-act=close]');
 console.log('  friends:', friendCount);
 assert.ok(friendCount >= 8 && friendCount <= 10, 'every table but the missed fact\'s');
-assert.match(await kp.textContent('.streak'), /6 days in a row · rest day used this week/);
+assert.match(await kp.textContent('.streak-card'), /6 days in a row/);
+assert.match(await kp.textContent('.streak-card'), /Come back tomorrow for 7\. Rest day used this week\./);
+assert.equal(await kp.locator('.days .rest').count(), 1, 'yesterday shown as the rest day');
+assert.equal(await kp.locator('.days .on').count(), 6);
 
 step('personal bests');
 await kp.click('[data-act=bests]');
 await kp.waitForSelector('.sheet .bests li');
+assert.ok(await kp.evaluate(() => { const r = document.querySelector('.sheet [data-act=close]').getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0; }), 'Close is in view without scrolling');
 assert.match(await kp.textContent('.sheet'), /Quickest this week/);
 await kp.click('.sheet [data-act=close]');
 
@@ -217,7 +229,7 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   assert.match(await bp.textContent('[data-act=mod-tables]'), /All 66 trees planted/);
   await bp.click('[data-act=mod-tables]');
   await bp.waitForSelector('.forest');
-  assert.match(await bp.textContent('.tables'), /Every seed is planted/);
+  assert.equal(await bp.locator('.tables').count(), 0, 'nothing to say once every seed is planted');
   assert.equal(await bp.locator('.goal').count(), 0);
   assert.equal(await bp.locator('[data-act=mock-intro]').count(), 1);
   await bp.click('.dock [data-act=grove]');
