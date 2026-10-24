@@ -244,6 +244,19 @@ p{line-height:1.45}
 .friends ul{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}
 .friends li{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;border-radius:14px;background:var(--surface);font-size:16px}
 .friends small{color:var(--muted);font-size:13px}
+/* special grove and golden acorns */
+.grove h2{font-size:17px;font-weight:600;margin:16px 0 8px}
+.grove ul{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px}
+.grove li{display:flex;align-items:center;gap:6px;padding:4px 12px 4px 6px;border-radius:14px;background:var(--surface);font-size:16px}
+.grove .special{width:34px;height:34px}
+.acorns{display:flex;gap:4px}
+.acorn{width:30px;height:30px;fill:none;stroke:color-mix(in srgb,var(--muted) 55%,transparent);stroke-width:1.4}
+.acorn.gold{stroke:none}
+.acorn.gold path:nth-child(1){fill:#B07A1E}
+.acorn.gold path:nth-child(2){fill:#F2C25B}
+.acorn.gold path:nth-child(3){stroke:#8A5A1E}
+.acorn-new{text-align:center;font-size:19px;font-weight:500;margin:0 0 6px;display:flex;flex-direction:column;align-items:center}
+.acorn-new .acorn{width:56px;height:56px}
 .emo{font-size:24px;line-height:1}
 .friend-new{text-align:center;font-size:19px;font-weight:500;margin:0 0 6px}
 /* milestones: every seed planted, practice check open */

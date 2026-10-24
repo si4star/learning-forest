@@ -11,6 +11,10 @@ const HEAVY=[6,7,8,9,12];   // weighted more heavily in the real check
 const FRIENDS={10:['🦉','an owl'],2:['🐿️','a squirrel'],5:['🦔','a hedgehog'],11:['🐇','a rabbit'],3:['🦊','a fox'],
   4:['🐦','a robin'],9:['🦌','a deer'],6:['🦡','a badger'],8:['🦋','a butterfly'],12:['🐸','a frog'],7:['🐞','a ladybird']};
 const friendName=t=>FRIENDS[t][1].split(' ')[1];
+// A golden acorn for each day every tree is checked; every ACORNS_PER_TREE plant a special tree, in this order
+const ACORNS_PER_TREE=7;
+const SPECIAL=[['oak','an oak'],['rowan','a rowan'],['birch','a silver birch']];
+const specialName=i=>SPECIAL[i%SPECIAL.length];
 // Shown before a newly planted table, with three worked examples
 const TABLE_INTROS={10:'To times by 10, count in tens.',2:'To times by 2, double the number.',
   5:'To times by 5, times by 10, then halve it.',11:'To times by 11, write the digit twice.',
@@ -731,7 +735,8 @@ function renderHome(){
   const due=un.filter(k=>{const f=fact(p,k);return f.box>0&&f.due<=now}).length;
   const fresh=un.filter(k=>fact(p,k).box===0).length;
   // a round checks up to ROUND trees, so a big backlog takes a few rounds
-  const status=due?`${due} ${due===1?'tree is':'trees are'} ready to check.${due>ROUND?` Each round checks up to ${ROUND}.`:''}`:fresh?'New seeds are ready to plant.':'Everything is checked for today. Come back tomorrow to grow more.';
+  const acornToday=p.extra.acornDay===today();
+  const status=due?`${due} ${due===1?'tree is':'trees are'} ready to check.${due>ROUND?` Each round checks up to ${ROUND}.`:''}`:fresh?'New seeds are ready to plant.':`Everything is checked for today.${acornToday?" You've earned today's golden acorn.":''} Come back tomorrow to grow more.`;
   const label=(due||fresh)?'Play a round':'Extra practice';
   const on=tablesOn(p);
   let g='<div class="hd">×</div>'+[...Array(11)].map((_,i)=>`<div class="hd ${on.includes(i+2)?'on':''}">${i+2}</div>`).join('');
@@ -764,6 +769,7 @@ function renderHome(){
     <section class="friends" aria-labelledby="ff"><h2 id="ff">Forest friends</h2>
       ${friends.length?`<ul>${friends.map(t=>`<li><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span>${friendName(t)}<small>${t}s</small></li>`).join('')}</ul>`
         :'<p class="hint small">Grow every tree in a times table into a Young tree and a forest friend moves in.</p>'}</section>
+    ${groveHtml(p,acornToday)}
     <p class="tables">Planted: the ${on.slice().sort((x,y)=>x-y).join(', ')} times tables.${next?` Next up: the ${next} times table.`:seedsLeft?` Only ${seedsLeft} ${seedsLeft===1?'seed':'seeds'} left to plant. Plant them all to finish your forest!`:' Every seed is planted.'}</p>
     <button class="link" data-act="bests">⏱ Personal bests</button>
   </main>`;
@@ -931,9 +937,17 @@ function finishRound(){
     p.lastDay=t;
   }
   const b=round.before;
-  summary={...round.res,unlocked:checkUnlock(p),friends:newFriends(p),
+  summary={...round.res,unlocked:checkUnlock(p),friends:newFriends(p),acorn:earnAcorn(p),
     allPlanted:b.planted<ALL.length&&planted(p)===ALL.length,mockOpen:!b.mock&&mockReady(p)};saveMeta();round=null;view='summary';render();
   flush().then(ok=>{if(!ok&&view==='summary')render()});
+}
+// After a round: a golden acorn if no tree is left to check today (one a day)
+function earnAcorn(p){
+  const t=today(),now=Date.now();
+  if(p.extra.acornDay===t||ALL.some(k=>{const f=fact(p,k);return f.box>0&&f.due<=now}))return null;
+  const n=(p.extra.acorns||0)+1;
+  p.extra.acorns=n;p.extra.acornDay=t;
+  return {n,special:n%ACORNS_PER_TREE===0?specialName(n/ACORNS_PER_TREE-1):null};
 }
 const tableGrown=(p,t)=>ALL.filter(k=>parse(k).includes(t)).every(k=>fact(p,k).box>=4);
 function newFriends(p){
@@ -1002,19 +1016,31 @@ function finishAssessment(){
 }
 function renderSummary(){
   const s=summary;
-  const party=s.allPlanted||s.mockOpen;
-  app.innerHTML=`<main class="screen${party?' scroll':''}">${party?`<div class="confetti" aria-hidden="true">${'<i></i>'.repeat(24)}</div>`:''}<div class="done">${tree(party?5:s.grown?4:2,'big')}
-    <h1>${s.mockOpen?'The practice check is open!':s.allPlanted?'Every seed planted!':'Round done'}</h1>
+  const party=s.allPlanted||s.mockOpen||s.acorn?.special;
+  app.innerHTML=`<main class="screen${party?' scroll':''}">${party?`<div class="confetti" aria-hidden="true">${'<i></i>'.repeat(24)}</div>`:''}<div class="done">${s.acorn?.special?`<svg class="big" aria-hidden="true"><use href="#sp-${s.acorn.special[0]}"/></svg>`:tree(party?5:s.grown?4:2,'big')}
+    <h1>${s.mockOpen?'The practice check is open!':s.allPlanted?'Every seed planted!':s.acorn?.special?'A special tree!':'Round done'}</h1>
     ${s.allPlanted?`<p class="milestone">All ${ALL.length} trees are in your forest. Now grow them all!</p>`:''}
     ${s.mockOpen?`<p class="milestone">You've grown ${MOCK_TREES} trees. Try the practice check: ${MOCK_N} questions, ${MOCK_MS/1000} seconds each, like the Year 4 check.</p>`:''}
     <div class="stats"><span><b>${s.right}</b> of ${s.asked} right</span><span><b>${s.quick}</b> quick answers</span>
       <span><b>${s.grown}</b> ${s.grown===1?'tree':'trees'} grew</span></div>
     ${s.unlocked?`<p class="unlock">The ${s.unlocked} times table is now planted.</p>`:''}
+    ${s.acorn?`<p class="acorn-new">${acornIcon(true)}<span>A golden acorn! Every tree is checked today.</span></p>`:''}
+    ${s.acorn?.special?`<p class="milestone">${ACORNS_PER_TREE} golden acorns: ${s.acorn.special[1]} has been planted in your special grove!</p>`:''}
     ${(s.friends||[]).map(t=>`<p class="friend-new"><span class="emo" aria-hidden="true">${FRIENDS[t][0]}</span> ${FRIENDS[t][1][0].toUpperCase()+FRIENDS[t][1].slice(1)} has moved into your forest! Every ${t}s tree has grown.</p>`).join('')}
     ${unsaved?'<p class="warn center">Not saved yet. It will save when the internet is back.</p>':''}
     ${s.mockOpen?'<button class="cta" data-act="mock-intro">📝 Try the practice check</button>':''}
     <button class="cta${s.mockOpen?' quiet':''}" data-act="home">Back to the forest</button>
     <button class="cta quiet" data-act="play">Play again</button></div></main>`;
+}
+
+// Special grove: the special trees planted so far, and golden acorns towards the next one
+const acornIcon=gold=>`<svg class="acorn${gold?' gold':''}" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 10.5C6.5 7.5 9 6 12 6C15 6 17.5 7.5 17.5 10.5Z"/><path d="M7.4 10.4C7.4 15.6 10 18.6 12 18.6C14 18.6 16.6 15.6 16.6 10.4Z"/><path d="M12 6V3.8" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+function groveHtml(p,acornToday){
+  const n=p.extra.acorns||0,trees=Math.floor(n/ACORNS_PER_TREE),have=n%ACORNS_PER_TREE;
+  return `<section class="grove" aria-labelledby="sg"><h2 id="sg">Special grove</h2>
+    ${trees?`<ul>${[...Array(trees)].map((_,i)=>{const [k,name]=specialName(i);return `<li><svg class="special" aria-hidden="true"><use href="#sp-${k}"/></svg>${name.replace(/^an? (.)/,(_,c)=>c.toUpperCase())}</li>`}).join('')}</ul>`:''}
+    <div class="acorns" role="img" aria-label="${have} of ${ACORNS_PER_TREE} golden acorns">${[...Array(ACORNS_PER_TREE)].map((_,i)=>acornIcon(i<have)).join('')}</div>
+    <p class="hint small">${acornToday?"You've earned today's golden acorn.":'Check every tree in a day to earn a golden acorn.'} ${ACORNS_PER_TREE} golden acorns plant a special tree.</p></section>`;
 }
 
 /* sheets */

@@ -151,6 +151,7 @@ function cleanExtra(x) {
   const out = {};
   for (const k of ['friends', 'intros']) if (k in x) { if (!tableList(x[k])) throw new HttpError(400, 'Bad progress.'); out[k] = x[k]; }
   if ('restDay' in x) { if (x.restDay !== null && !Number.isFinite(x.restDay)) throw new HttpError(400, 'Bad progress.'); out.restDay = x.restDay; }
+  for (const k of ['acorns', 'acornDay']) if (k in x) { if (!isInt(x[k], 0, 1e14)) throw new HttpError(400, 'Bad progress.'); out[k] = x[k]; }   // golden acorns
   if ('xmasOff' in x) { if (!isInt(x.xmasOff, 2000, 3000)) throw new HttpError(400, 'Bad progress.'); out.xmasOff = x.xmasOff; }   // Christmas season turned off, that year
   if ('mocks' in x) {
     if (!Array.isArray(x.mocks) || x.mocks.length > 10 || !x.mocks.every(m => m && Number.isFinite(m.at) && isInt(m.score, 0, 25)))
