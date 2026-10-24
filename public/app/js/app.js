@@ -738,10 +738,12 @@ function renderHome(){
   const p=kid,now=Date.now(),un=ALL.filter(k=>isUnlocked(p,k));
   const due=un.filter(k=>{const f=fact(p,k);return f.box>0&&f.due<=now}).length;
   const fresh=un.filter(k=>fact(p,k).box===0).length;
-  // a round checks up to ROUND trees, so a big backlog takes a few rounds
-  const acornToday=p.extra.acornDay===today();
-  const status=due?`${due} ${due===1?'tree is':'trees are'} ready to check.${due>ROUND?` Each round checks up to ${ROUND}.`:''}`:fresh?'New seeds are ready to plant.':`Everything is checked for today.${acornToday?" You've earned today's golden acorn.":''} Come back tomorrow to grow more.`;
-  const label=(due||fresh)?'Play a round':'Extra practice';
+  // The play button is today's progress bar: trees checked out of those due today.
+  // A round checks up to ROUND trees, so a big backlog takes a few rounds.
+  const pct=due?Math.round(100*(1-due/dueAtStart(p,due))):100;
+  const play=due?`<button class="cta progress" data-act="play" style="--p:${pct}%"><span>Play a round</span><small>${due} ${due===1?'tree':'trees'} to check${due>ROUND?` · up to ${ROUND} a round`:''}</small></button>`
+    :fresh?'<button class="cta progress" data-act="play" style="--p:100%"><span>Play a round</span><small>New seeds to plant</small></button>'
+    :'<button class="cta progress" data-act="play"><span>Extra practice</span><small>Every tree is checked today</small></button>';
   const on=tablesOn(p);
   let g='<div class="hd">×</div>'+[...Array(11)].map((_,i)=>`<div class="hd ${on.includes(i+2)?'on':''}">${i+2}</div>`).join('');
   for(let a=2;a<=12;a++){
@@ -765,9 +767,8 @@ function renderHome(){
     ${needLogin?'<p class="warn">Your login has run out. <button class="link inline" data-act="logout">Log in again</button> to save your answers.</p>'
       :offline?'<p class="warn">You\'re offline. You can still play, and your answers will save when you\'re back online.</p>'
       :unsaved?'<p class="warn">Some answers haven\'t saved yet. They\'ll save when the internet is back.</p>':''}
-    <section class="today"><p class="status">${status}</p>
-      ${streakHtml(p,restRecent)}
-      <div class="stack tight"><button class="cta" data-act="play">${label}</button>${mock}</div></section>
+    <section class="today">${streakHtml(p,restRecent)}
+      <div class="stack tight">${play}${mock}</div></section>
     <section class="forest" aria-label="Times table forest">${g}</section>
     ${next?`<p class="tables">Next up: the ${next} times table.</p>`:seedsLeft?`<p class="tables">Only ${seedsLeft} ${seedsLeft===1?'seed':'seeds'} left to plant. Plant them all to finish your forest!</p>`:''}
   </main>
@@ -776,6 +777,14 @@ function renderHome(){
     <button data-act="grove">${acornIcon(true)}Grove<small>${(p.extra.acorns||0)%ACORNS_PER_TREE} of ${ACORNS_PER_TREE}</small></button>
     <button data-act="bests"><span class="emo" aria-hidden="true">⏱️</span>Bests<small>this week</small></button>
   </nav>`;
+}
+// How many trees were due when the child first opened the forest today (kept on this device only)
+function dueAtStart(p,due){
+  const k='lf-due-'+p.username,t=today();
+  let v=null;try{v=JSON.parse(localStorage.getItem(k))}catch(e){}
+  const start=v&&v.day===t?Math.max(v.start,due):due;
+  try{localStorage.setItem(k,JSON.stringify({day:t,start}))}catch(e){}
+  return start;
 }
 // Streak: the run of days played (one missed day a week allowed), with the last 7 days as dots
 function streakHtml(p,restRecent){

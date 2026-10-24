@@ -56,8 +56,8 @@ await kp.click('.cell[data-a="7"][data-b="8"]');
 assert.equal(await kp.textContent('.sheet .legend .here'), 'Young tree', 'the key highlights this fact\'s stage');
 assert.match(await kp.textContent('.sheet .stage-now'), /This tree is a Young tree\. Next: Mature tree\./);
 await kp.click('.sheet [data-act=close]');
-assert.equal(await kp.textContent('.status'), '66 trees are ready to check. Each round checks up to 20.', 'a big backlog takes a few rounds');
-assert.equal(await kp.textContent('[data-act=play]'), 'Play a round');
+assert.equal(await kp.textContent('[data-act=play]'), 'Play a round66 trees to check · up to 20 a round', 'a big backlog takes a few rounds');
+assert.equal(await kp.evaluate(() => document.querySelector('[data-act=play]').style.getPropertyValue('--p')), '0%', 'nothing checked yet today');
 
 step('settings has no read aloud');
 await kp.click('[data-act=settings]');
@@ -111,6 +111,9 @@ const summary = await kp.textContent('.done');
 assert.match(summary, /has moved into your forest/);
 assert.doesNotMatch(summary, /golden acorn/, 'trees still left to check, so no acorn');
 await kp.click('[data-act=home]');
+const progress = await kp.evaluate(() => parseInt(document.querySelector('[data-act=play]').style.getPropertyValue('--p')));
+console.log('  checked today:', progress + '%');
+assert.ok(progress > 0 && progress < 100, 'the play button fills as trees are checked');
 assert.deepEqual(await kp.locator('.dock button').evaluateAll(bs => bs.map(b => b.dataset.act)), ['friends', 'grove', 'bests'], 'bottom bar');
 await kp.click('.dock [data-act=friends]');
 const friendCount = (await kp.$$('.sheet .friends li:not(.to-come)')).length;
@@ -237,7 +240,7 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   assert.equal(await bp.locator('.sheet .grove .acorn.gold').count(), 0);
   assert.match(await bp.textContent('.sheet .grove'), /You've earned today's golden acorn/);
   await bp.click('.sheet [data-act=close]');
-  assert.match(await bp.textContent('.status'), /You've earned today's golden acorn/);
+  assert.equal(await bp.textContent('[data-act=play]'), 'Extra practiceEvery tree is checked today');
   // one acorn a day: another round today earns nothing
   await bp.click('[data-act=play]');
   for (let n = 0; n < 60 && !(await bp.$('.done')); n++) {

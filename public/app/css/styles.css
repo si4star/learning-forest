@@ -89,7 +89,11 @@ p{line-height:1.45}
 .icon{width:44px;height:44px;border-radius:50%;border:0;background:var(--surface);font-size:22px;font-weight:600;
   display:grid;place-items:center;box-shadow:0 2px 0 var(--key-shadow);flex:none}
 .today{margin:18px 0 8px}
-.status{font-size:19px;margin:0 0 4px}
+/* the play button doubles as today's progress bar: the darker part is what's been checked */
+.cta.progress{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 18px}
+.cta.progress::before{content:'';position:absolute;inset:0 auto 0 0;width:var(--p,0%);background:rgba(0,0,0,.24);transition:width .5s}
+.cta.progress > *{position:relative}
+.cta.progress small{font-size:14px;font-weight:500;opacity:.92}
 .streak{color:var(--muted);margin:0 0 14px;font-size:16px}
 .cta{width:100%;padding:18px;border:0;border-radius:20px;background:var(--leaf);color:#fff;
   font-size:22px;font-weight:600;box-shadow:0 4px 0 color-mix(in srgb,var(--leaf) 60%,#000)}
