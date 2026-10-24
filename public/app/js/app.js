@@ -303,7 +303,7 @@ function render(){
   applySeason();
   ({loading:renderLoading,welcome:renderWelcome,childLogin:renderChildLogin,recover:renderRecover,
     grownup:renderGrownup,parent:renderParent,card:renderCard,scan:renderScan,
-    classPick:renderClassPick,classPics:renderClassPics,classAdmin:renderClassAdmin,classCards:renderClassCards,
+    classPick:renderClassPick,classPics:renderClassPics,classAdmin:renderClassAdmin,classOverview:renderClassOverview,classCards:renderClassCards,
     assessPick:renderAssessPick,assessResult:renderAssessResult,
     hub:renderHub,home:renderHome,play:renderPlay,summary:renderSummary,mockIntro:renderMockIntro,mockResult:renderMockResult})[view]();
   syncWakeLock();
@@ -388,7 +388,7 @@ function renderGrownup(){
 }
 
 function kidActions(c,a){
-  return `<button class="link" data-act="tricky" data-id="${c.id}">Tricky facts</button>
+  return `<button class="link" data-act="tricky" data-id="${c.id}">Progress</button>
         <button class="link" data-act="rename" data-id="${c.id}">Rename</button>
         ${c.classId?`<button class="link" data-act="kid-pics" data-id="${c.id}">${a==='kid-pics'?'Tap again: new pictures':'New pictures'}</button>`:''}
         <button class="link" data-act="kid-qr" data-id="${c.id}">${a==='kid-qr'?'Tap again: new QR card (the old one stops working)':'New QR card'}</button>
@@ -455,6 +455,7 @@ function renderClassAdmin(){
     <p class="hint small">${k.devices?`${k.devices} ${k.devices===1?'device is':'devices are'} set up for this class. <button class="link inline" data-act="class-signout" data-id="${k.id}">${armedFor(k.id,'class-signout')?'Tap again to sign them all out':'Sign out all class devices'}</button>`:'No devices are set up for this class yet.'}</p>
     <h2>Pupils</h2>
     ${pupils.length?`<ul class="kids">${rows}</ul>`:'<p class="lead">Add the class\'s first names below.</p>'}
+    ${pupils.length?'<button class="cta quiet" data-act="class-overview">📊 Class overview</button>':''}
     <form class="form" data-form="addPupils" data-id="${k.id}" novalidate>
       <label>Add pupils<textarea name="names" rows="5" placeholder="One first name or nickname per line"></textarea>
         <span class="field-hint">Use first names or initials only. If two pupils share a name, add a surname initial, like "Bob A" and "Bob B". Each pupil gets three pictures and a QR code.</span></label>
@@ -462,6 +463,29 @@ function renderClassAdmin(){
     </form>
     <button class="link danger ${armedFor(k.id,'class-delete')?'armed':''}" data-act="class-delete" data-id="${k.id}">${armedFor(k.id,'class-delete')?`Tap again to delete ${esc(k.name)} and all ${pupils.length} pupils' data. This can't be undone.`:'Delete this class and all its pupils'}</button>
   </main>`;
+}
+// Class overview: each pupil's grown trees per table, and the class's trickiest facts this week
+let overview=null;
+async function openOverview(){
+  overview=null;go('classOverview');
+  try{overview=await api(`/parent/classes/${openClass}/overview`)}catch(e){overview={error:e.message}}
+  if(view==='classOverview')render();
+}
+function renderClassOverview(){
+  const o=overview,tables=[2,3,4,5,6,7,8,9,10,11,12];
+  const body=!o?'<p class="hint">Loading…</p>':o.error?`<p class="err">${esc(o.error)}</p>`:`
+    <p class="hint small">The number is how many of that table's 11 trees have grown (Young or Mature tree). Darker is more grown; blank means not started.</p>
+    <div class="tablewrap"><table class="overview"><thead><tr><th>Pupil</th>${tables.map(t=>`<th>×${t}</th>`).join('')}<th>All</th></tr></thead><tbody>
+      ${o.pupils.map(c=>`<tr><th>${esc(c.name)}<small>${c.lastPlayed?ago(c.lastPlayed):'not played'}</small></th>${c.tables.map(x=>x.planted
+        ?`<td style="--g:${Math.round(100*x.grown/11)}%"${x.grown>=7?' class="hi"':''}>${x.grown}</td>`:'<td class="none"></td>').join('')}<td class="all">${c.grown}</td></tr>`).join('')}
+    </tbody></table></div>
+    <h2>Trickiest this week</h2>
+    ${o.tricky.length?`<ul class="tricky">${o.tricky.map(q=>`<li><span class="tf">${factText(q.fact)} = ${parse(q.fact)[0]*parse(q.fact)[1]}</span>
+      <span class="pmeta">${q.pupils} ${q.pupils===1?'pupil':'pupils'} got it wrong · wrong ${q.wrong} of ${q.asked}</span></li>`).join('')}</ul>`:'<p class="hint">No wrong answers this week.</p>'}
+    ${(()=>{const idle=o.pupils.filter(c=>!c.weekAsked);return idle.length?`<h2>Not played this week</h2><p>${idle.map(c=>esc(c.name)).join(', ')}</p>`:''})()}`;
+  app.innerHTML=`<main class="screen scroll">
+    <header class="bar">${back('classAdmin')}<h1>${esc(o&&o.name||'Class overview')}</h1><span class="icon-gap"></span></header>
+    ${body}</main>`;
 }
 function renderClassCards(){
   const k=classes.find(x=>x.id===openClass);
@@ -742,7 +766,9 @@ function renderHome(){
   // The play button is today's progress bar: trees checked out of those due today.
   // A round checks up to ROUND trees, so a big backlog takes a few rounds.
   const pct=due?Math.round(100*(1-due/dueAtStart(p,due))):100;
-  const play=due?`<button class="cta progress" data-act="play" style="--p:${pct}%"><span>Play a round</span><small>${due} to check</small></button>`
+  // a round clears up to 5 due trees whatever else it plants, so that's one round from today's golden acorn
+  const nearly=due<=5&&p.extra.acornDay!==today();
+  const play=due?`<button class="cta progress" data-act="play" style="--p:${pct}%"><span>Play a round</span><small>${due} to check${nearly?' · 🌰 nearly there':''}</small></button>`
     :fresh?'<button class="cta progress" data-act="play" style="--p:100%"><span>Play a round</span><small>New seeds to plant</small></button>'
     :'<button class="cta progress" data-act="play"><span>Extra practice</span><small>All checked today</small></button>';
   const on=tablesOn(p);
@@ -1170,11 +1196,28 @@ async function bestsSheet(){
 }
 async function trickySheet(id){
   const c=kids.find(k=>k.id===id);
-  const bg=sheet(`<h2>${esc(c?c.name:'')}: tricky facts</h2><div id="tricky"><p class="hint">Loading…</p></div>`),el=bg.querySelector('#tricky');
+  const bg=sheet(`<h2>${esc(c?c.name:'')}: progress</h2><div id="tricky"><p class="hint">Loading…</p></div>`),el=bg.querySelector('#tricky');
   try{
     const t=await api(`/parent/children/${id}/tricky`);
     const pct=t.week.asked?Math.round(t.week.right/t.week.asked*100):0;
-    el.innerHTML=`<p>${t.week.asked?`This week: ${t.week.asked} questions, ${pct}% right.`:'No questions answered this week.'}</p>
+    const day=864e5,t0=today(),alive=t.streak>0&&t0-t.lastDay<=2*day;
+    const perDay=[6,5,4,3,2,1,0].map(i=>{const d=addDays(t0,-i);return {d,n:t.weekAt.filter(a=>a>=d&&a<addDays(d,1)).length}});
+    const most=Math.max(1,...perDay.map(x=>x.n)),sp=Math.floor(t.acorns/ACORNS_PER_TREE);
+    el.innerHTML=`<div class="pstats">
+        <p><b>${t.grown}</b> of 66 trees grown<small>${t.planted} planted</small></p>
+        <p><b>${alive?t.streak:0}</b> ${alive&&t.streak===1?'day':'days'} in a row<small>${t.lastDay?`last played ${ago(t.lastDay)}`:'not played yet'}</small></p>
+        <p><b>${t.grown>=MOCK_TREES&&t.tables.every(x=>x.planted)?'Open':`${t.grown}/${MOCK_TREES}`}</b> practice check<small>${t.mocks.length?`best ${Math.max(...t.mocks.map(m=>m.score))} / ${MOCK_N}`:'not tried yet'}</small></p>
+      </div>
+      <h3>This week</h3>
+      <div class="week" aria-label="Questions answered each day this week">${perDay.map(x=>`<span><i style="height:${Math.round(100*x.n/most)}%"></i><b>${x.n||''}</b>${new Date(x.d).toLocaleDateString('en-GB',{weekday:'narrow'})}</span>`).join('')}</div>
+      <p>${t.week.asked?`${t.week.asked} questions, ${pct}% right.`:'No questions answered this week.'}</p>
+      <h3>Times tables</h3>
+      <p class="hint small">Each table has 11 trees. Dark: grown (Young or Mature tree). Light: planted, still growing.</p>
+      <ul class="tbars">${t.tables.map(x=>`<li><span class="tn">×${x.t}</span><span class="tb"><i class="pl" style="width:${Math.round(100*x.planted/11)}%"></i><i class="gr" style="width:${Math.round(100*x.grown/11)}%"></i></span><span class="tc">${x.planted?`${x.grown}/11`:'not started'}</span></li>`).join('')}</ul>
+      <h3>Rewards</h3>
+      <p>${t.friends.length?t.friends.map(f=>`<span title="${FRIENDS[f][1]}">${FRIENDS[f][0]}</span>`).join(' ')+` ${t.friends.length} of 11 forest friends`:'No forest friends yet: one moves in when every tree in a table has grown.'}</p>
+      <p class="kid-acorns">${acornIcon(true)} ${t.acorns} golden ${t.acorns===1?'acorn':'acorns'}${sp?` · ${sp} special ${sp===1?'tree':'trees'}`:''}</p>
+      <h3>Tricky facts</h3>
       ${t.facts.length?`<p class="hint small">Most often wrong, then slowest, over the last 30 days. Good ones to practise together.</p>
         <ul class="tricky">${t.facts.map(f=>`<li><span class="tf">${factText(f.fact)} = ${parse(f.fact)[0]*parse(f.fact)[1]}</span>
           <span class="pmeta">wrong ${f.wrong} of ${f.asked}${f.avgMs?` · usually ${secs(f.avgMs)}`:''} · ${STAGES[f.box]}</span></li>`).join('')}</ul>`
@@ -1387,6 +1430,7 @@ app.addEventListener('click',e=>{
     case 'card-done':card=null;cardFile=null;if(cardFor==='child')enterChild();else enterParent();break;
     case 'kid-reset':case 'kid-reassess':case 'kid-remove':case 'kid-qr':case 'kid-pics':parentAction(act,+b.dataset.id);break;
     case 'open-class':openClass=+b.dataset.id;go('classAdmin');break;
+    case 'class-overview':openOverview();break;
     case 'rename':renameSheet(+b.dataset.id);break;
     case 'class-device':case 'class-signout':case 'class-delete':case 'class-cards':classAction(act,+b.dataset.id);break;
     case 'print-cards':window.print();break;

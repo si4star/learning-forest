@@ -297,6 +297,34 @@ ul.friends{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-wrap:wrap;
 .acorn.gold path:nth-child(1){fill:#B07A1E}
 .acorn.gold path:nth-child(2){fill:#F2C25B}
 .acorn.gold path:nth-child(3){stroke:#8A5A1E}
+/* grown-up: a child's progress */
+.pstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 6px}
+.pstats p{margin:0;padding:10px;border-radius:14px;background:var(--bg);font-size:14px;line-height:1.25}
+.pstats b{display:block;font-size:24px;color:var(--leaf)}
+.pstats small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;height:96px;margin:4px 0 8px}
+.week span{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;font-size:12px;color:var(--muted)}
+.week i{display:block;width:70%;min-height:2px;border-radius:5px 5px 0 0;background:var(--leaf)}
+.week b{font-size:11px;color:var(--ink);font-weight:600}
+.tbars{list-style:none;padding:0;margin:0 0 8px;display:grid;gap:5px}
+.tbars li{display:grid;grid-template-columns:36px 1fr 84px;align-items:center;gap:8px;font-size:14px}
+.tbars .tn{font-weight:600}
+.tbars .tb{position:relative;height:12px;border-radius:6px;background:var(--bg);overflow:hidden}
+.tbars .tb i{position:absolute;inset:0 auto 0 0;border-radius:6px}
+.tbars .pl{background:color-mix(in srgb,var(--leaf) 30%,transparent)}
+.tbars .gr{background:var(--leaf)}
+.tbars .tc{color:var(--muted);font-size:13px}
+/* teacher: class overview */
+table.overview{border-collapse:separate;border-spacing:2px;font-size:13px;margin:4px 0 12px}
+.overview th{font-weight:600;text-align:center;padding:2px 0;font-size:12px}
+.overview tbody th{text-align:left;padding-right:4px;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:sticky;left:0;background:var(--bg)}
+.overview tbody th small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.overview td{min-width:22px;height:30px;padding:0;text-align:center;border-radius:6px;font-weight:600;
+  background:color-mix(in srgb,var(--leaf) calc(20% + var(--g,0%) * .75),var(--surface));color:var(--ink)}
+.overview td.none{background:var(--surface)}
+.overview td.hi{color:#fff}
+.tablewrap{overflow-x:auto;flex:none}
+.overview td.all{background:none;color:var(--leaf)}
 .kid-acorns{display:flex;align-items:center;gap:4px;margin-top:2px}
 .kid-acorns .acorn{width:20px;height:20px}
 .acorn-new{text-align:center;font-size:19px;font-weight:500;margin:0 0 6px;display:flex;flex-direction:column;align-items:center}

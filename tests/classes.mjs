@@ -56,6 +56,19 @@ for (let i = 0; i < 60; i++) await call('ipad', 'POST', '/child/login', { userna
 assert.equal((await call('laptop', 'POST', '/child/login', { username: cards[0].username, password: cards[0].password })).status, 200,
   'school address not locked by class-device failures');
 
+// class overview: each pupil's trees per table, and the class's trickiest facts this week
+const wrongAns = { fact: '2x3', a: 2, b: 3, given: 5, correct: false, ms: 3000, kind: 'review', at: Date.now(), shape: 'mul' };
+await ok(await call('laptop', 'POST', '/child/sync', { facts: { '2x3': { box: 4, due: 0 }, '2x5': { box: 2, due: 0 }, '3x3': { box: 5, due: 0 } }, answers: [wrongAns, wrongAns] }));
+const ov = await ok(await call('teacher', 'GET', `/parent/classes/${k.id}/overview`));
+assert.deepEqual(ov.pupils.map(p => p.name), ['Ava', 'Ben', 'Cara']);
+const avaT = Object.fromEntries(ov.pupils[0].tables.map(x => [x.t, x]));
+assert.deepEqual([avaT[2], avaT[3], avaT[5], avaT[7]].map(x => [x.planted, x.grown]), [[2, 1], [2, 2], [1, 0], [0, 0]]);
+assert.equal(ov.pupils[0].grown, 2);
+assert.equal(ov.pupils[0].weekAsked, 2);
+assert.deepEqual(ov.tricky, [{ fact: '2x3', asked: 2, wrong: 2, pupils: 1 }]);
+await ok(await call('stranger', 'POST', '/parent/signup', { email: 's@else.test', password: 'a-long-enough-pass', consent: true }));
+assert.equal((await call('stranger', 'GET', `/parent/classes/${k.id}/overview`)).status, 404, "another grown-up can't see the class");
+
 // a pupil of another class can't log in on this device
 const k2 = await ok(await call('teacher', 'POST', '/parent/classes', { name: 'Ash class' }));
 const [other] = (await ok(await call('teacher', 'POST', `/parent/classes/${k2.id}/pupils`, { names: ['Dev'] }))).cards;

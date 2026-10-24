@@ -166,6 +166,9 @@ await pp.goto(BASE + '/app/');
 await pp.waitForSelector('.kid');
 await pp.click('[data-act=tricky]');
 await pp.waitForSelector('.sheet .tricky li');
+assert.equal(await pp.locator('.sheet .tbars li').count(), 11, 'a bar for each table');
+assert.equal(await pp.locator('.sheet .week span').count(), 7, 'questions on each of the last 7 days');
+assert.match(await pp.textContent('.sheet .pstats'), /best 24 \/ 25/);
 const tricky = await pp.textContent('.sheet');
 // two wrong answers: one missed on purpose in a round, one left to time out in the practice check.
 // They can land on the same fact ("wrong 2 of"), so count them up rather than expect "wrong 1 of".
@@ -219,6 +222,7 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   await bp.click('.sheet [data-act=close]');
   assert.equal(await bp.evaluate(() => document.querySelector('.play-row .locked').style.getPropertyValue('--p')), '97%');
   assert.equal(await bp.locator('[data-act=mock-intro]').count(), 0);
+  assert.equal(await bp.textContent('[data-act=play] small'), '1 to check · 🌰 nearly there', "one round from today's golden acorn");
   assert.match(await bp.textContent('.dock [data-act=grove]'), /6 of 7/);
   await bp.click('.dock [data-act=grove]');
   assert.equal(await bp.locator('.sheet .grove .acorn.gold').count(), 6);

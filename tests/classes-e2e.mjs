@@ -50,6 +50,15 @@ await p.waitForSelector('.lcard >> text=Ben B');
 await p.click('[data-act=go][data-to=classAdmin]');
 await p.waitForSelector('.kid');
 
+step('class overview: a row per pupil, a column per table');
+await p.click('[data-act=class-overview]');
+await p.waitForSelector('table.overview tbody tr');
+assert.deepEqual(await p.$$eval('table.overview tbody th', els => els.map(e => e.firstChild.textContent)), ['Ava', 'Ben A', 'Ben B', 'Cara']);
+assert.equal(await p.locator('table.overview thead th').count(), 13, 'pupil, ×2 to ×12, all');
+assert.match(await p.textContent('main'), /Not played this week/);
+await p.click('[data-act=go][data-to=classAdmin]');
+await p.waitForSelector('.kid');
+
 step('teacher sets this device up for the class: signed out, name tiles shown');
 await p.click('[data-act=class-device]');
 await p.click('[data-act=class-device]');

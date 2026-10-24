@@ -407,7 +407,16 @@ async function childStats(ctx) {
   return json({ quickest, faster, rightThisWeek });
 }
 
-// Tricky facts for a grown-up: most often wrong, then slowest, over the last 30 days.
+// For each times table: how many of its 11 facts are planted, and how many grown (Young or Mature tree)
+function tableStats(facts) {
+  return [...ORDER].sort((x, y) => x - y).map(t => {
+    const mine = facts.filter(f => f.fact.split('x').map(Number).includes(t));
+    return { t, planted: mine.filter(f => f.box > 0).length, grown: mine.filter(f => f.box >= 4).length };
+  });
+}
+
+// A child's progress for a grown-up: each table, this week's play, friends and acorns,
+// and tricky facts (most often wrong, then slowest, over the last 30 days).
 async function childTricky(ctx, id) {
   const pid = await need(ctx, 'parent');
   const child = await ownedChild(ctx, pid, id);
@@ -415,14 +424,14 @@ async function childTricky(ctx, id) {
   const [a, f, c] = await ctx.db.batch([
     ctx.db.prepare(`SELECT fact, correct, ms, at FROM answers WHERE child_id = ? AND kind != 'assess' AND at > ?`).bind(child.id, now - 30 * DAY_MS),
     ctx.db.prepare('SELECT fact, box FROM facts WHERE child_id = ?').bind(child.id),
-    ctx.db.prepare('SELECT extra FROM children WHERE id = ?').bind(child.id),
+    ctx.db.prepare('SELECT extra, streak, last_day FROM children WHERE id = ?').bind(child.id),
   ]);
-  const per = {}, week = { asked: 0, right: 0 };
+  const per = {}, week = { asked: 0, right: 0 }, weekAt = [];
   for (const r of a.results) {
     const p = (per[r.fact] ??= { fact: r.fact, asked: 0, wrong: 0, msTotal: 0, right: 0 });
     p.asked++;
     if (r.correct) { p.right++; p.msTotal += r.ms; } else p.wrong++;
-    if (r.at > now - 7 * DAY_MS) { week.asked++; if (r.correct) week.right++; }
+    if (r.at > now - 7 * DAY_MS) { week.asked++; weekAt.push(r.at); if (r.correct) week.right++; }
   }
   const box = Object.fromEntries(f.results.map(r => [r.fact, r.box]));
   const facts = Object.values(per)
@@ -430,7 +439,38 @@ async function childTricky(ctx, id) {
     .filter(p => p.wrong > 0 || (p.avgMs ?? 0) > 4000)
     .sort((x, y) => y.wrong / y.asked - x.wrong / x.asked || y.wrong - x.wrong || (y.avgMs ?? 0) - (x.avgMs ?? 0))
     .slice(0, 8);
-  return json({ facts, week, mocks: parseExtra(c.results[0]?.extra).mocks || [] });
+  const row = c.results[0] || {}, extra = parseExtra(row.extra);
+  return json({ facts, week, weekAt, mocks: extra.mocks || [], tables: tableStats(f.results),
+    planted: f.results.filter(r => r.box > 0).length, grown: f.results.filter(r => r.box >= 4).length,
+    streak: row.streak || 0, lastDay: row.last_day || 0, friends: extra.friends || [], acorns: (extra.acorns || 0) + (extra.acornGift || 0) });
+}
+
+// A teacher's view of a class: each pupil's progress per table, and the class's trickiest facts this week
+async function classOverview(ctx, id) {
+  const pid = await need(ctx, 'parent');
+  const k = await ownedClass(ctx, pid, id);
+  const since = Date.now() - 7 * DAY_MS;
+  const [p, f, a] = await ctx.db.batch([
+    ctx.db.prepare('SELECT id, name, last_played AS lastPlayed, assessed_at AS assessedAt FROM children WHERE class_id = ? ORDER BY name COLLATE NOCASE').bind(k.id),
+    ctx.db.prepare('SELECT child_id, fact, box FROM facts WHERE child_id IN (SELECT id FROM children WHERE class_id = ?)').bind(k.id),
+    ctx.db.prepare(`SELECT child_id, fact, correct FROM answers WHERE child_id IN (SELECT id FROM children WHERE class_id = ?) AND kind != 'assess' AND at > ?`).bind(k.id, since),
+  ]);
+  const byChild = {};
+  for (const r of f.results) (byChild[r.child_id] ??= []).push(r);
+  const asked = {}, per = {};
+  for (const r of a.results) {
+    asked[r.child_id] = (asked[r.child_id] || 0) + 1;
+    const q = (per[r.fact] ??= { fact: r.fact, asked: 0, wrong: 0, pupils: new Set() });
+    q.asked++; if (!r.correct) { q.wrong++; q.pupils.add(r.child_id); }
+  }
+  const pupils = p.results.map(c => {
+    const mine = byChild[c.id] || [];
+    return { ...c, tables: tableStats(mine), grown: mine.filter(r => r.box >= 4).length, planted: mine.filter(r => r.box > 0).length, weekAsked: asked[c.id] || 0 };
+  });
+  const tricky = Object.values(per).filter(q => q.wrong > 0)
+    .sort((x, y) => y.pupils.size - x.pupils.size || y.wrong / y.asked - x.wrong / x.asked).slice(0, 5)
+    .map(q => ({ fact: q.fact, asked: q.asked, wrong: q.wrong, pupils: q.pupils.size }));
+  return json({ name: k.name, pupils, tricky });
 }
 
 // Daily reminders: this device's push subscription, the time and its time zone.
@@ -768,6 +808,7 @@ const ROUTES = [
   ['POST', /^\/child\/sync$/, childSync],
   ['GET', /^\/child\/stats$/, childStats],
   ['GET', /^\/parent\/children\/(\d+)\/tricky$/, childTricky],
+  ['GET', /^\/parent\/classes\/(\d+)\/overview$/, classOverview],
   ['POST', /^\/child\/reminder$/, reminderOn],
   ['POST', /^\/child\/reminder\/off$/, reminderOff],
   ['POST', /^\/parent\/classes$/, addClass],
