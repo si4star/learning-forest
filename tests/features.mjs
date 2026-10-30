@@ -118,6 +118,15 @@ assert.ok(progress > 0 && progress < 100, 'the play button fills as trees are ch
 assert.deepEqual(await kp.locator('.dock button').evaluateAll(bs => bs.map(b => b.dataset.act)), ['friends', 'grove', 'bests'], 'bottom bar');
 assert.equal(await kp.evaluate(() => Math.round(document.querySelector('.dock').getBoundingClientRect().bottom)), 844, 'bottom bar sits on the bottom edge');
 assert.equal(await kp.textContent('header h1'), "Ava's Forest");
+step('back to an app left open: the forest is loaded again, picking up what changed elsewhere');
+{
+  const st = await (await kr.get(BASE + '/api/child/state')).json();
+  const { tables, streak, lastDay, assessedAt, theme, extra, resetAt } = st;
+  assert.equal((await kr.post(BASE + '/api/child/sync', { data: { resetAt, meta: { tables, streak, lastDay, assessedAt, theme, extra: { ...extra, acorns: 4 } } } })).status(), 200);
+  assert.match(await kp.textContent('.dock [data-act=grove]'), /0 of 7/, 'this device still has the old copy');
+  await kp.evaluate(() => { hiddenAt = Date.now() - 6 * 60e3; document.dispatchEvent(new Event('visibilitychange')); });
+  await kp.waitForFunction(() => /4 of 7/.test(document.querySelector('.dock [data-act=grove]').textContent));
+}
 assert.ok(await kp.evaluate(() => { const r = document.querySelector('header h1').getBoundingClientRect(); return Math.abs(r.left + r.width / 2 - innerWidth / 2) < 2; }), 'title centred');
 await kp.click('.dock [data-act=friends]');
 const behind = () => kp.evaluate(() => [getComputedStyle(document.querySelector('main.scroll')).overflowY]);
@@ -275,7 +284,7 @@ step('milestones: the last seed planted, the practice check opening and a sevent
   await gp.goto(BASE + '/app/');
   await gp.waitForSelector('.kid');
   assert.match(await gp.locator('.kid', { hasText: 'Bea' }).textContent(), /7 golden acorns · 1 special tree/);
-  assert.equal(await gp.locator('.kid', { hasText: 'Ava' }).locator('.kid-acorns').count(), 0, 'none shown before the first');
+  assert.match(await gp.locator('.kid', { hasText: 'Ava' }).textContent(), /4 golden acorns(?! ·)/, 'no special tree before 7');
   await gp.close();
 }
 

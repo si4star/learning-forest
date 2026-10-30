@@ -61,17 +61,33 @@ async function flush(){
   if(flushing)await flushing;
   if(!kid||!hasPending())return true;
   const sending=pending;pending=emptyPending();
-  const body={facts:sending.facts,answers:sending.answers.slice(0,200)};
+  const body={facts:sending.facts,answers:sending.answers.slice(0,200),resetAt:kid.resetAt};
   if(sending.meta)body.meta=sending.meta;
   pending.answers=sending.answers.slice(200);
   flushing=api('/child/sync',body).then(()=>{unsaved=false;offline=false;needLogin=false;storePending();if(pending.answers.length)queue();return true},e=>{
+    // a grown-up started the forest again since this device loaded it: drop the old progress and start from the new
+    if(e.status===409){pending=emptyPending();storePending();LS.del('ttf-snap');location.reload();return false}
     pending={facts:{...sending.facts,...pending.facts},answers:sending.answers.concat(pending.answers),meta:pending.meta||sending.meta};
     storePending();unsaved=true;if(e.status===401)needLogin=true;return false;
   }).finally(()=>{flushing=null});
   return flushing;
 }
 window.addEventListener('online',()=>flush().then(ok=>{if(ok){offline=false;if(view==='home'||view==='hub')render()}}));
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
+// Coming back to an app left open: the forest may have moved on elsewhere (another device, or school),
+// so after a few minutes away it's loaded again before the next round
+let hiddenAt=0,refreshDue=false;
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){hiddenAt=Date.now();flush()}
+  else if(kid&&hiddenAt&&Date.now()-hiddenAt>5*60e3){refreshDue=true;refreshKid()}
+});
+async function refreshKid(){
+  if(!refreshDue||!kid||!['hub','home'].includes(view)||document.querySelector('.sheet-bg'))return;
+  refreshDue=false;
+  if(!(await flush()))return;   // offline or not saved: keep this device's copy
+  let fresh;try{fresh=await api('/child/state')}catch(e){return}
+  if(!['hub','home'].includes(view))return;
+  adoptKid(fresh);render();
+}
 
 /* learning model */
 function today(){const d=new Date();d.setHours(0,0,0,0);return d.getTime()}
@@ -308,7 +324,7 @@ function render(){
     hub:renderHub,home:renderHome,play:renderPlay,summary:renderSummary,mockIntro:renderMockIntro,mockResult:renderMockResult})[view]();
   syncWakeLock();
 }
-function go(v){if(v!=='scan')stopScan();view=v;flash='';armed=null;render();maybeUpdate();autoInstallSheet()}
+function go(v){if(v!=='scan')stopScan();view=v;flash='';armed=null;render();maybeUpdate();autoInstallSheet();refreshKid()}
 const err=()=>flash?`<p class="err" role="alert">${esc(flash)}</p>`:'';
 const back=(to,label='Back')=>`<button class="icon" data-act="go" data-to="${to}" aria-label="${label}">‹</button>`;
 
@@ -1303,13 +1319,20 @@ async function boot(){
   else{const f=flash;go('welcome');if(f){flash=f;render()}}
 }
 async function enterChild(){
-  try{kid=await api('/child/state');offline=false}catch(e){
+  let fresh;
+  try{fresh=await api('/child/state');offline=false}catch(e){
     const snap=readSnap();
-    if(e.status===0&&snap?.kid){kid=snap.kid;offline=true}else return signedOut(e);
+    if(e.status===0&&snap?.kid){fresh=snap.kid;offline=true}else return signedOut(e);
   }
-  kid.extra=kid.extra||{};
+  adoptKid(fresh);
   // a reminder set up before the app moved (to /app, /tables, then back to /app) belonged to an old service worker
   if(reminderSaved()&&pushable())navigator.serviceWorker.ready.then(r=>r.pushManager.getSubscription()).then(sub=>{if(!sub)LS.del('ttf-reminder')}).catch(()=>{});
+  if(hasPending()&&!offline)flush();
+  picked=[];plan=[];go('hub');
+}
+// Take the forest from the server (or this device's last copy), with anything not yet saved from here on top
+function adoptKid(fresh){
+  kid=fresh;kid.extra=kid.extra||{};
   loadPending();
   // answers saved on this device but not yet on the server win over the server copy
   Object.assign(kid.facts,pending.facts);if(pending.meta)Object.assign(kid,pending.meta);
@@ -1317,8 +1340,6 @@ async function enterChild(){
   if(!kid.extra.intros)kid.extra.intros=kid.assessedAt?kid.tables.slice():[];   // children from before table intros
   if(!kid.extra.friends)kid.extra.friends=[];
   storeSnap();
-  if(hasPending()&&!offline)flush();
-  picked=[];plan=[];go('hub');
 }
 async function loadParent(){const r=await api('/parent/children');kids=r.children;classes=r.classes||[]}
 async function enterParent(){

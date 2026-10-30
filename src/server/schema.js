@@ -116,6 +116,10 @@ export const MIGRATIONS = [
     // Kept apart from earned acorns (extra.acornGift); the server keeps it whatever a device sends.
     `UPDATE children SET extra = CASE WHEN json_valid(extra) THEN json_set(extra, '$.acornGift', 2) ELSE json_object('acornGift', 2) END`,
   ],
+  [
+    // when a grown-up last redid the starting check: a device still holding older progress can't save it back
+    `ALTER TABLE children ADD COLUMN reset_at INTEGER NOT NULL DEFAULT 0`,
+  ],
 ];
 
 let ready = null;

@@ -113,6 +113,7 @@ There are four forest seasons, spring, summer, autumn and winter, plus Christmas
 - **Class overview** (teacher, per class). A row per pupil and a column per table, each cell the number of that table's 11 trees grown, shaded by it; the class's 5 trickiest facts this week (by how many pupils got them wrong); and who hasn't played this week.
 - **Golden acorn nudge.** With 5 or fewer trees to check and today's acorn not yet earned, the play button adds "🌰 nearly there": one round clears them.
 - **Daily reminder** (Settings, on the child's device). One notification a day at the chosen time, only if the child hasn't played yet that day. Needs the reminders Worker (below). On iPhone and iPad it needs iOS 16.4 or later, and the app installed to the home screen.
+- **More than one device.** Progress is per child, on the server. A device can hold an older copy (an app left open for days, or school and home), so: the app loads the forest again when it comes back after more than 5 minutes away (before the next round, once anything unsaved is saved); and the server never lets a save take progress backwards (tables, forest friends and introductions from both copies, the most acorns, practice check scores from both, the latest day played with the streak worked out from the saved one). A grown-up redoing the starting check sets `reset_at` (migration 12); a save from a device that loaded before it is refused (409) and that device starts again from the server. Individual trees are saved as answered, so an old copy can still set a tree it answered back a stage; reloading on return makes that rare.
 - **Offline play.** The last forest is kept on the device. With no connection the app opens it and rounds can be played; answers save when the connection returns. Logging in, personal bests and the practice check need the internet.
 
 ## Daily reminders (one-off setup)
@@ -206,6 +207,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `workers/reminders/` | Scheduled Worker that sends daily reminders |
 | `tests/e2e.mjs` | End-to-end test: accounts, starting check, rounds, sync, PWA |
 | `tests/acorns.mjs` | The gift of 2 golden acorns: added to earned ones, kept through device syncs, shown to grown-ups |
+| `tests/sync.mjs` | Two devices: an older copy never takes progress backwards; a fresh start by a grown-up is kept |
 | `tests/features.mjs` | End-to-end test: shapes, friends, streak, bests, practice check, tricky facts, reminders, offline |
 | `tests/reminders.mjs` | Reminders Worker: timing rules and VAPID signature |
 | `public/admin/` | Admin dashboard page (see **Admin dashboard**) |

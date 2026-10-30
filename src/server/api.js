@@ -284,7 +284,7 @@ async function reassessChild(ctx, id) {
   const child = await ownedChild(ctx, pid, id);
   await ctx.db.batch([
     ctx.db.prepare('DELETE FROM facts WHERE child_id = ?').bind(child.id),
-    ctx.db.prepare("UPDATE children SET tables = '[]', assessed_at = NULL, streak = 0, last_day = 0, extra = json_remove(extra, '$.friends', '$.intros', '$.restDay') WHERE id = ?").bind(child.id),
+    ctx.db.prepare("UPDATE children SET tables = '[]', assessed_at = NULL, streak = 0, last_day = 0, reset_at = ?, extra = json_remove(extra, '$.friends', '$.intros', '$.restDay') WHERE id = ?").bind(Date.now(), child.id),
   ]);
   return json({ ok: true });
 }
@@ -335,7 +335,7 @@ async function childQrLogin(ctx) {
 async function childState(ctx) {
   const cid = await need(ctx, 'child');
   const [c, f] = await ctx.db.batch([
-    ctx.db.prepare('SELECT id, name, display_username, tables, assessed_at, streak, last_day, theme, extra FROM children WHERE id = ?').bind(cid),
+    ctx.db.prepare('SELECT id, name, display_username, tables, assessed_at, streak, last_day, theme, extra, reset_at FROM children WHERE id = ?').bind(cid),
     ctx.db.prepare('SELECT fact, box, due FROM facts WHERE child_id = ?').bind(cid),
   ]);
   const row = c.results[0];
@@ -345,6 +345,7 @@ async function childState(ctx) {
   return json({
     id: row.id, name: row.name, username: row.display_username, tables: JSON.parse(row.tables),
     assessedAt: row.assessed_at, streak: row.streak, lastDay: row.last_day, theme: row.theme, extra: parseExtra(row.extra), facts,
+    resetAt: row.reset_at,
   });
 }
 
@@ -355,6 +356,9 @@ async function childSync(ctx) {
   const facts = Object.entries(b.facts || {});
   const answers = Array.isArray(b.answers) ? b.answers : [];
   if (facts.length > 66 || answers.length > 200) throw new HttpError(400, 'Too much at once.');
+  const cur = await db.prepare('SELECT tables, assessed_at, streak, last_day, extra, reset_at FROM children WHERE id = ?').bind(cid).first();
+  // progress loaded before a grown-up redid the starting check isn't saved over the fresh start
+  if (b.resetAt !== undefined && b.resetAt !== cur.reset_at) throw new HttpError(409, 'Your forest was started again by a grown-up.');
   for (const [k, f] of facts) {
     if (!isFact(k) || !f || !isInt(f.box, 0, 5) || !Number.isFinite(f.due)) throw new HttpError(400, 'Bad fact.');
     stmts.push(db.prepare(`INSERT INTO facts(child_id, fact, box, due) VALUES (?, ?, ?, ?)
@@ -375,16 +379,46 @@ async function childSync(ctx) {
       && isInt(m.streak, 0, 100000) && Number.isFinite(m.lastDay) && (m.assessedAt === null || Number.isFinite(m.assessedAt))
       && THEMES.includes(m.theme);
     if (!ok) throw new HttpError(400, 'Bad progress.');
-    stmts.push(db.prepare('UPDATE children SET tables = ?, streak = ?, last_day = ?, assessed_at = ?, theme = ? WHERE id = ?')
-      .bind(JSON.stringify(m.tables), m.streak, m.lastDay, m.assessedAt, m.theme, cid));
-    if (m.extra !== undefined)
+    // A device may hold an older copy (left open for days, or a second device), so progress never goes backwards.
+    const old = parseExtra(cur.extra), ext = m.extra !== undefined ? cleanExtra(m.extra) : null;
+    const merged = mergeProgress({ tables: JSON.parse(cur.tables || '[]'), streak: cur.streak, lastDay: cur.last_day, extra: old }, { ...m, extra: ext || {} });
+    stmts.push(db.prepare('UPDATE children SET tables = ?, streak = ?, last_day = ?, assessed_at = COALESCE(assessed_at, ?), theme = ? WHERE id = ?')
+      .bind(JSON.stringify(merged.tables), merged.streak, merged.lastDay, m.assessedAt, m.theme, cid));
+    if (ext)
       // a gift of acorns is set by the server only, so it's kept whatever the device sends
       stmts.push(db.prepare("UPDATE children SET extra = json_set(?, '$.acornGift', COALESCE(json_extract(extra, '$.acornGift'), 0)) WHERE id = ?")
-        .bind(JSON.stringify(cleanExtra(m.extra)), cid));
+        .bind(JSON.stringify(merged.extra), cid));
   }
   if (answers.length) stmts.push(db.prepare('UPDATE children SET last_played = ? WHERE id = ?').bind(Date.now(), cid));
   if (stmts.length) await db.batch(stmts);
   return json({ ok: true });
+}
+
+// Saved progress merged with what a device sends, keeping the furthest-on of each:
+// tables, friends and introductions from both; the most acorns; the latest day played, with the streak
+// worked out here from the saved one (the same rule as the app: one missed day a week is a rest day);
+// practice check scores from both. Settings (season, Christmas opt-out) are the device's.
+const union = (a = [], b = []) => ORDER.filter(t => a.includes(t) || b.includes(t));
+function mergeProgress(saved, sent) {
+  const s = saved.extra, d = sent.extra, extra = { ...d };
+  for (const k of ['friends', 'intros']) if (s[k] || d[k]) extra[k] = union(s[k], d[k]);
+  for (const k of ['acorns', 'acornDay', 'restDay']) if (s[k] != null || d[k] != null) extra[k] = Math.max(s[k] ?? 0, d[k] ?? 0) || (d[k] ?? s[k]);
+  if (s.mocks || d.mocks) {
+    const byAt = new Map([...(s.mocks || []), ...(d.mocks || [])].map(x => [x.at, x]));
+    extra.mocks = [...byAt.values()].sort((x, y) => x.at - y.at).slice(-10);
+  }
+  if (d.xmasOff == null && s.xmasOff != null && sent.lastDay <= saved.lastDay) extra.xmasOff = s.xmasOff;
+  let { streak, lastDay } = saved;
+  if (sent.lastDay > saved.lastDay) {
+    const gap = Math.round((sent.lastDay - saved.lastDay) / DAY_MS), rest = extra.restDay;
+    if (!saved.lastDay) streak = sent.streak;
+    else if (gap === 1) streak = saved.streak + 1;
+    else if (gap === 2 && saved.streak > 0 && (!rest || rest === sent.lastDay - DAY_MS || sent.lastDay - rest >= 7 * DAY_MS)) {
+      streak = saved.streak + 1; extra.restDay = sent.lastDay - DAY_MS;
+    } else streak = 1;
+    lastDay = sent.lastDay;
+  } else if (sent.lastDay === saved.lastDay) streak = Math.max(saved.streak, sent.streak);
+  return { tables: union(saved.tables, sent.tables), streak, lastDay, extra };
 }
 
 // Personal bests: quickest facts in the last 7 days, and facts whose best time beat the week before.
