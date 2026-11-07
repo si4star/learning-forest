@@ -117,6 +117,7 @@ for (const t of [2, 5, 7]) await kp.click(`[data-t="${t}"]`);
 const label = await kp.textContent('[data-act=assess-start]');
 const planned = +label.match(/\((\d+) questions\)/)[1];
 await kp.click('[data-act=assess-start]');
+assert.deepEqual(await kp.$eval('main.play', m => { const c = getComputedStyle(m); return [c.touchAction, c.userSelect]; }), ['none', 'none'], 'game screen: no scrolling, no text selection');
 let asked = 0;
 while (await kp.$('.q')) {
   const [a, b] = (await kp.textContent('.q')).split('×').map(s => +s.trim());

@@ -54,7 +54,9 @@
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);touch-action:pan-x pan-y}   /* no pinch zoom in the app */
 body{height:100%;margin:0;background:var(--bg);color:var(--ink);
   font-family:'Fredoka',ui-rounded,'SF Pro Rounded','Segoe UI',system-ui,sans-serif;
-  -webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+  -webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}   /* no drag-to-select text */
+input,textarea{-webkit-user-select:text;user-select:text}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:3px solid var(--sun);outline-offset:2px}
@@ -135,7 +137,7 @@ p{line-height:1.45}
 .tables{color:var(--muted);font-size:15px;margin:16px 0 0}
 
 /* play */
-.play{padding-bottom:12px}
+.play{padding-bottom:12px;touch-action:none;overscroll-behavior:none}   /* the game screen doesn't scroll */
 .pbar{display:flex;align-items:center;gap:12px}
 .track{flex:1;height:12px;border-radius:6px;background:var(--surface);overflow:hidden}
 .fill{height:100%;background:var(--leaf);border-radius:6px;transition:width .25s}

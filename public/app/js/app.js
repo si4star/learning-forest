@@ -225,7 +225,8 @@ function applySeason(){
 /* no pinch zoom in the app (the website and How does a tree work? can still zoom).
    Safari ignores user-scalable=no in the viewport tag, so stop the gesture itself. */
 document.addEventListener('gesturestart',e=>e.preventDefault());
-document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+// no pinch, and no dragging the game screen about (iOS ignores touch-action on its own)
+document.addEventListener('touchmove',e=>{if(e.touches.length>1||e.target.closest?.('.play'))e.preventDefault()},{passive:false});
 
 /* install as an app */
 let installEvt=null;
@@ -926,6 +927,8 @@ function renderPlay(){
 </header>
     <section class="stage">${stage}</section>
     <section class="pad ${walkDone||paused?'off':''}">${keys}</section></main>`;
+  // a long walk-through on a small screen can't be dragged, so bring the current step into view
+  app.querySelector('.steps .now, .walk .cta')?.scrollIntoView({block:'nearest'});
 }
 
 /* Strategy walk-through: shown for a new seed ('intro') and after a wrong answer ('fix').
