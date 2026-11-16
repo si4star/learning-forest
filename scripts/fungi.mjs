@@ -131,7 +131,7 @@ const figBreak = {
     ['saw', 'Saw cut', 'A saw slices straight across the tubes. The end is flat, and every tube is cut open.'],
     ['snap', 'Snapped', 'When a branch snaps, the tubes mostly pull apart along the glue between them, leaving a jagged, splintery end with long splinters.'],
   ],
-  note: 'Grown-up words: a break along the glue is an intercellular fracture; a cut through the walls is transwall. Nobody has yet tested properly whether a snapped end rots more slowly than a saw cut.',
+  note: 'Grown-up words: a break along the glue is an intercellular fracture; a cut through the walls is transwall. Nobody has yet tested properly whether a snapped end rots more slowly than a saw cut, though The Tree Fella sees much less decay around natural fractures than around pruning cuts.',
 };
 
 // trunk slice: the four ways in
@@ -200,7 +200,7 @@ const ZONES = [
       ['Why do fungi move into the dry wood?', 'Dry, airy wood with nothing left to fight back is just what a fungus wants. Spores land on the cut, or [were already hiding inside|latent colonisation], and the fungus moves in. The tree builds [walls|compartmentalisation (CODIT)] to keep it in that one part: see <a href="../trees/#how-does-a-tree-deal-with-a-wound">how a tree deals with a wound</a>.'],
       ['Why do big cuts matter?', 'The bigger the cut, the more straws stop working, and the more dry wood there is for fungi. Taking lots of leaves off a tree at once, like [chopping its top off|topping], does the same all over the tree. That’s why tree surgeons try to [make small cuts|minimising wound size], and why <a href="../trees/#when-is-the-worst-time-to-prune-a-tree">when you prune</a> matters too.'],
       ['Does cutting roots do the same?', 'Yes. Roots are the bottom end of the straws. Cut a big root and the wood it was feeding [stops working too|dysfunction], and fungi can get in from below.'],
-      ['Is a snapped branch different from a sawn one?', 'When a branch snaps, the wood mostly [pulls apart between the tubes|intercellular fracture], along the glue, leaving a jagged, splintery end. A saw [slices straight across the tubes|transverse cut] and leaves them cut open. On some old trees, tree surgeons copy snapping on purpose with [jagged cuts|coronet cuts, natural fracture pruning], to make homes for beetles and fungi. Whether a snapped end rots more slowly than a sawn one hasn’t been tested properly yet.'],
+      ['Is a snapped branch different from a sawn one?', 'When a branch snaps, the wood mostly [pulls apart between the tubes|intercellular fracture], along the glue, leaving a jagged, splintery end. A saw [slices straight across the tubes|transverse cut] and leaves them cut open. On some old trees, tree surgeons copy snapping on purpose with [jagged cuts|coronet cuts, natural fracture pruning], to make homes for beetles and fungi. Whether a snapped end rots more slowly than a sawn one hasn’t been tested properly yet, but here at The Tree Fella we can’t help noticing much less rot around natural snaps than around pruning cuts.'],
       { fig: 'break' },
     ]],
   ['heartwood', 'z-bark', 'Heartwood', 'In the middle', 'What’s in the middle of a tree?',
