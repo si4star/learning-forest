@@ -44,7 +44,7 @@ function el(tag,attrs){const e=document.createElementNS(NS,tag);for(const k in a
   tip.forEach(([x,yy])=>rg.appendChild(el('circle',{cx:x,cy:yy,r:5,fill:'#F6C343',stroke:'#8A6A10','stroke-width':1.5})));
   btn.disabled=y>=MAX;
   cap.textContent=y===0?'A young tree in its first year. The yellow dots are its growing tips. Its trunk slice has one ring.':
-   `Year ${y+1}: the tips grew, so the tree is taller and wider, and its roots spread further sideways. They stay in the top 60 cm or so, where there’s air. The growing layer under the bark added ring number ${y+1}, shown in yellow, so the trunk is fatter.`+(y>=MAX?' That’s enough growing for now. Press Start again.':'')}
+   `Year ${y+1}: the tips grew, so the tree is taller and wider, and its roots spread further sideways. Most of them stay in the top 60 cm or so, where there’s air. The growing layer under the bark added ring number ${y+1}, shown in yellow, so the trunk is fatter.`+(y>=MAX?' That’s enough growing for now. Press Start again.':'')}
  f.querySelector('[data-act=grow]').addEventListener('click',()=>{if(y<MAX){y++;draw();track('diagram_used',{diagram:'grow',state:String(y+1)})}});
  f.querySelector('[data-act=reset]').addEventListener('click',()=>{y=0;draw();btn.focus()});
  draw()})();

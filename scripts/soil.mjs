@@ -67,7 +67,7 @@ const figMix = (() => {
       ['all', 'Everything', 'Soil close up: bits of rock, a little rotted stuff, and gaps full of water and air.'],
       ['rock', 'Rock bits', 'About half of soil is tiny bits of broken rock: sand, silt and clay.'],
       ['rotted', 'Rotted bits', 'Only a little is rotted leaves and plants, but it’s the most important bit for food and creatures.'],
-      ['water', 'Water', 'Some gaps hold water. Roots drink it, with the minerals melted into it.'],
+      ['water', 'Water', 'Some gaps hold water. Roots drink it, with the minerals dissolved in it, like sugar in tea.'],
       ['air', 'Air', 'The other gaps hold air. Roots and creatures need it to breathe.'],
     ],
     note: 'Grown-up words: mineral particles (sand, silt and clay), organic matter, and pore space holding soil water and air. These are rough amounts for a good soil; after rain there’s more water and less air.',
@@ -94,7 +94,7 @@ const figCycle = {
     ['shred', 'Shredders', 'Woodlice, millipedes and slugs nibble the leaf full of holes and chew it into little bits.'],
     ['worm', 'Worms', 'Earthworms pull bits of leaf down into their burrows and eat them with soil. Their poo, worm casts, is rich, crumbly soil.'],
     ['tiny', 'Tiny helpers', 'Springtails and mites eat the tiniest bits. Fungus threads and bacteria finish off the rest.'],
-    ['back', 'Back to the tree', 'What’s left is dark, crumbly soil food. Its minerals melt into the soil water, and the tree’s roots drink them up, ready for next spring’s leaves.'],
+    ['back', 'Back to the tree', 'What’s left is dark, crumbly soil food. Its minerals dissolve in the soil water, like sugar in tea, and the tree’s roots drink them up, ready for next spring’s leaves.'],
   ],
   note: 'Grown-up words: the shredders are detritivores; the dark, crumbly stuff is humus; the whole loop is nutrient cycling.',
 };
@@ -167,7 +167,7 @@ const FIGS = { mix: figMix, cycle: figCycle, squash: figSquash, mulch: figMulch 
 const LURKS = [
   ['soil', 'ant', 'Ant', 'right', 14, 'I’m an ant. Our tunnels let air and rain into the soil.'],
   ['leaves', 'woodlouse', 'Woodlouse', 'left', 22, 'I’m a woodlouse. I eat dead leaves and rotting wood. I’m not an insect: I’m related to crabs!'],
-  ['leaves', 'millipede', 'Millipede', 'right', 64, 'I’m a millipede. I munch dead leaves. I’ve got two pairs of legs on most of my body bits, but nowhere near a thousand legs.'],
+  ['leaves', 'millipede', 'Millipede', 'right', 64, 'I’m a millipede. I munch dead leaves. I’ve got two pairs of legs on most of my body bits. Most of us have nowhere near a thousand legs, but one kind, far away in Australia, has more than a thousand!'],
   ['mulch', 'slug', 'Slug', 'right', 18, 'I’m a slug. I eat rotting plants and fungi, and leave a slimy trail.'],
   ['mulch', 'springtail', 'Springtail', 'left', 50, 'I’m a springtail, smaller than a grain of rice. I eat fungus threads and rotting bits, and I can flick myself into the air with a spring under my tummy.'],
   ['mulch', 'beetle', 'Ground beetle', 'right', 80, 'I’m a ground beetle. I hunt slugs and other minibeasts at night.'],
@@ -186,7 +186,7 @@ const ZONES = [
       ['What is soil made of?', 'About half of soil is [tiny bits of broken rock|mineral particles]. A little is [rotted leaves and plants|organic matter]. The rest is [gaps|pore space], filled with air and water. Roots and creatures need both.'],
       { fig: 'mix' },
       ['Where does soil come from?', 'Rain, ice, plant roots and [lichens|lichens] slowly [crumble rock into tiny bits|weathering]. Dead plants and animals rot into it. Making soil takes a very, very long time, so it’s precious.'],
-      ['What are sand, silt and clay?', 'They’re bits of rock of different sizes. [Sand|sand] is the biggest: it feels gritty, and water runs straight through it. [Clay|clay] is the tiniest: it’s sticky, holds on to water and food, and squashes easily. [Silt|silt] is in between. Most soil is a mix, called [loam|loam].'],
+      ['What are sand, silt and clay?', 'They’re bits of rock of different sizes. [Sand|sand] is the biggest: it feels gritty, and water runs straight through it. [Clay|clay] is the tiniest: it’s sticky, holds on to water and food, and squashes easily. [Silt|silt] is in between. Most soil is a mix. A mix with a good balance of all three is called loam.'],
       ['Why do trees need soil?', `Soil holds a tree up, and gives its roots water, [food|nutrients] and air. Thick roots near the trunk hold it steady like tent pegs: see ${link('../trees/#what-stops-a-tree-blowing-over', 'what stops a tree blowing over')}.`],
       ['Is soil alive?', 'Very! Soil is full of worms, beetles, woodlice, fungi, and [living things too tiny to see|bacteria and other microbes]. A handful of good soil holds millions of them. Some are hiding on this page: see if you can find them on the way down.'],
     ]],
@@ -209,10 +209,10 @@ const ZONES = [
       ['Is fresh wood chip all right?', 'Yes, spread on top of the soil. It only borrows a little [plant food|nitrogen] right where it touches the surface, not down where the roots are. Don’t dig it in, though.'],
     ]],
   ['food', 'z-top', 'Soil food', 'In the topsoil', 'What food is in soil?',
-    'Minerals, a bit like vitamins for trees. They melt into the water in the soil, and roots drink them up.', [
+    'Minerals, a bit like vitamins for trees. They dissolve in the water in the soil, like sugar in tea, and roots drink them up.', [
       ['What do trees need from soil?', `Trees make their own sugar from sunshine, but they need [minerals|mineral nutrients] from the soil: [nitrogen|N] for leaves, [phosphorus|P] for energy, [potassium|K] for opening and shutting leaf mouths, and tiny bits of others, like iron. See ${link('../trees/#what-minerals-does-a-tree-need', 'what minerals a tree needs')}.`],
       ['Where do the minerals come from?', 'Most come back from rotting leaves, poo and dead things: that’s [recycling|nutrient cycling]. Some come slowly out of the bits of rock. And some [tiny living things grab nitrogen out of the air|nitrogen fixation].'],
-      ['How do roots get the minerals?', `The minerals [melt into the water|dissolve] in the soil, and the thinnest roots soak them up. Fungi wrapped round the roots help, reaching much further: see ${link('../trees/#why-do-tree-roots-need-fungi', 'why tree roots need fungi')}.`],
+      ['How do roots get the minerals?', `The minerals [mix into the water and vanish|dissolve], like sugar in tea, and the thinnest roots soak them up. Fungi wrapped round the roots help, reaching much further: see ${link('../trees/#why-do-tree-roots-need-fungi', 'why tree roots need fungi')}.`],
       ['Why is topsoil darker?', 'Topsoil has the most [rotted leaves and plants|organic matter] in it, and that makes it dark. It’s where most creatures live, and where most of a tree’s drinking roots are.'],
       ['Can a tree run short of food?', `In a wood, fallen leaves keep the food coming back. In streets, parks and gardens, leaves are often swept away and the soil gets squashed, so less comes back. Mulch helps put that right. Pouring on plant food usually isn’t the answer: see ${link('../trees/#do-trees-need-plant-food', 'do trees need plant food?')}`],
     ]],
@@ -229,13 +229,13 @@ const ZONES = [
     'Paler, harder soil, with less air, fewer creatures and fewer roots.', [
       ['What is subsoil?', 'Under the dark topsoil is [paler soil|subsoil]. It has much less rotted stuff in it, and less air, so fewer creatures and roots live there.'],
       ['How deep do tree roots go?', `Not as deep as you’d think! Most stay in the top part of the soil, where there’s air, but they spread out wide, often further than the branches. See ${link('../trees/#how-deep-do-tree-roots-go', 'how deep tree roots go')}.`],
-      ['Who digs down here?', 'Some earthworms dig burrows [more than a metre deep|deep-burrowing (anecic) earthworms]. Moles dig tunnels, hunting for them.'],
+      ['Who digs down here?', 'Some earthworms are [deep diggers|anecic earthworms]: their burrows go more than a metre down. Moles dig tunnels, hunting for them.'],
       ['Why are soils different colours?', 'Dark brown or black soil has lots of rotted stuff in it. Red, orange or yellow soil has [rusty iron|iron oxides] in it. Grey or blue-grey soil is often [soaked, with no air|gleyed soil].'],
     ]],
   ['rock', 'z-rock', 'Rock', 'At the very bottom', 'What’s at the very bottom?',
     'Solid rock. Very slowly, it crumbles and becomes new soil.', [
       ['What is bedrock?', 'Under all the soil is solid rock, called [bedrock|bedrock]. Sometimes it’s just under the surface; sometimes it’s many metres down.'],
-      ['How does rock turn into soil?', 'Water seeps into cracks and freezes. Ice takes up more room than water, so it pushes the cracks wider. Roots grow into cracks and push too. Bit by bit, rock breaks into stones, then sand, then silt and clay. It takes [thousands of years|soil formation].'],
+      ['How does rock turn into soil?', 'Water seeps into cracks and freezes. Ice takes up more room than water, so it pushes the cracks wider. Roots grow into cracks and push too. Bit by bit, rock breaks into stones, then sand, then silt. Rainwater slowly changes some of the tiniest bits into sticky clay. That’s [how soil is made|soil formation], and it takes thousands of years.'],
       ['Why should we look after soil?', 'Because it takes so long to make, and almost all our food grows in it. Look after the soil, and it looks after the trees.'],
     ]],
 ];
