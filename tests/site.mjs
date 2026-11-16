@@ -80,6 +80,11 @@ step('How do fungi work?: diagrams, grown-up words, links to the tree page, noth
     await last.click();
     assert.equal(await f.$eval('.cap', c => c.textContent), await last.getAttribute('data-say'));
   }
+  // spot the fungus: a picture for each, its numbers matching its clues
+  assert.equal(await fp.locator('.spot').count(), 9);
+  for (const s of await fp.$$('.spot')) assert.equal(await s.$$eval('svg .pin', p => p.length), await s.$$eval('.clues li', l => l.length));
+  // the closing section lines up with the sections above it
+  assert.equal(await fp.$eval('.finish-in', e => e.getBoundingClientRect().left), await fp.$eval('#spot .zone-in', e => e.getBoundingClientRect().left));
   await fp.click('#fig-cut [data-state=cut]');
   assert.ok(await fp.isHidden('#fig-cut [data-show=leafy]'), 'the branch is gone once it is cut');
   const kw = fp.locator('#what-is-brown-rot .kw').first();
@@ -93,7 +98,7 @@ step('How do fungi work?: diagrams, grown-up words, links to the tree page, noth
     await fp.goto(new URL(href, BASE + '/fungi/').href);
     assert.equal(await fp.locator(`#${id}`).count(), 1, `${href} exists`);
   }
-  assert.equal(await fp.locator('a[href="../fungi/#heartwood"]').count(), 1, 'the tree page links to the fungi page');
+  assert.equal(await fp.locator('a[href="../fungi/#heartwood"][target=_blank]').count(), 1, 'the tree page links to the fungi page, in a new tab');
   assert.match(await fp.textContent('#which-fungi-eat-wood'), /eat the woody glue and leave soft white strings/);
   // the app copy has the back bar and isn't indexed
   await fp.goto(BASE + '/app/fungi/');

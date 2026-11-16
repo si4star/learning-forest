@@ -15,3 +15,5 @@ html:root{padding-top:0}
 .lf-stick .lf-top,.lf-stick .bar.bar{position:static}
 .zone .zone-head{top:calc(var(--stick-h,7rem) + 1rem)}
 .finish .sources{font-size:.95rem;opacity:.85;max-width:70ch}
+/* The closing section lines up with the sections above it, not narrower. */
+.finish .finish-in{max-width:1100px}

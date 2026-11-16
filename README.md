@@ -239,7 +239,7 @@ node scripts/import-trees.mjs path/to/index.html
 
 The import adapts it to this site: the inline script moves to `public/trees/trees.js` (the security policy runs no inline scripts), Google Analytics and its cookie banner come out (the school pack promises no tracking), Google Fonts become self-hosted copies, addresses move from `/` to `/trees/`, the sharing image and logo come out, and The Learning Forest's header and footer replace the page's own. Its section links and progress bar stay as a sticky bar under the site header, and the book credits move into its closing section. Each change must match exactly once, so if the page's structure changes the import stops with the step that failed rather than publishing a half-converted page.
 
-**Changes made here, not in the source file.** The rot answer says "eat the woody glue" and "eat the strings" (it said "the dark, gluey part" and "the white part"), the heartwood answer says only some trees, like oak, protect their middle, and both link to How do fungi work?. Make the same changes in the source file before the next import, or the import will undo them.
+**Changes made here, not in the source file.** The rot answer says "eat the woody glue" and "eat the strings" (it said "the dark, gluey part" and "the white part"), the heartwood answer says only some trees, like oak, protect their middle, and both link to How do fungi work? in a new tab. Make the same changes in the source file before the next import, or the import will undo them.
 
 ## How do fungi work?
 

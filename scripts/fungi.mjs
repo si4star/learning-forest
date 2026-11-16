@@ -165,6 +165,107 @@ const figWays = {
 
 const FIGS = { wood: figWood, rot: figRot, cut: figCut, break: figBreak, ways: figWays };
 
+// ---------- spot the fungus: a drawing each, with numbered clues ----------
+const num = (x, y, n) => `<g class="pin"><circle cx="${x}" cy="${y}" r="10" fill="#1D2B22" stroke="#fff" stroke-width="2"/><text x="${x}" y="${y + 4.5}" text-anchor="middle" fill="#fff" font-size="13" font-weight="700" font-family="Fredoka,sans-serif">${n}</text></g>`;
+const bark = (w, fill = '#7A5A3E', line = '#5E4430') => `<rect x="0" y="0" width="${w}" height="180" fill="${fill}"/>` +
+  [0.2, 0.45, 0.7].map(f => `<path d="M${w * f} 0 q4 45 -2 90 q-4 45 2 90" stroke="${line}" stroke-width="3" fill="none"/>`).join('');
+const soil = y => `<rect x="0" y="${y}" width="240" height="${180 - y}" fill="#5A4030"/>`;
+const tier = (y, len) =>
+  `<path d="M70 ${y - 16} Q${70 + len * .6} ${y - 30} ${70 + len} ${y - 2} Q${78 + len} ${y + 12} ${60 + len} ${y + 16} Q${70 + len * .5} ${y + 22} 70 ${y + 12}Z" fill="#F6D243"/>` +
+  `<path d="M70 ${y - 14} Q${70 + len * .55} ${y - 26} ${58 + len} ${y - 2} Q${64 + len} ${y + 7} ${52 + len} ${y + 9} Q${70 + len * .45} ${y + 13} 70 ${y + 7}Z" fill="#F08A24"/>` +
+  `<path d="M${70 + len * .3} ${y - 20} q20 -4 40 0 M${70 + len * .35} ${y - 10} q24 -3 46 2" stroke="#F6B347" stroke-width="2" fill="none"/>`;
+const scales = () => {
+  let o = '';
+  for (const r of [34, 58, 82, 104]) for (let a = -150; a <= -20; a += 22 - r / 10) {
+    const x = 92 + r * Math.cos(a * Math.PI / 180), y = 108 + r * .62 * Math.sin(a * Math.PI / 180);
+    o += `<path d="M${x.toFixed(1)} ${y.toFixed(1)} l7 -3 l-2 7z" fill="#7A4A22"/>`;
+  }
+  return o;
+};
+const SPOTS = [
+  { name: 'Chicken of the woods', latin: 'Laetiporus sulphureus',
+    svg: bark(70) + tier(46, 130) + tier(92, 150) + tier(136, 118) + num(150, 34, 1) + num(226, 96, 2) + num(140, 158, 3),
+    clues: ['Layers of soft, fan-shaped brackets, bright orange and yellow, in summer.', 'A wavy, sulphur-yellow edge.', 'Underneath is yellow, with tiny holes, not gills.'],
+    more: 'Old ones fade to chalky white and crumble.',
+    lives: 'Oak, yew and sweet chestnut, sometimes other trees.', does: 'Brown rot in the heartwood. It hollows out old oaks.' },
+  { name: 'Beefsteak fungus', latin: 'Fistulina hepatica',
+    svg: bark(80) + `<path d="M80 68 Q140 50 170 78 Q184 104 160 122 Q120 136 80 112Z" fill="#9E2A1E"/>` +
+      [[100, 80], [120, 72], [140, 76], [112, 96], [134, 92], [154, 98], [126, 112], [146, 112]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#C8584A"/>`).join('') +
+      `<path d="M80 112 Q120 136 160 122 Q152 134 120 138 Q94 136 80 122Z" fill="#EBCDB0"/>` +
+      `<path d="M186 54 Q220 46 232 64 Q238 84 222 96 Q200 104 186 92Z" fill="#B83A2E"/><path d="M192 62 q14 6 30 -2 M190 74 q18 8 36 0 M192 86 q14 4 28 -2" stroke="#E79A8C" stroke-width="2.5" fill="none"/>` +
+      `<path d="M204 100 q-3 8 0 10 q3 -2 0 -10z M216 98 q-3 10 0 13 q3 -3 0 -13z" fill="#B83A2E"/><text x="210" y="128" text-anchor="middle" font-size="12" fill="#5E4430" font-family="Fredoka,sans-serif">cut open</text>` +
+      num(122, 58, 1) + num(186, 40, 2) + num(110, 150, 3),
+    clues: ['One tongue-shaped bracket, red-brown, often low down the trunk, in late summer and autumn.', 'Cut it and it looks just like raw steak, and drips red juice.', 'Underneath is cream, turning pinkish-brown.'],
+    lives: 'Oak and sweet chestnut.', does: 'A very slow brown rot in the heartwood. It stains oak a rich, dark brown.' },
+  { name: 'Artist’s bracket', latin: 'Ganoderma applanatum',
+    svg: bark(70) + [[20, 40], [36, 52], [50, 34], [28, 64], [58, 58]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="#8A5A2E"/>`).join('') +
+      `<path d="M70 70 L206 80 Q224 84 222 96 L70 104Z" fill="#8B6B4E"/><path d="M76 78 L200 86 M76 88 L212 92 M76 97 L216 99" stroke="#6E5238" stroke-width="2" fill="none"/>` +
+      [[100, 80], [130, 82], [160, 86], [118, 92], [150, 94], [186, 90]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#6B4024"/>`).join('') +
+      `<path d="M200 80 Q224 84 222 96 L198 98" stroke="#FAF7F0" stroke-width="5" fill="none" stroke-linecap="round"/>` +
+      `<path d="M70 104 L222 96 Q216 116 70 120Z" fill="#F4EFE6" stroke="#D8CDB8" stroke-width="1.5"/>` +
+      `<path d="M160 116 l8 -12 l8 12 M168 104 l0 -1 M150 110 q6 -6 4 4" stroke="#6B4024" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+      [[96, 112], [114, 110], [130, 112]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#E2CFA6" stroke="#B89A66" stroke-width="1.2"/><circle cx="${x}" cy="${y + 4}" r="1.5" fill="#B89A66"/>`).join('') +
+      num(42, 20, 1) + num(232, 78, 2) + num(186, 132, 3) + num(104, 136, 4),
+    clues: ['Brown dust like cocoa powder on top, and on the bark and plants around it.', 'A hard, flat, woody shelf with a white edge while it’s growing. It stays for years, adding a layer each year.', 'A white underside: scratch it and the line turns brown.', 'Little nipple-like bumps underneath, made by a tiny fly.'],
+    more: 'The southern bracket looks very like it, but it’s thicker and never has the bumps.',
+    lives: 'Broadleaved trees, often beech.', does: 'White rot in the heartwood, low down in the trunk and big roots.' },
+  { name: 'Lacquered bracket', latin: 'Ganoderma resinaceum',
+    svg: bark(80) + soil(156) + `<path d="M80 108 Q150 88 190 110 Q198 130 170 136 Q120 142 80 132Z" fill="#8E2B17"/>` +
+      `<path d="M96 106 Q130 96 160 102" stroke="#fff" stroke-width="4" opacity=".45" fill="none" stroke-linecap="round"/><path d="M104 116 Q130 110 150 112" stroke="#fff" stroke-width="2.5" opacity=".3" fill="none" stroke-linecap="round"/>` +
+      `<path d="M156 98 Q192 104 194 120 Q192 132 172 136" stroke="#F2DFA0" stroke-width="6" fill="none" stroke-linecap="round"/>` +
+      num(124, 86, 1) + num(214, 120, 2) + num(40, 140, 3),
+    clues: ['A shiny, red-brown top, as if it’s been varnished.', 'A creamy-yellow edge while it’s growing.', 'Low down on the trunk, often oak. A new one grows each year.'],
+    lives: 'Oak, and sometimes other trees.', does: 'White rot in the roots and the bottom of the trunk. It can spread into the working wood.' },
+  { name: 'Dryad’s saddle', latin: 'Cerioporus squamosus',
+    svg: bark(60) + `<path d="M60 102 L92 104 L92 120 L60 122Z" fill="#E9D8B4"/><path d="M60 104 L74 104 L74 120 L60 121Z" fill="#1E1C1A"/>` +
+      `<clipPath id="ds-cap"><path d="M84 114 Q84 46 190 46 Q236 60 226 100 Q170 136 84 114Z"/></clipPath>` +
+      `<path d="M84 114 Q84 46 190 46 Q236 60 226 100 Q170 136 84 114Z" fill="#E9D8B4" stroke="#C9B48A" stroke-width="2"/><g clip-path="url(#ds-cap)">` + scales() + `</g>` +
+      num(206, 64, 1) + num(150, 84, 2) + num(68, 140, 3),
+    clues: ['A big cream fan, shaped like a saddle, in spring and early summer.', 'Brown scales in rings, like a pheasant’s feathers.', 'A short, thick stalk, black at the bottom.'],
+    more: 'Underneath has big, wide holes, and it smells of cucumber or watermelon.',
+    lives: 'Sycamore, elm, ash and beech.', does: 'White rot. It waits at wounds, where the sapwood has dried out.' },
+  { name: 'Birch polypore', latin: 'Fomitopsis betulina',
+    svg: bark(80, '#F2F0EA', '#F2F0EA') + [[12, 30], [44, 22], [20, 140], [52, 120], [30, 160]].map(([x, y]) => `<rect x="${x}" y="${y}" width="22" height="4" rx="2" fill="#2B2B2B"/>`).join('') +
+      `<path d="M14 80 l10 -8 l10 8 l-10 8z" fill="#3A3A3A"/>` +
+      `<path d="M80 60 Q150 48 176 80 Q186 104 162 112 Q120 120 80 108Z" fill="#BCA88E"/><path d="M90 64 Q140 56 166 78" stroke="#D4C4AA" stroke-width="5" fill="none" stroke-linecap="round"/>` +
+      `<path d="M80 108 Q120 120 162 112 Q178 106 174 118 Q130 134 80 122Z" fill="#FAF7F0" stroke="#D8D0C0" stroke-width="1.5"/>` +
+      num(36, 104, 1) + num(130, 84, 2) + num(132, 146, 3),
+    clues: ['Only ever on birch.', 'A smooth, pale grey-brown cushion, like a hoof, with a rounded edge.', 'White underneath, with tiny holes.'],
+    lives: 'Birch, usually ones that are weak or dying.', does: 'Brown rot. It hides inside healthy birch, then wakes up when the tree weakens.' },
+  { name: 'Honey fungus', latin: 'Armillaria',
+    svg: bark(70) + `<rect x="12" y="50" width="44" height="78" rx="6" fill="#DCC69C"/><path d="M20 56 q10 20 0 40 q-6 14 6 30 M34 54 q-8 24 4 44 q6 14 -2 28 M46 58 q6 18 -2 34" stroke="#141010" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+      soil(150) + `<path d="M80 160 q30 -6 50 4 M120 170 q40 -10 90 0" stroke="#141010" stroke-width="3" fill="none"/>` +
+      [[104, 150, 96, 22], [134, 150, 70, 24], [164, 150, 92, 21], [194, 150, 66, 19], [222, 150, 84, 16]].map(([x, base, top, r]) =>
+        `<rect x="${x - 4}" y="${top}" width="8" height="${base - top}" fill="#EFE3C6"/><ellipse cx="${x}" cy="${top + 22}" rx="9" ry="3" fill="#FAF7F0"/>` +
+        `<path d="M${x - r} ${top + 4} Q${x} ${top - r * .9} ${x + r} ${top + 4}Z" fill="#C99A3A"/>` +
+        [[-4, -6], [3, -9], [6, -3], [-1, -2]].map(([dx, dy]) => `<circle cx="${x + dx}" cy="${top + dy}" r="1.6" fill="#5A3A14"/>`).join('')).join('') +
+      num(166, 54, 1) + num(150, 124, 2) + num(34, 140, 3),
+    clues: ['Clumps of honey-coloured mushrooms at the bottom of the tree, in autumn.', 'Little dark scales in the middle of each cap, and a white ring round the stem.', 'Black bootlaces under the bark and in the soil.'],
+    more: 'Under the bark there can also be a white, fan-shaped sheet of fungus.',
+    lives: 'Lots of different trees and shrubs.', does: 'Attacks living roots and the bottom of the trunk, then white rot. One of the few that can break in.' },
+  { name: 'Brittle cinder', latin: 'Kretzschmaria deusta',
+    svg: `<path d="M50 0 L150 0 L150 120 Q170 150 200 160 L10 160 Q40 150 50 120Z" fill="#7A5A3E"/>` + soil(156) +
+      `<path d="M30 132 Q40 112 70 116 Q86 122 80 140 Q60 152 34 146Z" fill="#9C9A94" stroke="#FAFAF7" stroke-width="5"/>` +
+      `<path d="M96 138 Q100 118 130 120 Q156 124 160 142 Q140 156 104 152Z" fill="#1E1C1A"/>` + [[108, 132], [122, 128], [136, 134], [148, 140], [118, 144]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#2C2926"/>`).join('') +
+      num(56, 98, 1) + num(130, 104, 2),
+    clues: ['In spring: a flat grey crust with a white edge, right at the bottom of the trunk.', 'Later: black and lumpy, like burnt charcoal or tarmac. It crumbles when you press it.'],
+    more: 'It’s easy to miss, so tree surgeons look for it on purpose.',
+    lives: 'Beech, lime and other broadleaved trees.', does: 'Soft rot, then white rot, in the bottom of the trunk and roots. The tree can snap with little warning.' },
+  { name: 'Ash dieback', latin: 'Hymenoscyphus fraxineus',
+    svg: `<rect x="0" y="0" width="240" height="180" fill="#C9B28A"/>` + [[30, 30], [180, 150], [60, 160], [210, 30]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="18" ry="8" fill="#B39466" transform="rotate(-30 ${x} ${y})"/>`).join('') +
+      `<path d="M20 150 Q70 110 130 60" stroke="#2A2420" stroke-width="7" fill="none" stroke-linecap="round"/>` +
+      [[46, 128], [62, 116], [80, 100], [98, 86], [112, 74]].map(([x, y]) => `<path d="M${x} ${y} l0 -8" stroke="#F5F0E0" stroke-width="2"/><ellipse cx="${x}" cy="${y - 10}" rx="5" ry="2.6" fill="#FAF7F0" stroke="#D8D0C0"/>`).join('') +
+      `<rect x="160" y="20" width="70" height="140" rx="10" fill="#E9E1CC"/><path d="M195 26 L195 154" stroke="#8A8F5A" stroke-width="12"/><path d="M195 90 L222 70" stroke="#8A8F5A" stroke-width="7"/>` +
+      `<path d="M195 62 L204 90 L195 118 L186 90Z" fill="#4A2E1A"/>` +
+      num(30, 168, 1) + num(98, 60, 2) + num(176, 92, 3),
+    clues: ['Last year’s fallen ash leaf stalks, gone black, in the leaf litter.', 'Tiny white cups on the stalks, only a few millimetres across, in summer.', 'On the tree: dark, diamond-shaped patches on the bark where a twig joins.'],
+    lives: 'Ash.', does: 'Grows from the leaves into the twigs and wood, so the branches die back from the tips.' },
+];
+const spotCard = s => `<figure class="spot" id="spot-${slug(s.name)}"><svg viewBox="0 0 240 180" role="img" aria-labelledby="spot-${slug(s.name)}-h" focusable="false">${s.svg}</svg>` +
+  `<figcaption><h3 id="spot-${slug(s.name)}-h">${s.name} <i>${s.latin}</i></h3><ol class="clues">${s.clues.map(c => `<li>${c}</li>`).join('')}</ol>` +
+  (s.more ? `<p>${s.more}</p>` : '') + `<p><b>Lives on:</b> ${s.lives}</p><p><b>What it does:</b> ${s.does}</p></figcaption></figure>`;
+const spotGallery = () => `<p class="spot-safe">Look, draw and take photos. Never pick or eat wild fungi. The numbers on each picture match the clues.</p><div class="spots">${SPOTS.map(spotCard).join('')}</div>`;
+
 function figure(f) {
   const first = f.buttons[0];
   return `<figure class="fig" id="fig-${f.id}" data-fig="${f.id}" data-state="${first[0]}"><figcaption class="fig-title" id="${f.id}-c">${f.title}</figcaption>` +
@@ -227,6 +328,8 @@ const ZONES = [
       { fig: 'rot' },
       ['Which rot makes a tree break?', 'Wood with some white rots [bends a long way before it breaks|ductile fracture]. Brown rot, soft rot and the white rots that eat everything at once can make wood [snap like a carrot|brittle fracture], with little warning. That’s why tree surgeons want to know which fungus is there, not just that there is one.'],
     ]],
+  ['spot', 'z-time', 'Spot them', 'Spot the fungus', 'How do I tell which fungus it is?',
+    'Look for clues: its shape, its colour, what’s underneath, and which tree it’s on.', [{ spots: true }]],
   ['ganoderma', 'z-soil', 'Ganoderma', 'Meet a bracket', 'What is Ganoderma?',
     'A family of big, tough bracket fungi that rot the middle of trees, usually from near the bottom.', [
       ['What does Ganoderma look like?', 'Ganoderma is a [family of fungi|genus]. Its brackets are hard and woody, and stick out from the trunk like shelves, often near the ground. Some [add a new layer every year|perennial fruiting bodies], so they stay on a tree for years. The [lacquered bracket|Ganoderma resinaceum] looks shiny, as if it’s been varnished.'],
@@ -268,15 +371,15 @@ function topic([q, a]) {
     `<div itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">${esc(html)}</p></div>` +
     (chips.length ? `<p class="words"><span class="words-h">Grown-up words:</span> ${esc(chips.join(' '))}</p>` : '') + `</article>`;
 }
-const BG = { 'z-leaf': 'leaf', 'z-trunk': 'trunk', 'z-branch': 'branch', 'z-bark': 'bark', 'z-msg': 'msg', 'z-seed': 'seed', 'z-soil': 'soil', 'z-deep': 'deep', 'z-people': 'people' };
+const BG = { 'z-time': 'time', 'z-leaf': 'leaf', 'z-trunk': 'trunk', 'z-branch': 'branch', 'z-bark': 'bark', 'z-msg': 'msg', 'z-seed': 'seed', 'z-soil': 'soil', 'z-deep': 'deep', 'z-people': 'people' };
 const sections = ZONES.map(([id, cls, , where, q, a, items], i) => {
   const prev = ZONES[i - 1], next = ZONES[i + 1], me = `var(--${BG[cls]}-bg)`;
   const top = `color-mix(in srgb,${prev ? `var(--${BG[prev[1]]}-bg)` : 'var(--sky-bg)'},${me})`;
   const style = `--top:${top}` + (next ? `;--bot:color-mix(in srgb,${me},var(--${BG[next[1]]}-bg))` : '');
-  const body = items.map(it => it.fig ? figure(FIGS[it.fig]) : topic(it)).join('');
+  const body = items.map(it => it.spots ? spotGallery() : it.fig ? figure(FIGS[it.fig]) : topic(it)).join('');
   return `<section class="zone ${cls}" id="${id}" aria-labelledby="h-${id}" style="${style}"><div class="zone-in"><div class="zone-head" itemprop="mainEntity" itemscope itemtype="https://schema.org/Question"><p class="where">${where}</p><h2 id="h-${id}" itemprop="name">${esc(q)}</h2><div itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">${esc(a)}</p></div></div><div class="topics">${body}</div></div></section>`;
 }).join('\n');
-const nQ = ZONES.reduce((s, z) => s + z[6].filter(it => !it.fig).length + 1, 0);
+const nQ = ZONES.reduce((s, z) => s + z[6].filter(it => !it.fig && !it.spots).length + 1, 0);
 const nFig = Object.keys(FIGS).length;
 
 const hero = `<svg id="hero-fungi" viewBox="0 0 400 420" role="img" aria-labelledby="hft"><title id="hft">A tree trunk with a big bracket fungus near the bottom, brown spore dust on top of it, and white fungus threads spreading through the soil and the wood.</title>
@@ -371,6 +474,11 @@ const trees = readFileSync('public/trees/index.html', 'utf8');
 const css = trees.slice(trees.indexOf('<style>') + 7, trees.indexOf('</style>'));
 mkdirSync('public/fungi', { recursive: true });
 writeFileSync('public/fungi/fungi.css', `/* Copied from How does a tree work? by scripts/fungi.mjs, so the two pages match. Don't edit here. */\n${css.trim()}\n` +
-  `/* fungi page */\n.hero .hint{max-width:34ch}\n.topic a{color:inherit;text-decoration-thickness:2px;text-underline-offset:3px}\n`);
+  `/* fungi page */\n.hero .hint{max-width:34ch}\n.topic a{color:inherit;text-decoration-thickness:2px;text-underline-offset:3px}\n` +
+  `.spot-safe{font-weight:700;margin:0 0 1rem}\n.spots{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}\n` +
+  `.spot{margin:0;background:var(--fig-bg);color:var(--fig-ink);border-radius:20px;overflow:hidden}\n.spot svg{display:block;width:100%;height:auto}\n` +
+  `.spot figcaption{padding:.8rem 1rem 1rem}\n.spot h3{font-family:var(--head);font-weight:600;font-size:1.25rem;margin:0 0 .5rem;line-height:1.15}\n` +
+  `.spot h3 i{display:block;font-family:var(--body);font-weight:400;font-size:.9rem;opacity:.75}\n.spot ol{margin:0 0 .6rem;padding-left:1.5rem}\n.spot li{margin:.25rem 0}\n` +
+  `.spot li::marker{font-family:var(--head);font-weight:700}\n.spot p{margin:.35rem 0}\n`);
 writeFileSync('public/fungi/index.html', page);
 console.log(`public/fungi/index.html: ${nQ} questions, ${nFig} diagrams`);
