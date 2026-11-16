@@ -280,16 +280,8 @@ section.zone{position:relative;overflow-x:clip}
 .lurk-say b{display:block;font-family:var(--head);font-size:1.15rem}
 .lurk-say small{display:block;margin-top:.35rem;font-family:var(--head);font-weight:600;color:#2F7A34}
 .found-line{font-family:var(--head);font-weight:500}
-/* the torch: dark all round, a circle of light where you point; creatures in the beam light up */
-.torch-btn{position:fixed;left:max(1rem,env(safe-area-inset-left,0px));bottom:calc(1rem + env(safe-area-inset-bottom,0px));z-index:35;
-  display:flex;align-items:center;gap:.4rem;height:52px;padding:0 1.1rem 0 .8rem;border-radius:26px;border:2px solid #fff;background:#2B2B2B;color:#fff;
-  font-family:var(--head);font-weight:600;font-size:1.05rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)}
-.torch-btn svg{width:26px;height:26px}
-.torch-btn[aria-pressed="true"]{background:#F6C343;color:#2B2B2B;border-color:#2B2B2B}
-.torch-dark{position:fixed;inset:0;z-index:30;pointer-events:none;
-  background:radial-gradient(circle at var(--tx,50%) var(--ty,50%),rgba(255,244,200,.28) 0,rgba(255,244,200,.12) 70px,rgba(0,0,0,0) 110px,rgba(0,0,0,.72) 170px)}
-.torch-dark[hidden]{display:none}
-.lurk.lit{z-index:31;filter:drop-shadow(0 0 6px #FFF4C8) drop-shadow(0 0 2px #fff) brightness(1.35)}
+/* on the dark soil, creatures get a pale outline and a soft glow so they stand out */
+.z-top .lurk svg,.z-top2 .lurk svg,.z-sub .lurk svg,.z-rock .lurk svg{filter:drop-shadow(0 0 1.2px #FFF4E0) drop-shadow(0 0 1.2px #FFF4E0) drop-shadow(0 0 6px rgba(255,236,200,.55))}
 `;
 
 const nFig = Object.keys(FIGS).length, nLurk = LURKS.length;
@@ -307,7 +299,7 @@ const nQ = writePage({
     ldDescription: 'Soil for children: what it’s made of, how fallen leaves become soil food, mulch, nutrients, squashed (compacted) soil, subsoil and rock, and the creatures that live there.',
     keywords: 'what is soil, soil for kids, soil and trees, mulch, soil compaction, leaf litter, soil creatures, earthworms, nutrients',
     lede: `Dig down from the grass at the bottom of a tree, all the way to the rock. ${nQ} questions, ${nFig} diagrams to play with, and ${nLurk} creatures hiding on the way down.`,
-    hint: `<p class="hint">In the answers, hover over or tap any underlined words to see their grown-up word.</p><p class="hint found-line" aria-live="polite">Tap the creatures when you spot them, and switch on the torch to look in the dark soil. Found <b id="found">0</b> of ${nLurk}.</p>`,
+    hint: `<p class="hint">In the answers, hover over or tap any underlined words to see their grown-up word.</p><p class="hint found-line" aria-live="polite">Tap the creatures when you spot them. Found <b id="found">0</b> of ${nLurk}.</p>`,
     finish: `<h2 id="finish-h">You dug all the way down to the rock.</h2>
     <p>That’s ${nQ} questions about soil. Next time you walk past a tree, think about the roots, worms and fungi under your feet.</p>
     <p class="sources">For the grown-ups: <cite>BS 5837:2012 Trees in relation to design, demolition and construction</cite>, for keeping roots safe on building sites, and Linda Chalker-Scott’s review <cite>Impact of mulches on landscape plants and the environment</cite> (Journal of Environmental Horticulture, 2007).</p>`,
