@@ -135,6 +135,20 @@ step('What is soil?: diagrams, creatures to find, links to the other pages, noth
   assert.equal(await sp.textContent('#found'), '1', 'the same creature only counts once');
   await sp.click('h1');
   assert.ok(await sp.isHidden('.lurk-say'));
+  // the torch: dark all round, and a creature in the beam lights up
+  assert.ok(await sp.isHidden('.torch-dark'));
+  await sp.click('.torch-btn');
+  assert.equal(await sp.getAttribute('.torch-btn', 'aria-pressed'), 'true');
+  assert.ok(await sp.isVisible('.torch-dark'));
+  const mite = sp.locator('.lurk[data-who="Soil mite"]');
+  await mite.scrollIntoViewIfNeeded();
+  const mb = await mite.boundingBox();
+  await sp.mouse.move(mb.x + mb.width / 2, mb.y + mb.height / 2);
+  await sp.waitForFunction(() => document.querySelector('.lurk[data-who="Soil mite"]').classList.contains('lit'));
+  assert.equal(await worm.evaluate(e => e.classList.contains('lit')), false, 'creatures outside the beam stay dark');
+  await sp.click('.torch-btn');
+  assert.ok(await sp.isHidden('.torch-dark'));
+  assert.equal(await sp.locator('.lurk.lit').count(), 0);
   // no "sand = 'Sand'": a word that's already the grown-up word isn't made tappable
   assert.equal(await sp.locator('#what-are-sand-silt-and-clay .kw').count(), 0);
   assert.equal(await sp.locator('main a[href^="../"]:not([target=_blank])').count(), 0, 'links to the other pages open in a new tab');
