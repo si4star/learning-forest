@@ -16,7 +16,7 @@ const watch = p => {
 step('home page and school pack load without errors, with no sideways scrolling on a phone');
 for (const [w, h] of [[390, 844], [1280, 900]]) {
   const p = watch(await (await browser.newContext({ viewport: { width: w, height: h } })).newPage());
-  for (const path of ['/', '/trees/', '/fungi/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/school-pack/terms.html', '/404.html']) {
+  for (const path of ['/', '/trees/', '/fungi/', '/soil/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/school-pack/terms.html', '/404.html']) {
     await p.goto(BASE + path);
     await p.evaluate(() => document.fonts.ready);
     assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${path} scrolls sideways at ${w}px`);
@@ -107,6 +107,46 @@ step('How do fungi work?: diagrams, grown-up words, links to the tree page, noth
   assert.equal(await fp.locator('main a[href^="http"]').count(), 0, 'no links out to other sites');
   assert.deepEqual(outside, []);
   assert.deepEqual(await fp.evaluate(() => Object.keys(localStorage)), []);
+}
+
+step('What is soil?: diagrams, creatures to find, links to the other pages, nothing from other websites, stores nothing');
+{
+  const sc = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const sp = watch(await sc.newPage()), outside = [];
+  sp.on('request', r => { if (!r.url().startsWith(BASE)) outside.push(r.url()); });
+  await sp.goto(BASE + '/soil/');
+  assert.equal(await sp.locator('.fig').count(), 4);
+  for (const f of await sp.$$('.fig')) {
+    assert.ok(await f.$$eval('svg [data-show]', els => els.length === 0 || els.some(e => e.style.display !== 'none')), 'something is drawn on load');
+    const last = (await f.$$('.ctl button')).at(-1);
+    await last.click();
+    assert.equal(await f.$eval('.cap', c => c.textContent), await last.getAttribute('data-say'));
+  }
+  // the page digs down: grass, leaves, mulch, topsoil, subsoil, rock
+  assert.deepEqual(await sp.$$eval('section.zone', s => s.map(z => z.className.split(' ')[1])), ['z-grass', 'z-litter', 'z-mulch', 'z-top', 'z-top2', 'z-sub', 'z-rock']);
+  // creatures: tap to meet one and count it; tapping elsewhere closes the bubble
+  assert.equal(await sp.locator('.lurk').count(), 10);
+  const worm = sp.locator('.lurk[data-who=Earthworm]');
+  await worm.scrollIntoViewIfNeeded();
+  await worm.click();
+  assert.match(await sp.textContent('.lurk-say'), /Earthworm.*breathe through my skin.*Found 1 of 10/);
+  assert.equal(await sp.textContent('#found'), '1');
+  await worm.click(); await worm.click();
+  assert.equal(await sp.textContent('#found'), '1', 'the same creature only counts once');
+  await sp.click('h1');
+  assert.ok(await sp.isHidden('.lurk-say'));
+  // no "sand = 'Sand'": a word that's already the grown-up word isn't made tappable
+  assert.equal(await sp.locator('#what-are-sand-silt-and-clay .kw').count(), 0);
+  assert.equal(await sp.locator('main a[href^="../"]:not([target=_blank])').count(), 0, 'links to the other pages open in a new tab');
+  for (const href of await sp.$$eval('main a[href^="../"]', as => as.map(a => a.getAttribute('href')))) {
+    await sp.goto(new URL(href, BASE + '/soil/').href);
+    assert.equal(await sp.locator(`[id="${href.split('#')[1]}"]`).count(), 1, `${href} exists`);
+  }
+  await sp.goto(BASE + '/app/soil/');
+  assert.equal(await sp.getAttribute('.lf-back', 'href'), '/app/');
+  assert.equal(await sp.getAttribute('meta[name=robots]', 'content'), 'noindex');
+  assert.deepEqual(outside, []);
+  assert.deepEqual(await sp.evaluate(() => Object.keys(localStorage)), []);
 }
 
 step('sitemap: every page in it loads and can be indexed; robots.txt points to it; the app is kept out of search');

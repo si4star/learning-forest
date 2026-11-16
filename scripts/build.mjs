@@ -29,7 +29,7 @@ for (const file of pages('dist')) {
 // Module pages opened from the app: the same page under /app/ (so an installed app stays in its own
 // window), with the app's back bar in place of the website header and no website footer.
 const appHeader = readFileSync('public/_partials/app-header.html', 'utf8').trim();
-for (const mod of ['trees', 'fungi']) {
+for (const mod of ['trees', 'fungi', 'soil']) {
   const html = readFileSync(`public/${mod}/index.html`, 'utf8');
   mkdirSync(`dist/app/${mod}`, { recursive: true });
   writeFileSync(`dist/app/${mod}/index.html`, html.replace('<!-- lf:header -->', appHeader).replace('<!-- lf:footer -->\n', '')

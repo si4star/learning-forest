@@ -1,11 +1,6 @@
-// How do fungi work?: writes public/fungi/index.html and public/fungi/fungi.css.
-// The text lives here. In an answer, [shown words|grown-up word] makes the shown words tappable,
-// lighting up their grown-up word underneath. Run `node scripts/fungi.mjs` after changing anything.
-// The styles are the How does a tree work? page's own, copied from it each run so the two match.
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-
-const esc = s => s.replace(/&(?![a-z#0-9]+;)/g, '&amp;');
-const slug = s => s.toLowerCase().replace(/’/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// How do fungi work?: writes public/fungi/index.html and public/fungi/fungi.css (see scripts/explainer.mjs).
+// The text and diagrams live here. Run `node scripts/fungi.mjs` after changing anything.
+import { esc, slug, figure, writePage } from './explainer.mjs';
 
 // ---------- diagrams (each is { id, title, desc, svg, buttons:[[state,label,caption]], note, hl }) ----------
 
@@ -266,15 +261,6 @@ const spotCard = s => `<figure class="spot" id="spot-${slug(s.name)}"><svg viewB
   (s.more ? `<p>${s.more}</p>` : '') + `<p><b>Lives on:</b> ${s.lives}</p><p><b>What it does:</b> ${s.does}</p></figcaption></figure>`;
 const spotGallery = () => `<p class="spot-safe">Look, draw and take photos. Never pick or eat wild fungi. The numbers on each picture match the clues.</p><div class="spots">${SPOTS.map(spotCard).join('')}</div>`;
 
-function figure(f) {
-  const first = f.buttons[0];
-  return `<figure class="fig" id="fig-${f.id}" data-fig="${f.id}" data-state="${first[0]}"><figcaption class="fig-title" id="${f.id}-c">${f.title}</figcaption>` +
-    `<svg viewBox="${f.viewBox || '0 0 400 262'}" role="img" aria-labelledby="${f.id}-c ${f.id}-d" focusable="false"><desc id="${f.id}-d">${f.desc}</desc>${f.svg}</svg>` +
-    `<div class="ctl" role="group" aria-label="${f.title}">` +
-    f.buttons.map(([s, label, say], i) => `<button type="button" data-state="${s}" data-say="${say}" aria-pressed="${i ? 'false' : 'true'}">${label}</button>`).join('') +
-    `</div><p class="cap" aria-live="polite">${first[2]}</p><p class="fig-note">${f.note}</p></figure>`;
-}
-
 // ---------- the text ----------
 // zones: [id, class, nav label, where, question, answer, items]; an item is [question, answer] or {fig:'id'}
 const ZONES = [
@@ -353,33 +339,6 @@ const ZONES = [
     ]],
 ];
 
-// ---------- page ----------
-function answer(id, text) {
-  let n = 0;
-  const chips = [];
-  const html = text.replace(/\[([^\]|]+)\|([^\]]+)\]/g, (_, shown, word) => {
-    n++;
-    const k = `kw-${id}-${n}`, g = `gw-${id}-${n}`;
-    chips.push(`<span class="gw" id="${g}" data-kw="${k}"><dfn>${word}</dfn><span class="sr"> is the grown-up word for</span><span aria-hidden="true"> =</span> ‘${shown}’</span>`);
-    return `<span class="kw" id="${k}" data-gw="${g}" role="button" tabindex="0" aria-pressed="false" aria-describedby="${g}">${shown}</span>`;
-  });
-  return { html, chips };
-}
-function topic([q, a]) {
-  const id = slug(q), { html, chips } = answer(id, a);
-  return `<article class="topic" id="${id}" itemprop="mainEntity" itemscope itemtype="https://schema.org/Question"><h3><span itemprop="name">${esc(q)}</span></h3>` +
-    `<div itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">${esc(html)}</p></div>` +
-    (chips.length ? `<p class="words"><span class="words-h">Grown-up words:</span> ${esc(chips.join(' '))}</p>` : '') + `</article>`;
-}
-const BG = { 'z-time': 'time', 'z-leaf': 'leaf', 'z-trunk': 'trunk', 'z-branch': 'branch', 'z-bark': 'bark', 'z-msg': 'msg', 'z-seed': 'seed', 'z-soil': 'soil', 'z-deep': 'deep', 'z-people': 'people' };
-const sections = ZONES.map(([id, cls, , where, q, a, items], i) => {
-  const prev = ZONES[i - 1], next = ZONES[i + 1], me = `var(--${BG[cls]}-bg)`;
-  const top = `color-mix(in srgb,${prev ? `var(--${BG[prev[1]]}-bg)` : 'var(--sky-bg)'},${me})`;
-  const style = `--top:${top}` + (next ? `;--bot:color-mix(in srgb,${me},var(--${BG[next[1]]}-bg))` : '');
-  const body = items.map(it => it.spots ? spotGallery() : it.fig ? figure(FIGS[it.fig]) : topic(it)).join('');
-  return `<section class="zone ${cls}" id="${id}" aria-labelledby="h-${id}" style="${style}"><div class="zone-in"><div class="zone-head" itemprop="mainEntity" itemscope itemtype="https://schema.org/Question"><p class="where">${where}</p><h2 id="h-${id}" itemprop="name">${esc(q)}</h2><div itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">${esc(a)}</p></div></div><div class="topics">${body}</div></div></section>`;
-}).join('\n');
-const nQ = ZONES.reduce((s, z) => s + z[6].filter(it => !it.fig && !it.spots).length + 1, 0);
 const nFig = Object.keys(FIGS).length;
 
 const hero = `<svg id="hero-fungi" viewBox="0 0 400 420" role="img" aria-labelledby="hft"><title id="hft">A tree trunk with a big bracket fungus near the bottom, brown spore dust on top of it, and white fungus threads spreading through the soil and the wood.</title>
@@ -392,93 +351,28 @@ const hero = `<svg id="hero-fungi" viewBox="0 0 400 420" role="img" aria-labelle
 <g><path d="M96 340 q0 -26 -4 -34" stroke="#F3E6D6" stroke-width="6" stroke-linecap="round"/><ellipse cx="92" cy="304" rx="22" ry="11" fill="#C0392B"/><circle cx="84" cy="300" r="3" fill="#fff"/><circle cx="98" cy="303" r="3" fill="#fff"/></g>
 </svg>`;
 
-const ld = [{
-  '@context': 'https://schema.org', '@type': 'LearningResource', '@id': 'https://learn.thetreefella.co.uk/fungi/#learning',
-  url: 'https://learn.thetreefella.co.uk/fungi/', isPartOf: { '@type': 'WebSite', name: 'The Learning Forest', url: 'https://learn.thetreefella.co.uk/' },
-  name: 'How do fungi work?', headline: 'How fungi work in trees, explained simply',
-  description: 'How fungi live in trees: why most are opportunists, what happens to wood after a branch is cut, heartwood, white, brown and soft rot, Ganoderma, and the few fungi that make trees ill.',
-  inLanguage: 'en-GB', isAccessibleForFree: true,
-  keywords: 'fungi for kids, how do fungi work, tree fungi, wood rot, white rot, brown rot, ash dieback, Dutch elm disease, Ganoderma',
-  learningResourceType: ['Explainer', 'Interactive diagram'], educationalLevel: 'Beginner',
-  audience: { '@type': 'EducationalAudience', educationalRole: ['student', 'parent', 'teacher'] },
-  teaches: ZONES.map(z => z[4]),
-  author: { '@type': 'Organization', name: 'The Tree Fella', legalName: 'The Tree Fella NE Ltd', url: 'https://thetreefella.co.uk/' },
-  publisher: { '@type': 'Organization', name: 'The Tree Fella', legalName: 'The Tree Fella NE Ltd', url: 'https://thetreefella.co.uk/' },
-}];
-
-const page = `<!doctype html>
-<html lang="en-GB">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>How Do Fungi Work? Tree Fungi for Kids | The Learning Forest</title>
-<meta name="description" content="How do fungi work? Why most tree fungi are opportunists, what a cut branch has to do with rot, white, brown and soft rot, Ganoderma and tree diseases, explained so a five-year-old gets it.">
-<meta name="robots" content="index, follow, max-image-preview:large">
-<meta name="author" content="The Tree Fella">
-<link rel="canonical" href="https://learn.thetreefella.co.uk/fungi/">
-<link rel="icon" href="/app/icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png">
-<meta name="theme-color" content="#F1F6E6">
-<meta property="og:type" content="article">
-<meta property="og:locale" content="en_GB">
-<meta property="og:site_name" content="The Learning Forest">
-<meta property="og:url" content="https://learn.thetreefella.co.uk/fungi/">
-<meta property="og:title" content="How do fungi work? ${nQ} questions, answered like you’re five">
-<meta property="og:description" content="Why most tree fungi wait for a chance, what a cut branch has to do with rot, and the few fungi that make trees ill. ${nFig} diagrams to poke at.">
-<meta name="twitter:card" content="summary">
-<link rel="stylesheet" href="/chrome.css">
-<link rel="stylesheet" href="/fungi/fungi.css">
-<link rel="stylesheet" href="/trees/site.css">
-<script type="application/ld+json">${JSON.stringify(ld)}</script>
-</head>
-<body>
-<a class="skip" href="#main">Skip to the content</a>
-<div class="lf-stick">
-<!-- lf:header -->
-<div class="bar">
-  <div class="bar-in">
-    <nav id="nav" aria-label="Sections">${ZONES.map(z => `<a href="#${z[0]}">${esc(z[2])}</a>`).join('')}</nav>
-    <div class="progress" aria-hidden="true"><span id="progress"></span></div>
-  </div>
-</div>
-</div>
-<main id="main" tabindex="-1" itemscope itemtype="https://schema.org/FAQPage">
-<section class="hero" aria-labelledby="t">
-  <div class="hero-in">
-    <div class="hero-copy">
-      <h1 id="t">How do fungi work?</h1>
-      <p class="lede">Most fungi on trees are opportunists: they wait for a chance. ${nQ} questions about what that chance is, and what fungi do when they get it. ${nFig} diagrams to play with.</p>
-      <p class="hint">In the answers, hover over or tap any underlined words to see their grown-up word.</p>
-    </div>
-    ${hero}
-  </div>
-</section>
-${sections}
-<section class="finish" aria-labelledby="finish-h">
-  <div class="finish-in">
-    <h2 id="finish-h">You made it to the end.</h2>
+const nQ = writePage({
+  dir: 'fungi', zones: ZONES, hero,
+  bg: { 'z-time': 'time', 'z-leaf': 'leaf', 'z-trunk': 'trunk', 'z-branch': 'branch', 'z-bark': 'bark', 'z-msg': 'msg', 'z-seed': 'seed', 'z-soil': 'soil', 'z-deep': 'deep', 'z-people': 'people' },
+  render: it => it.spots ? spotGallery() : figure(FIGS[it.fig]),
+  text: nQ => ({
+    title: 'How Do Fungi Work? Tree Fungi for Kids | The Learning Forest',
+    description: 'How do fungi work? Why most tree fungi are opportunists, what a cut branch has to do with rot, white, brown and soft rot, Ganoderma and tree diseases, explained so a five-year-old gets it.',
+    ogTitle: `How do fungi work? ${nQ} questions, answered like you’re five`,
+    ogDescription: `Why most tree fungi wait for a chance, what a cut branch has to do with rot, and the few fungi that make trees ill. ${nFig} diagrams to poke at.`,
+    h1: 'How do fungi work?', headline: 'How fungi work in trees, explained simply',
+    ldDescription: 'How fungi live in trees: why most are opportunists, what happens to wood after a branch is cut, heartwood, white, brown and soft rot, Ganoderma, and the few fungi that make trees ill.',
+    keywords: 'fungi for kids, how do fungi work, tree fungi, wood rot, white rot, brown rot, ash dieback, Dutch elm disease, Ganoderma',
+    lede: `Most fungi on trees are opportunists: they wait for a chance. ${nQ} questions about what that chance is, and what fungi do when they get it. ${nFig} diagrams to play with.`,
+    hint: '<p class="hint">In the answers, hover over or tap any underlined words to see their grown-up word.</p>',
+    finish: `<h2 id="finish-h">You made it to the end.</h2>
     <p>That’s ${nQ} questions about how fungi work. Next time you see a bracket on a tree, you’ll know it’s only the fruit.</p>
-    <p class="sources">The grown-up versions: <cite>Fungi and Trees: Their Complex Relationships</cite> by Lynne Boddy (Arboricultural Association, 2021), <cite>Fungi on Trees: An Arborists’ Field Guide</cite> by Watson, Green and Lonsdale (Arboricultural Association, 2011), and <cite>Fungal Strategies of Wood Decay in Trees</cite> by Schwarze, Engels and Mattheck (Springer, 2000).</p>
-  </div>
-</section>
-</main>
-<!-- lf:footer -->
-<button type="button" class="totop" id="totop" aria-label="Back to the top" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-<script src="/trees/stick.js"></script>
-<script src="/fungi/fungi.js"></script>
-</body>
-</html>
-`;
-
-const trees = readFileSync('public/trees/index.html', 'utf8');
-const css = trees.slice(trees.indexOf('<style>') + 7, trees.indexOf('</style>'));
-mkdirSync('public/fungi', { recursive: true });
-writeFileSync('public/fungi/fungi.css', `/* Copied from How does a tree work? by scripts/fungi.mjs, so the two pages match. Don't edit here. */\n${css.trim()}\n` +
-  `/* fungi page */\n.hero .hint{max-width:34ch}\n.topic a{color:inherit;text-decoration-thickness:2px;text-underline-offset:3px}\n` +
-  `.spot-safe{font-weight:700;margin:0 0 1rem}\n.spots{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}\n` +
+    <p class="sources">The grown-up versions: <cite>Fungi and Trees: Their Complex Relationships</cite> by Lynne Boddy (Arboricultural Association, 2021), <cite>Fungi on Trees: An Arborists’ Field Guide</cite> by Watson, Green and Lonsdale (Arboricultural Association, 2011), and <cite>Fungal Strategies of Wood Decay in Trees</cite> by Schwarze, Engels and Mattheck (Springer, 2000).</p>`,
+  }),
+  css: `.spot-safe{font-weight:700;margin:0 0 1rem}\n.spots{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}\n` +
   `.spot{margin:0;background:var(--fig-bg);color:var(--fig-ink);border-radius:20px;overflow:hidden}\n.spot svg{display:block;width:100%;height:auto}\n` +
   `.spot figcaption{padding:.8rem 1rem 1rem}\n.spot h3{font-family:var(--head);font-weight:600;font-size:1.25rem;margin:0 0 .5rem;line-height:1.15}\n` +
   `.spot h3 i{display:block;font-family:var(--body);font-weight:400;font-size:.9rem;opacity:.75}\n.spot ol{margin:0 0 .6rem;padding-left:1.5rem}\n.spot li{margin:.25rem 0}\n` +
-  `.spot li::marker{font-family:var(--head);font-weight:700}\n.spot p{margin:.35rem 0}\n`);
-writeFileSync('public/fungi/index.html', page);
+  `.spot li::marker{font-family:var(--head);font-weight:700}\n.spot p{margin:.35rem 0}\n`,
+});
 console.log(`public/fungi/index.html: ${nQ} questions, ${nFig} diagrams`);

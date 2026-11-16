@@ -11,6 +11,7 @@ This repo is **The Learning Forest** (`learn.thetreefella.co.uk`), free learning
 | `/` | Portal and website for schools, school pack |
 | `/trees/` | How does a tree work? (one page, no login; see **How does a tree work?** below) |
 | `/fungi/` | How do fungi work? (one page, no login; see **How do fungi work?** below) |
+| `/soil/` | What is soil? (one page, no login; see **What is soil?** below) |
 | `/app/` | The Learning Forest app: one login (Forest Pass for pupils, email for grown-ups), classes and class devices for every module. After logging in, a pupil picks a module. |
 | (in the app) | Grow your times tables: the module described below |
 | `/tables/` | Old address: forwards to `/app/` |
@@ -187,7 +188,9 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `public/sw.js`, `public/tables/sw.js` | Retire the service workers from before the app's moves |
 | `public/tables/index.html`, `public/moved.js` | Send `/tables/` links and QR cards on to `/app/` |
 | `public/trees/` | How does a tree work?: the page (edited here; this is its only copy), its script, fonts (Atkinson Hyperlegible, SIL OFL) |
-| `scripts/fungi.mjs`, `public/fungi/` | How do fungi work?: the text and diagrams live in the script, which writes the page and copies the tree page's styles; `fungi.js` runs the diagrams and grown-up words |
+| `scripts/explainer.mjs`, `public/explainer.js` | Shared by the explainer pages written by script: builds the page (questions, grown-up words, diagrams, the tree page's styles) and runs it in the browser |
+| `scripts/fungi.mjs`, `public/fungi/` | How do fungi work?: its text and diagrams |
+| `scripts/soil.mjs`, `public/soil/` | What is soil?: its text, diagrams and hiding creatures; `soil.js` lets you tap the creatures |
 | `public/_partials/header.html`, `footer.html`, `public/chrome.css` | The Learning Forest header and footer. `scripts/build.mjs` puts them into every website page in place of `<!-- lf:header -->` and `<!-- lf:footer -->`, so they're changed in one place. |
 | `public/404.html` | Not-found page (without it, Pages serves the home page for unknown paths) |
 | `public/app/index.html` | App page shell and tree SVG symbols (the app's service worker only serves this page for `/app/` itself) |
@@ -234,7 +237,11 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 
 ## How do fungi work?
 
-A sister page to How does a tree work?, in the same style: questions answered for a five-year-old, grown-up words to tap, and diagrams with buttons. The text and the diagrams are in `scripts/fungi.mjs`; after changing them run `node scripts/fungi.mjs`, which writes `public/fungi/index.html` and copies the tree page's styles into `public/fungi/fungi.css` so the two pages match. In an answer, `[shown words|grown-up word]` makes the shown words tappable. It's built from Simon's own notes (colonisation strategies and rot types after Rayner & Boddy, Boddy 2021, Schwarze 2007, Watson & Green 2011) plus published research on the points it didn't cover (natural fracture vs saw cuts, latent fungi in acorns, ash dieback, Dutch elm disease, Phytophthora).
+A sister page to How does a tree work?, in the same style: questions answered for a five-year-old, grown-up words to tap, and diagrams with buttons. The text and the diagrams are in `scripts/fungi.mjs`; after changing them run `node scripts/fungi.mjs`, which writes `public/fungi/index.html` and copies the tree page's styles into `public/fungi/fungi.css` so the pages match (the page building is shared, in `scripts/explainer.mjs`). In an answer, `[shown words|grown-up word]` makes the shown words tappable; if they're the same word, it stays plain text. It's built from Simon's own notes (colonisation strategies and rot types after Rayner & Boddy, Boddy 2021, Schwarze 2007, Watson & Green 2011) plus published research on the points it didn't cover (natural fracture vs saw cuts, latent fungi in acorns, ash dieback, Dutch elm disease, Phytophthora).
+
+## What is soil?
+
+The third explainer page, built the same way (`scripts/soil.mjs`, then `node scripts/soil.mjs`). It digs down as you scroll: grass and fallen leaves at the bottom of a tree, mulch, topsoil, squashed soil, subsoil and rock, each section a soil colour. Four diagrams: what's in a handful of soil, from leaf to soil, squash the soil, and bare soil or mulch. Ten creatures hide at the edges of the sections (peeking in from the right on a phone); tapping one says who it is and counts it ("Found 3 of 10"). The count isn't stored, so it starts again on each visit. Answers about roots, minerals and fungi link to How does a tree work? and How do fungi work? rather than repeating them. Sources for the grown-ups: BS 5837:2012 for root protection on building sites, and Chalker-Scott (2007) on mulches.
 
 ## Admin dashboard (`/admin/`)
 

@@ -1,4 +1,4 @@
-// How do fungi work?: section links, diagrams, grown-up words, progress and back to top.
+// Explainer pages (How do fungi work?, What is soil?): section links, diagrams, grown-up words, progress and back to top.
 // The same behaviour as How does a tree work? (public/trees/trees.js), without that page's own diagrams.
 
 // section links: highlight the one you're reading
