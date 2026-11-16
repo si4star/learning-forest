@@ -95,7 +95,7 @@ assert.equal(await kp.getAttribute('input[name=password]', 'type'), 'password');
 await kp.click('form .cta');
 step('after login the pupil picks a module');
 await kp.waitForSelector('.mods');
-assert.deepEqual((await kp.$$eval('.mod b', els => els.map(e => e.textContent))), ['Grow your times tables', 'How does a tree work?', 'What is soil?']);
+assert.deepEqual((await kp.$$eval('.mod b', els => els.map(e => e.textContent))), ['Grow your times tables', 'How does a tree work?', 'How do fungi work?', 'What is soil?']);
 step('the module screen has settings (with log out), not a log out button');
 assert.equal(await kp.locator('.bar [data-act=logout]').count(), 0);
 await kp.click('.bar [data-act=settings]');

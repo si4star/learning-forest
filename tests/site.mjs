@@ -16,7 +16,7 @@ const watch = p => {
 step('home page and school pack load without errors, with no sideways scrolling on a phone');
 for (const [w, h] of [[390, 844], [1280, 900]]) {
   const p = watch(await (await browser.newContext({ viewport: { width: w, height: h } })).newPage());
-  for (const path of ['/', '/trees/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/school-pack/terms.html', '/404.html']) {
+  for (const path of ['/', '/trees/', '/fungi/', '/school-pack/data.html', '/school-pack/privacy.html', '/school-pack/dpa.html', '/school-pack/terms.html', '/404.html']) {
     await p.goto(BASE + path);
     await p.evaluate(() => document.fonts.ready);
     assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${path} scrolls sideways at ${w}px`);
@@ -28,7 +28,7 @@ for (const [w, h] of [[390, 844], [1280, 900]]) {
   }
   await p.goto(BASE + '/');
   assert.equal(await p.locator('#grove svg').count(), 28);
-  assert.deepEqual(await p.locator('.module .mt b').allTextContents(), ['How does a tree work?', 'Grow your times tables', 'What is soil?']);
+  assert.deepEqual(await p.locator('.module .mt b').allTextContents(), ['How does a tree work?', 'How do fungi work?', 'Grow your times tables', 'What is soil?']);
   assert.equal(await p.isVisible('text=Spaced repetition'), false, 'module details start closed');
   await p.click('#tables summary');
   assert.ok(await p.isVisible('text=Spaced repetition'), 'tapping a module shows its details');
@@ -63,6 +63,44 @@ step('How does a tree work?: works, loads nothing from other websites, stores no
   }
   assert.deepEqual(outside, []);
   assert.deepEqual(await tp.evaluate(() => Object.keys(localStorage)), []);
+}
+
+step('How do fungi work?: diagrams, grown-up words, links to the tree page, nothing from other websites, stores nothing');
+{
+  const fc = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const fp = watch(await fc.newPage()), outside = [];
+  fp.on('request', r => { if (!r.url().startsWith(BASE)) outside.push(r.url()); });
+  await fp.goto(BASE + '/fungi/');
+  assert.equal(await fp.locator('.fig').count(), 5);
+  // every diagram shows its first state on load, and each button changes the caption
+  for (const f of await fp.$$('.fig')) {
+    assert.equal(await (await f.$('.ctl button')).getAttribute('aria-pressed'), 'true');
+    assert.ok(await f.$$eval('svg [data-show]', els => els.length === 0 || els.some(e => e.style.display !== 'none')), 'something is drawn on load');
+    const last = (await f.$$('.ctl button')).at(-1);
+    await last.click();
+    assert.equal(await f.$eval('.cap', c => c.textContent), await last.getAttribute('data-say'));
+  }
+  await fp.click('#fig-cut [data-state=cut]');
+  assert.ok(await fp.isHidden('#fig-cut [data-show=leafy]'), 'the branch is gone once it is cut');
+  const kw = fp.locator('#what-is-brown-rot .kw').first();
+  await kw.click();
+  assert.equal(await kw.getAttribute('aria-pressed'), 'true');
+  assert.match(await fp.textContent('#what-is-brown-rot .words'), /cellulose and hemicellulose/);
+  // links to the tree page land on answers that exist there
+  for (const href of await fp.$$eval('main a[href^="../trees/#"]', as => as.map(a => a.getAttribute('href')))) {
+    const id = href.split('#')[1];
+    await fp.goto(new URL(href, BASE + '/fungi/').href);
+    assert.equal(await fp.locator(`#${id}`).count(), 1, `${href} exists`);
+  }
+  assert.equal(await fp.locator('a[href="../fungi/#heartwood"]').count(), 1, 'the tree page links to the fungi page');
+  assert.match(await fp.textContent('#which-fungi-eat-wood'), /eat the woody glue and leave soft white strings/);
+  // the app copy has the back bar and isn't indexed
+  await fp.goto(BASE + '/app/fungi/');
+  assert.equal(await fp.getAttribute('.lf-back', 'href'), '/app/');
+  assert.equal(await fp.getAttribute('meta[name=robots]', 'content'), 'noindex');
+  assert.equal(await fp.locator('main a[href^="http"]').count(), 0, 'no links out to other sites');
+  assert.deepEqual(outside, []);
+  assert.deepEqual(await fp.evaluate(() => Object.keys(localStorage)), []);
 }
 
 step('sitemap: every page in it loads and can be indexed; robots.txt points to it; the app is kept out of search');

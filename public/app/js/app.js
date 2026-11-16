@@ -771,6 +771,7 @@ function renderHub(){
     <div class="mods">
       <button class="mod" data-act="mod-tables"><span class="emo" aria-hidden="true">✖️</span><span><b>Grow your times tables</b><small>${p.assessedAt?planted===ALL.length?`All ${ALL.length} trees planted 🌳`:`${planted} of ${ALL.length} trees planted`:'Start with a quick check'}</small></span></button>
       <a class="mod" href="/app/trees/"><span class="emo" aria-hidden="true">🌳</span><span><b>How does a tree work?</b><small>121 questions and 19 diagrams to play with</small></span></a>
+      <a class="mod" href="/app/fungi/"><span class="emo" aria-hidden="true">🍄</span><span><b>How do fungi work?</b><small>48 questions and 5 diagrams to play with</small></span></a>
       <div class="mod soon" aria-disabled="true"><span class="emo" aria-hidden="true">🪱</span><span><b>What is soil?</b><small>Coming soon</small></span></div>
     </div>
   </main>`;
