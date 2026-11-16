@@ -248,4 +248,8 @@ section.zone{position:relative;overflow-x:clip}
 .lurk-say small{display:block;margin-top:.35rem;font-family:var(--head);font-weight:600;color:#2F7A34}
 .found-line{font-family:var(--head);font-weight:500}
 /* on the dark soil, creatures get a pale outline and a soft glow so they stand out */
-.z-top .lurk svg,.z-top2 .lurk svg,.z-sub .lurk svg,.z-rock .lurk svg{filter:drop-shadow(0 0 1.2px #FFF4E0) drop-shadow(0 0 1.2px #FFF4E0) drop-shadow(0 0 6px rgba(255,236,200,.55))}
+/* (in dark mode every layer is dark, so every creature gets it) */
+.z-top .lurk svg,.z-top2 .lurk svg,.z-sub .lurk svg,.z-rock .lurk svg{filter:var(--glow)}
+:root{--glow:drop-shadow(0 0 1.2px #FFF4E0) drop-shadow(0 0 1.2px #FFF4E0) drop-shadow(0 0 6px rgba(255,236,200,.55))}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lurk svg{filter:var(--glow)}}
+:root[data-theme="dark"] .lurk svg{filter:var(--glow)}

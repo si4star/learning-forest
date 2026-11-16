@@ -138,6 +138,11 @@ step('What is soil?: diagrams, creatures to find, links to the other pages, noth
   // on the dark soil, creatures have a pale outline so they can be seen
   assert.match(await sp.$eval('.lurk[data-who="Soil mite"] svg', e => getComputedStyle(e).filter), /drop-shadow/);
   assert.equal(await sp.$eval('.lurk[data-who=Woodlouse] svg', e => getComputedStyle(e).filter), 'none', 'not needed on the light layers');
+  {
+    const dp = await (await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark' })).newPage();
+    await dp.goto(BASE + '/soil/');
+    assert.ok(await dp.$$eval('.lurk svg', els => els.every(e => getComputedStyle(e).filter.includes('drop-shadow'))), 'in dark mode every layer is dark, so every creature is outlined');
+  }
   // no "sand = 'Sand'": a word that's already the grown-up word isn't made tappable
   assert.equal(await sp.locator('#what-are-sand-silt-and-clay .kw').count(), 0);
   assert.equal(await sp.locator('main a[href^="../"]:not([target=_blank])').count(), 0, 'links to the other pages open in a new tab');
