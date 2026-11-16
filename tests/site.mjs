@@ -86,7 +86,8 @@ step('How do fungi work?: diagrams, grown-up words, links to the tree page, noth
   await kw.click();
   assert.equal(await kw.getAttribute('aria-pressed'), 'true');
   assert.match(await fp.textContent('#what-is-brown-rot .words'), /cellulose and hemicellulose/);
-  // links to the tree page land on answers that exist there
+  // links to the tree page open in a new tab and land on answers that exist there
+  assert.ok(await fp.$$eval('main a[href^="../trees/"]', as => as.length > 0 && as.every(a => a.target === '_blank' && a.rel === 'noopener')), 'tree page links open in a new tab');
   for (const href of await fp.$$eval('main a[href^="../trees/#"]', as => as.map(a => a.getAttribute('href')))) {
     const id = href.split('#')[1];
     await fp.goto(new URL(href, BASE + '/fungi/').href);
