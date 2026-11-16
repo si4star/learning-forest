@@ -186,9 +186,8 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 | `public/site.js` | Sends old QR links (`/#qr=`) and old home-screen installs to `/app/` |
 | `public/sw.js`, `public/tables/sw.js` | Retire the service workers from before the app's moves |
 | `public/tables/index.html`, `public/moved.js` | Send `/tables/` links and QR cards on to `/app/` |
-| `public/trees/` | How does a tree work?: the imported page, its script, fonts (Atkinson Hyperlegible, SIL OFL) |
+| `public/trees/` | How does a tree work?: the page (edited here; this is its only copy), its script, fonts (Atkinson Hyperlegible, SIL OFL) |
 | `scripts/fungi.mjs`, `public/fungi/` | How do fungi work?: the text and diagrams live in the script, which writes the page and copies the tree page's styles; `fungi.js` runs the diagrams and grown-up words |
-| `scripts/import-trees.mjs` | Imports a new version of the How does a tree work? page |
 | `public/_partials/header.html`, `footer.html`, `public/chrome.css` | The Learning Forest header and footer. `scripts/build.mjs` puts them into every website page in place of `<!-- lf:header -->` and `<!-- lf:footer -->`, so they're changed in one place. |
 | `public/404.html` | Not-found page (without it, Pages serves the home page for unknown paths) |
 | `public/app/index.html` | App page shell and tree SVG symbols (the app's service worker only serves this page for `/app/` itself) |
@@ -231,15 +230,7 @@ npm test             # reminders unit test, then end-to-end tests against the ru
 
 ## How does a tree work?
 
-The page is written outside this repo as a single HTML file. To publish a new version:
-
-```
-node scripts/import-trees.mjs path/to/index.html
-```
-
-The import adapts it to this site: the inline script moves to `public/trees/trees.js` (the security policy runs no inline scripts), Google Analytics and its cookie banner come out (the school pack promises no tracking), Google Fonts become self-hosted copies, addresses move from `/` to `/trees/`, the sharing image and logo come out, and The Learning Forest's header and footer replace the page's own. Its section links and progress bar stay as a sticky bar under the site header, and the book credits move into its closing section. Each change must match exactly once, so if the page's structure changes the import stops with the step that failed rather than publishing a half-converted page.
-
-**Changes made here, not in the source file.** The rot answer says "eat the woody glue" and "eat the strings" (it said "the dark, gluey part" and "the white part"), the heartwood answer says only some trees, like oak, protect their middle, and both link to How do fungi work? in a new tab. Make the same changes in the source file before the next import, or the import will undo them.
+`public/trees/index.html` is the only copy of this page: edit it here. (It was first written outside this repo and brought in by an import script, which adapted it to the site: its script moved to `trees.js` because the security policy runs no inline scripts, Google Analytics, Google Fonts and the sharing image came out, and The Learning Forest's header and footer went in. That source file no longer exists, so the import script has gone; it's in the git history.)
 
 ## How do fungi work?
 

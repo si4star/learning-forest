@@ -1,4 +1,4 @@
-// How does a tree work? Page script, imported by scripts/import-trees.mjs.
+// How does a tree work? Page script.
 // Analytics removed on this site; diagrams still call track(), which does nothing.
 function track(){}
 // hero
